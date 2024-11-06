@@ -3,11 +3,20 @@ import 'package:flutter/material.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/custom_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
+import 'screens/qr_code/qr_code_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(MyApp());
+  await Future.delayed(const Duration(milliseconds: 100));
+  await Firebase.initializeApp(
+    options: const FirebaseOptions(
+      apiKey: 'AIzaSyBzWodEQCoiKxigxPrYpvR1w18RU34w7J0',
+      appId: '1:866243564535:android:765971cef2c2e3b174d4f2',
+      messagingSenderId: '866243564535',
+      projectId: 'tableserve-b0183',
+    ),
+  );
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -20,13 +29,14 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      // Set the initial route to GuestRequestScreen
-      initialRoute: '/guestRequest',
+      // Set the initial route to main screen
+      initialRoute: '/qrCode',
       // Define routes for navigation
       routes: {
-        '/guestRequest': (context) => GuestRequestScreen(),
-        '/customRequest': (context) => CustomRequestScreen(),
-        '/adminPanel': (context) => AdminPanel(),
+        '/guestRequest': (context) => const GuestRequestScreen(),
+        '/customRequest': (context) => const CustomRequestScreen(),
+        '/adminPanel': (context) => const AdminPanel(),
+        '/qrCode': (context) => const ScanScreen(),
       },
     );
   }

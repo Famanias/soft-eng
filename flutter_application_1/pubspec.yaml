@@ -33,7 +33,7 @@ dependencies:
   firebase_core: ^2.16.1 # Replace with the latest if this changes
   cloud_firestore: ^4.12.1 # Replace with the latest if this changes
   qr_flutter: ^4.0.0          # For generating QR codes
-  qr_code_scanner: ^0.6.1     # For scanning QR codes
+  qr_code_scanner: ^1.0.1   # For scanning QR codes
   http: ^0.13.4               # For making HTTP requests to your backend
   firebase_messaging: ^14.0.0 # For real-time notifications to the admin
 

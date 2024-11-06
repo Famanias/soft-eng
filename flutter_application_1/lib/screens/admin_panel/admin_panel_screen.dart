@@ -2,18 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminPanel extends StatelessWidget {
+  const AdminPanel({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Admin Panel")),
+      appBar: AppBar(title: const Text("Admin Panel")),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance.collection('activeTables').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
+            return const CircularProgressIndicator();
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text("No active tables"));
+            return const Center(child: Text("No active tables"));
           }
 
           return ListView(

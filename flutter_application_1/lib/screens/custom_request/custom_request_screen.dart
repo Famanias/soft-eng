@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 class CustomRequestScreen extends StatelessWidget {
+  const CustomRequestScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFE4CB9D),
+      backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
-        title: Text(
+        title: const Text(
           "TableServe",
           style: TextStyle(
             fontSize: 24,
@@ -15,7 +17,7 @@ class CustomRequestScreen extends StatelessWidget {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Color(0xFFE4CB9D),
+        backgroundColor: const Color(0xFFE4CB9D),
         elevation: 0,
         toolbarHeight: 80,
         flexibleSpace: Column(
@@ -33,8 +35,8 @@ class CustomRequestScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               "How can we help you?",
               style: TextStyle(
                 fontSize: 28,
@@ -50,13 +52,13 @@ class CustomRequestScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 8),
+            const Text(
               "describe your service request in detail.",
               style: TextStyle(fontSize: 16, color: Color(0xFF316175)),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Text Input Field
             Container(
@@ -65,7 +67,7 @@ class CustomRequestScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12.0),
               ),
-              child: TextField(
+              child: const TextField(
                 maxLines: 8,
                 decoration: InputDecoration(
                   hintText: "Type here...",
@@ -73,12 +75,12 @@ class CustomRequestScreen extends StatelessWidget {
                 ),
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
 
             // Submit Request Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0), backgroundColor: Color(0xFF316175),
+                padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0), backgroundColor: const Color(0xFF316175),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
@@ -86,7 +88,7 @@ class CustomRequestScreen extends StatelessWidget {
               onPressed: () {
                 // Handle custom submit action
               },
-              child: Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
           ],
         ),
