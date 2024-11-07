@@ -36,6 +36,7 @@ dependencies:
   qr_code_scanner: ^1.0.1   # For scanning QR codes
   http: ^0.13.4               # For making HTTP requests to your backend
   firebase_messaging: ^14.0.0 # For real-time notifications to the admin
+  shared_preferences: ^2.0.6
 
 
 

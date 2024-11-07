@@ -12,7 +12,15 @@ class ScanScreen extends StatefulWidget {
 class _ScanScreenState extends State<ScanScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
+  String tableId = ""; // Store the tableId here
   bool isScanning = false; // Prevent multiple scans
+
+   @override
+  void dispose() {
+    controller?.dispose();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +29,23 @@ class _ScanScreenState extends State<ScanScreen> {
       body: Column(
         children: [
           Expanded(
-            flex: 5,
-            child: QRView(
-              key: qrKey,
-              onQRViewCreated: _onQRViewCreated,
+            flex: 0,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                double width = MediaQuery.of(context).size.width * 0.3; // 80% of the screen width
+                double height = MediaQuery.of(context).size.height * 0.3; // 80% of the screen height
+
+                return Center(
+                child: SizedBox(
+                  width: width,
+                  height: height,
+                  child: QRView(
+                    key: qrKey,
+                    onQRViewCreated: _onQRViewCreated,
+                  ),
+                ),
+              );
+              },
             ),
           ),
           const Expanded(
@@ -42,8 +63,9 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   void _onQRViewCreated(QRViewController controller) {
-    this.controller = controller;
-
+    setState(() {
+      this.controller = controller;
+    });
     // Set up listener for QR code scan
     controller.scannedDataStream.listen((scanData) async {
       if (isScanning) return; // Prevent multiple scans
@@ -97,12 +119,6 @@ class _ScanScreenState extends State<ScanScreen> {
         });
       }
     });
-  }
-
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
   }
 }
 

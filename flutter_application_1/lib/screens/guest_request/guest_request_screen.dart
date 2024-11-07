@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'notification.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -12,8 +14,56 @@ class GuestRequestScreen extends StatefulWidget {
 class _GuestRequestScreenState extends State<GuestRequestScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
+  bool isScanning = false; // Prevent multiple scans
   String tableId = ""; // This will store the scanned table ID
   List<bool> selectedItems = List.generate(5, (index) => false);
+  List<Map<String, dynamic>> requestHistory = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTableId();
+     _fetchRequestHistory();
+  }
+
+   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Retrieve the tableId from the arguments
+    final args = ModalRoute.of(context)?.settings.arguments as String?;
+    if (args != null) {
+      setState(() {
+        tableId = args;
+      });
+       _saveTableId(args);
+    }
+  }
+
+    Future<void> _loadTableId() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      tableId = prefs.getString('tableId') ?? "";
+    });
+  }
+
+  Future<void> _saveTableId(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('tableId', id);
+  }
+
+  Future<void> _fetchRequestHistory() async {
+    if (tableId.isNotEmpty) {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .where('tableId', isEqualTo: tableId)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      setState(() {
+        requestHistory = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -23,29 +73,25 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
   // Placeholder list of request types (replace "Lorem Ipsum Request" with actual request types)
   List<String> requestTypes = [
-    "Request Type 1",
-    "Request Type 2",
-    "Request Type 3",
-    "Request Type 4",
-    "Request Type 5",
+    "Eat",
+    "Sleep",
+    "Play",
+    "Rest",
+    "Swim",
   ];
 
-  // Function to scan QR code
-  void _onQRViewCreated(QRViewController controller) {
-    setState(() {
-      qrController = controller;
-    });
-    controller.scannedDataStream.listen((scanData) {
-      setState(() {
-        tableId = scanData.code ?? ""; // Set the table ID from QR code
-      });
-      controller.pauseCamera(); // Pause scanning after getting the first result
-    });
-  }
 
   Future<void> _submitRequest() async {
     // Collect the selected request types
     List<String> selectedRequests = [];
+
+    if(tableId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No table ID available")),
+      );
+      return;
+    }
+
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
         selectedRequests.add(requestTypes[i]);
@@ -60,11 +106,13 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       return;
     }
 
+    String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}';
+
     // Prepare Firestore data for each request
     try {
       for (var requestType in selectedRequests) {
-        await FirebaseFirestore.instance.collection('guestRequests').add({
-          'tableId': 'table_1', // Replace with dynamic table ID if available
+        await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
+          'tableId': tableId,
           'requestType': requestType,
           'status': 'active',
           'timestamp': Timestamp.now(),
@@ -88,6 +136,93 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     }
   }
 
+  Future<void> _exitRequest() async {
+    try {
+      // Update the status of the request to 'inactive' in Firestore
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .where('tableId', isEqualTo: tableId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      for (var doc in querySnapshot.docs) {
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(doc.id)
+            .update({'status': 'inactive'});
+      }
+
+      await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(tableId)
+          .update({'status': 'inactive'});
+
+      // Notify the user of successful update
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Thank you for using the service")),
+      );
+
+      // Optionally, reset the state
+      setState(() {
+        tableId = "";
+        selectedItems = List.generate(5, (index) => false);
+      });
+
+      // Navigate back to the QR screen
+      Navigator.popAndPushNamed(context, '/qrCode');
+    } catch (e) {
+      // Show error message if update fails
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to mark request as inactive: $e")),
+      );
+    }
+  }
+
+  void _showRequestHistory() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Request History"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.builder(
+              itemCount: requestHistory.length,
+              itemBuilder: (context, index) {
+                var request = requestHistory[index];
+                return Card(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: ListTile(
+                    title: Text(
+                      "Request: ${request['requestTypes'].join(', ')}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Status: ${request['status']}"),
+                        Text("Time: ${request['timestamp'].toDate()}"),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -101,6 +236,25 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             color: Colors.white,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              if (tableId.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NotificationScreen(tableId: tableId),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("No table ID available")),
+                );
+              }
+            } 
+          ),
+        ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),
         elevation: 0,
@@ -121,9 +275,9 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            const Text(
-              "Guest Request",
-              style: TextStyle(
+                Text(
+              "Table number $tableId",
+              style: const TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF316175),
@@ -136,6 +290,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                 ],
               ),
             ),
+            
             const SizedBox(height: 5),
             const Text(
               "Common requests of guests, can select multiple.",
@@ -225,6 +380,18 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             ),
 
             ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.0),
+              ),
+            ),
+            onPressed: _exitRequest, // Call the function to mark the request as inactive
+            child: const Text("Exit", style: TextStyle(fontSize: 18, color: Colors.white)),
+          ),
+
+            ElevatedButton(
               onPressed: () {
                 String username = 'dave';
                 String password = '123';
@@ -239,8 +406,13 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
               },
               child: const Text("Go to Admin Panel"),
             )
+            
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showRequestHistory,
+        child: const Icon(Icons.history),
       ),
     );
   }
