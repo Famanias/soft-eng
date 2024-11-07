@@ -95,7 +95,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.message, color: Colors.blue),
-                      onPressed: () => _showMessageDialog(doc.id),
+                      onPressed: () => _showMessageDialog(doc.id, requestTypeText),
                     ),
                   ],
                 ),
@@ -136,11 +136,14 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
 
   void _sendComment() async {
   if (_commentController.text.isNotEmpty) {
+    
+    String docName = '${widget.tableId} - Message';
     await FirebaseFirestore.instance
         .collection('activeTables')
         .doc(widget.tableId)
         .collection('messages')
-        .add({
+        .doc(docName)
+        .set({
       'message': _commentController.text,
       'timestamp': FieldValue.serverTimestamp(),
       'sender': 'admin',
@@ -149,7 +152,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
   }
 }
 
-  void _showMessageDialog(String requestId) {
+  void _showMessageDialog(String requestId, String requestType) {
   showDialog(
     context: context,
     builder: (context) {
@@ -171,7 +174,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
           ),
           TextButton(
             onPressed: () {
-              _sendMessage(requestId);
+              _sendMessage(requestId, requestType);
               Navigator.of(context).pop();
             },
             child: const Text("Send"),
@@ -182,18 +185,23 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
   );
 }
 
-void _sendMessage(String requestId) async {
-  if (_messageController.text.isNotEmpty) {
-    await FirebaseFirestore.instance
-        .collection('guestRequests')
-        .doc(requestId)
-        .collection('messages')
-        .add({
-      'message': _messageController.text,
-      'timestamp': FieldValue.serverTimestamp(),
-      'sender': 'admin',
-    });
-    _messageController.clear();
+  void _sendMessage(String requestId, String requestType) async {
+    if (_messageController.text.isNotEmpty) {
+
+      String docName = '${widget.tableId} Request Message - ${DateTime.now()}';
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .collection('messages')
+          .doc(docName)
+          .set({
+        'tableId': widget.tableId,
+        'requestType': requestType,
+        'message': _messageController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sender': 'admin',
+      });
+      _messageController.clear();
+    }
   }
-}
 }

@@ -15,7 +15,7 @@ class NotificationScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Notifications")),
       body: StreamBuilder(
         stream: FirebaseFirestore.instance
-            .collection('activeTables')
+            .collection('guestRequests')
             .doc(tableId)
             .collection('messages')
             .orderBy('timestamp')
@@ -28,115 +28,27 @@ class NotificationScreen extends StatelessWidget {
             return const Center(child: Text("No notifications"));
           }
 
+          // Debug print to see the fetched data
+          print("Fetched data: ${snapshot.data!.docs}");
+
           return ListView(
             children: snapshot.data!.docs.map((doc) {
+              print("Document data: ${doc.data()}"); 
               return ListTile(
-                title: Text(doc['message']),
-                subtitle: Text(doc['sender']),
-                trailing: doc['sender'] == 'admin'
-                    ? IconButton(
-                        icon: const Icon(Icons.reply, color: Colors.blue),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => MessageScreen(requestId: tableId),
-                            ),
-                          );
-                        },
-                      )
-                    : null,
+                title: Text("Request: ${doc['requestType'].join(', ')}"),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Status: ${doc['status']}"),
+                    if (doc['message'] != null) Text("Message: ${doc['message']}"),
+                    Text("Time: ${doc['timestamp'].toDate()}"),
+                  ],
+                ),
               );
             }).toList(),
           );
         },
       ),
     );
-  }
-}
-
-class MessageScreen extends StatefulWidget {
-  final String requestId;
-
-  const MessageScreen({required this.requestId, super.key});
-
-  @override
-  _MessageScreenState createState() => _MessageScreenState();
-}
-
-class _MessageScreenState extends State<MessageScreen> {
-  final TextEditingController _replyController = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Messages")),
-      body: Column(
-        children: [
-          Expanded(
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('activeTables')
-                  .doc(widget.requestId)
-                  .collection('messages')
-                  .orderBy('timestamp')
-                  .snapshots(),
-              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No messages"));
-                }
-
-                return ListView(
-                  children: snapshot.data!.docs.map((doc) {
-                    return ListTile(
-                      title: Text(doc['message']),
-                      subtitle: Text(doc['sender']),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _replyController,
-                    decoration: const InputDecoration(
-                      labelText: 'Reply',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendReply,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _sendReply() async {
-    if (_replyController.text.isNotEmpty) {
-      await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(widget.requestId)
-          .collection('messages')
-          .add({
-        'message': _replyController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'sender': 'user',
-      });
-      _replyController.clear();
-    }
   }
 }
