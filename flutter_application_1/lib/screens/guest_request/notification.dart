@@ -33,15 +33,15 @@ class NotificationScreen extends StatelessWidget {
 
           return ListView(
             children: snapshot.data!.docs.map((doc) {
-              print("Document data: ${doc.data()}"); 
+              print("Document data: ${doc.data()}");
+              var data = doc.data() as Map<String, dynamic>;
               return ListTile(
-                title: Text("Request: ${doc['requestType'].join(', ')}"),
+                title: Text("Request: ${data.containsKey('requestType') && data['requestType'] is List ? (data['requestType'] as List).join(', ') : 'N/A'}"),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Status: ${doc['status']}"),
-                    if (doc['message'] != null) Text("Message: ${doc['message']}"),
-                    Text("Time: ${doc['timestamp'].toDate()}"),
+                    Text("Status: ${data['status']}"),
+
                   ],
                 ),
               );

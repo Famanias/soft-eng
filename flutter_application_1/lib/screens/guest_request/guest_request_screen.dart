@@ -138,46 +138,62 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   }
 
   Future<void> _exitRequest() async {
-    try {
-      // Update the status of the request to 'inactive' in Firestore
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  try {
+    // Update the status of the request to 'inactive' in Firestore
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .where('tableId', isEqualTo: tableId)
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    for (var doc in querySnapshot.docs) {
+      await FirebaseFirestore.instance
           .collection('guestRequests')
-          .where('tableId', isEqualTo: tableId)
-          .where('status', isEqualTo: 'active')
+          .doc(doc.id)
+          .update({'status': 'inactive'});
+
+      // Delete all messages in the messages subcollection
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(doc.id)
+          .collection('messages')
           .get();
 
-      for (var doc in querySnapshot.docs) {
+      for (var messageDoc in messagesSnapshot.docs) {
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(doc.id)
-            .update({'status': 'inactive'});
+            .collection('messages')
+            .doc(messageDoc.id)
+            .delete();
       }
-
-      await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .update({'status': 'inactive'});
-
-      // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Thank you for using the service")),
-      );
-
-      // Optionally, reset the state
-      setState(() {
-        tableId = "";
-        selectedItems = List.generate(5, (index) => false);
-      });
-
-      // Navigate back to the QR screen
-      Navigator.popAndPushNamed(context, '/qrCode');
-    } catch (e) {
-      // Show error message if update fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to mark request as inactive: $e")),
-      );
     }
+
+    await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(tableId)
+        .update({'status': 'inactive'});
+
+    // Notify the user of successful update
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Thank you for using the service")),
+    );
+
+    // Optionally, reset the state
+    setState(() {
+      tableId = "";
+      selectedItems = List.generate(5, (index) => false);
+    });
+
+    // Navigate back to the QR screen
+    Navigator.popAndPushNamed(context, '/qrCode');
+  } catch (e) {
+    // Show error message if update fails
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to mark request as inactive: $e")),
+    );
   }
+}
 
   void _showRequestHistory() {
     showDialog(
@@ -195,7 +211,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                   margin: const EdgeInsets.symmetric(vertical: 8.0),
                   child: ListTile(
                     title: Text(
-                      "Request: ${request['requestTypes'].join(', ')}",
+                      "Request: ${request['requestType'].join(', ')}",
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
@@ -290,11 +306,14 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                     },
                   ),
                 ),
-                TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                    labelText: 'Message',
-                    border: OutlineInputBorder(),
+                Container(
+                  margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: const InputDecoration(
+                      labelText: 'Message',
+                      border: OutlineInputBorder(),
+                    ),
                   ),
                 ),
               ],
@@ -378,23 +397,23 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              if (tableId.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NotificationScreen(tableId: tableId),
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("No table ID available")),
-                );
-              }
-            } 
-          )
+          // IconButton(
+          //   icon: const Icon(Icons.notifications),
+          //   onPressed: () {
+          //     if (tableId.isNotEmpty) {
+          //       Navigator.push(
+          //         context,
+          //         MaterialPageRoute(
+          //           builder: (context) => NotificationScreen(tableId: tableId),
+          //         ),
+          //       );
+          //     } else {
+          //       ScaffoldMessenger.of(context).showSnackBar(
+          //         const SnackBar(content: Text("No table ID available")),
+          //       );
+          //     }
+          //   } 
+          // )
         ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),

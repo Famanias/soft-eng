@@ -95,10 +95,6 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                       icon: const Icon(Icons.close, color: Colors.red),
                       onPressed: () => _updateRequestStatus(doc.id, 'rejected'),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.message, color: Colors.blue),
-                      onPressed: () => _showMessagesPopup(),
-                    ),
                   ],
                 ),
               );
@@ -146,11 +142,11 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                 }
 
                 return ListView(
-                   reverse: true,
+                  reverse: true,
                   children: snapshot.data!.docs.map((doc) {
                     var message = doc.data() as Map<String, dynamic>;
                     bool isAdmin = message['sender'] == 'admin';
-                     Timestamp? timestamp = message['timestamp'] as Timestamp?;
+                    Timestamp? timestamp = message['timestamp'] as Timestamp?;
                     return Align(
                       alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
                       child: Container(
@@ -170,13 +166,13 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                               ),
                             ),
                             if (timestamp != null)
-                            Text(
-                              timestamp.toDate().toString(),
-                              style: const TextStyle(
-                                fontSize: 10,
-                                color: Colors.black54,
+                              Text(
+                                timestamp.toDate().toString(),
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.black54,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),
@@ -194,18 +190,26 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Close"),
+          Container(
+            margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text("Close"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    _sendMessage(widget.tableId, ''); // Pass the required arguments here
+                  },
+                  child: const Text("Send"),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                _sendMessage(widget.tableId, ''); // Pass the required arguments here
-              },
-              child: const Text("Send"),
-            ),
+          ),
           ],
         );
       },
