@@ -16,6 +16,8 @@ void main() async {
       projectId: 'tableserve-b0183',
     ),
   );
+
+  
   runApp(const MyApp());
 }
 
@@ -33,10 +35,10 @@ class MyApp extends StatelessWidget {
       initialRoute: '/qrCode',
       // Define routes for navigation
       routes: {
+        '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) => const CustomRequestScreen(),
         '/adminPanel': (context) => const AdminPanel(),
-        '/qrCode': (context) => const ScanScreen(),
       },
     );
   }

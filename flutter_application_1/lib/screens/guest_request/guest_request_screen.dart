@@ -228,6 +228,33 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
+        leading: IconButton(
+        icon: const Icon(Icons.exit_to_app),
+        onPressed: () async {
+          bool? confirmExit = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text("Confirm Exit"),
+                content: const Text("Are you sure you want to exit?"),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text("Cancel"),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text("Exit"),
+                  ),
+                ],
+              );
+            },
+          );
+          if (confirmExit == true) {
+            _exitRequest();
+          }
+        },
+      ),
         title: const Text(
           "TableServe",
           style: TextStyle(
@@ -254,6 +281,12 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
               }
             } 
           ),
+           IconButton(
+          icon: const Icon(Icons.admin_panel_settings),
+          onPressed: () {
+            Navigator.pushNamed(context, '/adminPanel');
+          },
+        ),
         ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),
@@ -378,35 +411,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
               },
               child: const Text("Custom Request", style: TextStyle(fontSize: 18)),
             ),
-
-            ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0),
-              ),
-            ),
-            onPressed: _exitRequest, // Call the function to mark the request as inactive
-            child: const Text("Exit", style: TextStyle(fontSize: 18, color: Colors.white)),
-          ),
-
-            ElevatedButton(
-              onPressed: () {
-                String username = 'dave';
-                String password = '123';
-                
-                if (username == 'dave' && password == '123') {
-                  Navigator.pushNamed(context, '/adminPanel');
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid credentials')),
-                  );
-                }
-              },
-              child: const Text("Go to Admin Panel"),
-            )
-            
           ],
         ),
       ),

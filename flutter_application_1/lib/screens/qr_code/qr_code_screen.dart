@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart'; // Import kIsWeb
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -15,37 +16,71 @@ class _ScanScreenState extends State<ScanScreen> {
   String tableId = ""; // Store the tableId here
   bool isScanning = false; // Prevent multiple scans
 
-   @override
+  @override
   void dispose() {
     controller?.dispose();
     super.dispose();
   }
 
+  void _showInfoDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("How to Use the QR Scanner"),
+          content: const Text(
+            "1. Point the camera at the QR code.\n"
+            "2. Ensure the QR code is within the red borders.\n"
+            "3. Wait for the scanner to detect the QR code.\n"
+            "4. The table ID will be automatically processed.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    double scanArea = MediaQuery.of(context).size.width * 0.7; // 70% of the screen width
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Scan Table QR Code")),
+      appBar: AppBar(
+        title: const Text("Scan Table QR Code"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showInfoDialog,
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Expanded(
-            flex: 0,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                double width = MediaQuery.of(context).size.width * 0.3; // 80% of the screen width
-                double height = MediaQuery.of(context).size.height * 0.3; // 80% of the screen height
-
-                return Center(
-                child: SizedBox(
-                  width: width,
-                  height: height,
-                  child: QRView(
-                    key: qrKey,
-                    onQRViewCreated: _onQRViewCreated,
+            flex: 5,
+            child: Center(
+              child: Container(
+                width: scanArea,
+                height: scanArea,
+                child: QRView(
+                  key: qrKey,
+                  onQRViewCreated: _onQRViewCreated,
+                  overlay: QrScannerOverlayShape(
+                    borderColor: Colors.red,
+                    borderRadius: 10,
+                    borderLength: 30,
+                    borderWidth: 10,
+                    cutOutSize: scanArea,
                   ),
                 ),
-              );
-              },
+              ),
             ),
           ),
           const Expanded(
@@ -95,11 +130,12 @@ class _ScanScreenState extends State<ScanScreen> {
             SnackBar(content: Text('$tableId marked as active')),
           );
 
-         Navigator.pushReplacementNamed(
-          context,
-          '/guestRequest',
-          arguments: tableId,  // Pass the tableId here
-        );
+          // Navigate to GuestRequestScreen and pass the tableId
+          Navigator.pushReplacementNamed(
+            context,
+            '/guestRequest',
+            arguments: tableId,  // Pass the tableId here
+          );
         } else {
           // Show error if tableId is invalid
           ScaffoldMessenger.of(context).showSnackBar(
@@ -121,4 +157,3 @@ class _ScanScreenState extends State<ScanScreen> {
     });
   }
 }
-
