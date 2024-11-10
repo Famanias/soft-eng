@@ -231,41 +231,76 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           title: const Text("Messages"),
           content: SizedBox(
             width: double.maxFinite,
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('guestRequests')
-                  .doc(tableId)
-                  .collection('messages')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No messages"));
-                }
+            child: Column(
+              children: [
+                Expanded(
+                  child: StreamBuilder(
+                    stream: FirebaseFirestore.instance
+                        .collection('guestRequests')
+                        .doc(tableId)
+                        .collection('messages')
+                        .orderBy('timestamp', descending: true)
+                        .snapshots(),
+                    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                        return const Center(child: Text("No messages"));
+                      }
 
-                return ListView(
-                  children: snapshot.data!.docs.map((doc) {
-                    var message = doc.data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(message['message']),
-                      subtitle: Text(message['timestamp'].toDate().toString()),
-                    );
-                  }).toList(),
-                );
-              },
+                      return ListView(
+                         reverse: true,
+                        children: snapshot.data!.docs.map((doc) {
+                          var message = doc.data() as Map<String, dynamic>;
+                          bool isGuest = message['sender'] == 'guest';
+                           Timestamp? timestamp = message['timestamp'] as Timestamp?;
+                          return Align(
+                            alignment: isGuest ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                              padding: const EdgeInsets.all(10.0),
+                              decoration: BoxDecoration(
+                                color: isGuest ? Colors.blue[100] : Colors.grey[300],
+                                borderRadius: BorderRadius.circular(10.0),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    message['message'],
+                                    style: TextStyle(
+                                      color: isGuest ? Colors.black : Colors.black,
+                                    ),
+                                  ),
+                                  if (timestamp != null)
+                                  Text(
+                                    timestamp.toDate().toString(),
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                ),
+                TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(
+                    labelText: 'Message',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
             ),
           ),
           actions: [
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                labelText: 'Message',
-                border: OutlineInputBorder(),
-              ),
-            ),
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -275,7 +310,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             TextButton(
               onPressed: () {
                 _sendMessage();
-                Navigator.of(context).pop();
               },
               child: const Text("Send"),
             ),
@@ -287,7 +321,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
    void _sendMessage() async {
     if (_messageController.text.isNotEmpty) {
-      String docName = 'Message - ${DateTime.now()}';
+      String docName = 'Guest Message - ${DateTime.now()}';
       await FirebaseFirestore.instance
           .collection('guestRequests')
           .doc(tableId)
@@ -360,13 +394,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                 );
               }
             } 
-          ),
-           IconButton(
-          icon: const Icon(Icons.admin_panel_settings),
-          onPressed: () {
-            Navigator.pushNamed(context, '/adminPanel');
-          },
-        ),
+          )
         ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),

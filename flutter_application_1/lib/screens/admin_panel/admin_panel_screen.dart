@@ -146,11 +146,40 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                 }
 
                 return ListView(
+                   reverse: true,
                   children: snapshot.data!.docs.map((doc) {
                     var message = doc.data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(message['message']),
-                      subtitle: Text(message['timestamp'].toDate().toString()),
+                    bool isAdmin = message['sender'] == 'admin';
+                     Timestamp? timestamp = message['timestamp'] as Timestamp?;
+                    return Align(
+                      alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                        padding: const EdgeInsets.all(10.0),
+                        decoration: BoxDecoration(
+                          color: isAdmin ? Colors.blue[100] : Colors.grey[300],
+                          borderRadius: BorderRadius.circular(10.0),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              message['message'],
+                              style: TextStyle(
+                                color: isAdmin ? Colors.black : Colors.black,
+                              ),
+                            ),
+                            if (timestamp != null)
+                            Text(
+                              timestamp.toDate().toString(),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   }).toList(),
                 );
@@ -174,7 +203,6 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
             TextButton(
               onPressed: () {
                 _sendMessage(widget.tableId, ''); // Pass the required arguments here
-                Navigator.of(context).pop();
               },
               child: const Text("Send"),
             ),

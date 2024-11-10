@@ -31,6 +31,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
+      
       // Set the initial route to main screen
       initialRoute: '/qrCode',
       // Define routes for navigation
