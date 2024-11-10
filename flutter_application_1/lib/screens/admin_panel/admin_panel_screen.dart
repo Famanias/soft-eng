@@ -12,7 +12,9 @@ class AdminPanel extends StatelessWidget {
         stream: FirebaseFirestore.instance.collection('activeTables').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const CircularProgressIndicator();
+            return const Center(
+              child: CircularProgressIndicator(),
+          );
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("No active tables"));
@@ -95,7 +97,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.message, color: Colors.blue),
-                      onPressed: () => _showMessageDialog(doc.id, requestTypeText),
+                      onPressed: () => _showMessagesPopup(),
                     ),
                   ],
                 ),
@@ -104,26 +106,12 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
           );
         },
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _commentController,
-                decoration: const InputDecoration(
-                  labelText: 'Send a message',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.send),
-              onPressed: _sendComment,
-            ),
-          ],
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showMessagesPopup(),
+        child: const Icon(Icons.message),
+        backgroundColor: Colors.blue,
       ),
+      
     );
   }
 
@@ -134,60 +122,87 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
         .update({'status': status});
   }
 
-  void _sendComment() async {
-  if (_commentController.text.isNotEmpty) {
-    
-    String docName = '${widget.tableId} - Message';
-    await FirebaseFirestore.instance
-        .collection('activeTables')
-        .doc(widget.tableId)
-        .collection('messages')
-        .doc(docName)
-        .set({
-      'message': _commentController.text,
-      'timestamp': FieldValue.serverTimestamp(),
-      'sender': 'admin',
-    });
-    _commentController.clear();
-  }
-}
+  void _showMessagesPopup() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Messages"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder(
+              stream: FirebaseFirestore.instance
+                  .collection('guestRequests')
+                  .doc(widget.tableId)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No messages"));
+                }
 
-  void _showMessageDialog(String requestId, String requestType) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
-        title: const Text("Send Message"),
-        content: TextField(
-          controller: _messageController,
-          decoration: const InputDecoration(
-            labelText: 'Message',
-            border: OutlineInputBorder(),
+                return ListView(
+                  children: snapshot.data!.docs.map((doc) {
+                    var message = doc.data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(message['message']),
+                      subtitle: Text(message['timestamp'].toDate().toString()),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () {
-              _sendMessage(requestId, requestType);
-              Navigator.of(context).pop();
-            },
-            child: const Text("Send"),
-          ),
-        ],
-      );
-    },
-  );
-}
+          actions: [
+            TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                labelText: 'Message',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+            TextButton(
+              onPressed: () {
+                _sendMessage(widget.tableId, ''); // Pass the required arguments here
+                Navigator.of(context).pop();
+              },
+              child: const Text("Send"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _sendComment() async {
+    if (_commentController.text.isNotEmpty) {
+      String docName = '${widget.tableId} - Message';
+      await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(widget.tableId)
+          .collection('messages')
+          .doc(docName)
+          .set({
+        'message': _commentController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sender': 'admin',
+      });
+      _commentController.clear();
+    }
+  }
 
   void _sendMessage(String requestId, String requestType) async {
     if (_messageController.text.isNotEmpty) {
-
       String docName = '${widget.tableId} Request Message - ${DateTime.now()}';
       await FirebaseFirestore.instance
           .collection('guestRequests')

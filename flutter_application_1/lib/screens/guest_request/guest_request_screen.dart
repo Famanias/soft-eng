@@ -17,6 +17,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   bool isScanning = false; // Prevent multiple scans
   String tableId = ""; // This will store the scanned table ID
   List<bool> selectedItems = List.generate(5, (index) => false);
+    final TextEditingController _messageController = TextEditingController();
   List<Map<String, dynamic>> requestHistory = [];
 
   @override
@@ -222,6 +223,85 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     );
   }
 
+  void _showMessageDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Messages"),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: StreamBuilder(
+              stream: FirebaseFirestore.instance
+                  .collection('guestRequests')
+                  .doc(tableId)
+                  .collection('messages')
+                  .orderBy('timestamp', descending: true)
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No messages"));
+                }
+
+                return ListView(
+                  children: snapshot.data!.docs.map((doc) {
+                    var message = doc.data() as Map<String, dynamic>;
+                    return ListTile(
+                      title: Text(message['message']),
+                      subtitle: Text(message['timestamp'].toDate().toString()),
+                    );
+                  }).toList(),
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                labelText: 'Message',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+            TextButton(
+              onPressed: () {
+                _sendMessage();
+                Navigator.of(context).pop();
+              },
+              child: const Text("Send"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+   void _sendMessage() async {
+    if (_messageController.text.isNotEmpty) {
+      String docName = 'Message - ${DateTime.now()}';
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(tableId)
+          .collection('messages')
+          .doc(docName)
+          .set({
+        'message': _messageController.text,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sender': 'guest',
+      });
+      _messageController.clear();
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -308,9 +388,9 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-                Text(
-              "Table number $tableId",
-              style: const TextStyle(
+                const Text(
+              "Guest Request",
+              style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF316175),
@@ -326,7 +406,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             
             const SizedBox(height: 5),
             const Text(
-              "Common requests of guests, can select multiple.",
+              "Select your request",
               style: TextStyle(fontSize: 16, color: Color(0xFF316175)),
               textAlign: TextAlign.center,
             ),
@@ -415,9 +495,10 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showRequestHistory,
-        child: const Icon(Icons.history),
+        onPressed: _showMessageDialog,
+        child: const Icon(Icons.message),
       ),
+      
     );
   }
 }
