@@ -470,38 +470,78 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                         selectedItems[index] = !selectedItems[index];
                       });
                     },
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      decoration: BoxDecoration(
-                        color: selectedItems[index] ? const Color(0xFF316175) : Colors.white,
-                        borderRadius: BorderRadius.circular(30.0),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withOpacity(0.3),
-                            spreadRadius: 1,
-                            blurRadius: 3,
-                            offset: const Offset(0, 2),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 60, // Set this to match the height of the white box
+                          alignment: Alignment.center,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(30),
+                            splashColor: Colors.transparent,
+                            highlightColor: Colors.transparent,
+                            onTap: () {
+                              // Handle information button press
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text('Information'),
+                                    content: Text('Details about the request type.'),
+                                    actions: <Widget>[
+                                      TextButton(
+                                        child: Text('Close'),
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            child: Icon(
+                              Icons.info,
+                              size: 50, // Adjust the size as needed
+                              color: selectedItems[index] ? const Color(0xFF316175) : const Color.fromARGB(255, 255, 255, 255),
+                            ),
                           ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info, color: selectedItems[index] ? Colors.white : const Color(0xFF316175)),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                requestTypes[index], // Display request type name
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: selectedItems[index] ? Colors.white : const Color.fromARGB(255, 49, 97, 117),
+                        ),
+                        const SizedBox(width: 10), // Add some space between the button and the container
+                        Expanded(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8.0),
+                            decoration: BoxDecoration(
+                              color: selectedItems[index] ? const Color(0xFF316175) : Colors.white,
+                              borderRadius: BorderRadius.circular(30.0),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.withOpacity(0.3),
+                                  spreadRadius: 1,
+                                  blurRadius: 3,
+                                  offset: const Offset(0, 2),
                                 ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Row(
+                                children: [
+                                  const SizedBox(width: 10), // Add some space between the button and the text
+                                  Expanded(
+                                    child: Text(
+                                      requestTypes[index], // Display request type name
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: selectedItems[index] ? Colors.white : const Color.fromARGB(255, 49, 97, 117),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   );
                 },
