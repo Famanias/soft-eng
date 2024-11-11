@@ -104,8 +104,8 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showMessagesPopup(),
-        child: const Icon(Icons.message),
         backgroundColor: Colors.blue,
+        child: const Icon(Icons.message),
       ),
       
     );

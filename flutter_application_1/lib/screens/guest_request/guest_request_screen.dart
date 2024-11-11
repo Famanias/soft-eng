@@ -397,23 +397,23 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           ),
         ),
         actions: [
-          // IconButton(
-          //   icon: const Icon(Icons.notifications),
-          //   onPressed: () {
-          //     if (tableId.isNotEmpty) {
-          //       Navigator.push(
-          //         context,
-          //         MaterialPageRoute(
-          //           builder: (context) => NotificationScreen(tableId: tableId),
-          //         ),
-          //       );
-          //     } else {
-          //       ScaffoldMessenger.of(context).showSnackBar(
-          //         const SnackBar(content: Text("No table ID available")),
-          //       );
-          //     }
-          //   } 
-          // )
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              if (tableId.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NotificationScreen(tableId: tableId),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("No table ID available")),
+                );
+              }
+            } 
+          )
         ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),

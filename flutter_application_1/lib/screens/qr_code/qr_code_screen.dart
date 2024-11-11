@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -23,42 +21,13 @@ class _ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  Future<User?> _signInWithGoogle() async {
-    final GoogleSignIn googleSignIn = GoogleSignIn(
-      clientId: '866243564535-05561go748lr38j905c8pmf1uufgl4nn.apps.googleusercontent.com', // Add your client ID here
-    );
-    final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-    if (googleUser == null) {
-      // The user canceled the sign-in
-      return null;
-    }
-
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-    final AuthCredential credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    final UserCredential userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-    return userCredential.user;
-  }
-
-  void _showAdminPanel() async {
-    // User? user = FirebaseAuth.instance.currentUser;
-    // user ??= await _signInWithGoogle();
-     Navigator.pushNamed(context, '/adminPanel');
-    // if (user != null) {
-    //   Navigator.pushNamed(context, '/adminPanel');
-    // } else {
-    //   ScaffoldMessenger.of(context).showSnackBar(
-    //     const SnackBar(content: Text("Sign-in failed")),
-    //   );
-    // }
+  void _showAdminPanel() {
+    Navigator.pushNamed(context, '/adminPanel');
   }
 
   @override
   Widget build(BuildContext context) {
-    double scanArea = MediaQuery.of(context).size.width * 0.7; // 70% of the screen width
+    double scanArea = MediaQuery.of(context).size.width * 0.75; // 75% of the screen width
 
     return Scaffold(
       appBar: AppBar(
@@ -79,9 +48,7 @@ class _ScanScreenState extends State<ScanScreen> {
           Expanded(
             flex: 5,
             child: Center(
-              child: Container(
-                width: scanArea,
-                height: scanArea,
+              child: SizedBox(
                 child: QRView(
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
