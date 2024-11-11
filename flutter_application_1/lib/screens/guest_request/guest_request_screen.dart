@@ -495,7 +495,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                                 requestTypes[index], // Display request type name
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: selectedItems[index] ? Colors.white : Colors.teal,
+                                  color: selectedItems[index] ? Colors.white : const Color.fromARGB(255, 49, 97, 117),
                                 ),
                               ),
                             ),
