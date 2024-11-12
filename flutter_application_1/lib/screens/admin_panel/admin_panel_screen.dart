@@ -15,7 +15,7 @@ class AdminPanel extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
-          );
+            );
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("No active tables"));
@@ -24,7 +24,7 @@ class AdminPanel extends StatelessWidget {
           return ListView(
             children: snapshot.data!.docs.map((doc) {
               return ListTile(
-                title: Text("${doc.id}"),
+                title: Text("Table ID: ${doc.id}"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -52,10 +52,9 @@ class RequestDetailsScreen extends StatefulWidget {
 }
 
 class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
-  
   String userName = "Guest";
 
-   @override
+  @override
   void initState() {
     super.initState();
     _fetchUserName();
@@ -100,8 +99,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                 requestTypeText = requestType.toString();
               }
 
-               userName = data['userName'] ?? "Guest";
-
+              userName = data['userName'] ?? "Guest";
 
               return ListTile(
                 title: Text("Request: $requestTypeText"),
@@ -111,11 +109,17 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.check, color: Colors.green),
-                      onPressed: () => _updateRequestStatus(doc.id, 'accepted'),
+                      onPressed: () {
+                        print("Check button pressed for request ID: ${doc.id}"); // Debug: Print when check button is pressed
+                        _updateRequestStatus(doc.id, 'accepted');
+                      },
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.red),
-                      onPressed: () => _updateRequestStatus(doc.id, 'rejected'),
+                      onPressed: () {
+                        print("Close button pressed for request ID: ${doc.id}"); // Debug: Print when close button is pressed
+                        _updateRequestStatus(doc.id, 'rejected');
+                      },
                     ),
                   ],
                 ),
@@ -129,16 +133,59 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
         backgroundColor: Colors.blue,
         child: const Icon(Icons.message),
       ),
-      
     );
   }
 
   void _updateRequestStatus(String requestId, String status) async {
+  try {
+    // Debug: Print the request ID and status being updated
+    print("Updating request ID: $requestId to status: $status");
+
+    // Fetch the request document to get the requestType
+    DocumentSnapshot requestDoc = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .doc(requestId)
+        .get();
+
+    String requestType = requestDoc['requestType'];
+
+    // Update the status of the request
     await FirebaseFirestore.instance
         .collection('guestRequests')
         .doc(requestId)
         .update({'status': status});
+
+    // Add a notification document
+    await FirebaseFirestore.instance
+        .collection('notifications')
+        .doc('Status of $requestId')
+        .set({
+          'tableId': widget.tableId,
+          'requestId': requestId,
+          'requestType': requestType,
+          'status': status,
+          'viewed': false,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+
+    // Notify the user of successful update
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Request status updated to $status"),
+        duration: Duration(seconds: 3), // Set the duration for the SnackBar
+      ),
+    );
+  } catch (e) {
+    // Show error message if update fails
+    print("Error updating request status: $e"); // Debug: Print the error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to update request status: $e"),
+        duration: Duration(seconds: 3), // Set the duration for the SnackBar
+      ),
+    );
   }
+}
 
   void _showMessagesScreen(String userName) {
     Navigator.push(
@@ -148,104 +195,4 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
       ),
     );
   }
-
-  // void _showMessagesPopup() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return AlertDialog(
-  //         title: const Text("Messages"),
-  //         content: SizedBox(
-  //           width: double.maxFinite,
-  //           child: StreamBuilder(
-  //             stream: FirebaseFirestore.instance
-  //                 .collection('guestRequests')
-  //                 .doc(widget.tableId)
-  //                 .collection('messages')
-  //                 .orderBy('timestamp', descending: true)
-  //                 .snapshots(),
-  //             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-  //               if (snapshot.connectionState == ConnectionState.waiting) {
-  //                 return const Center(child: CircularProgressIndicator());
-  //               }
-  //               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-  //                 return const Center(child: Text("No messages"));
-  //               }
-
-  //               return ListView(
-  //                 reverse: true,
-  //                 children: snapshot.data!.docs.map((doc) {
-  //                   var message = doc.data() as Map<String, dynamic>;
-  //                   bool isAdmin = message['sender'] == 'admin';
-  //                   Timestamp? timestamp = message['timestamp'] as Timestamp?;
-  //                   return Align(
-  //                     alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
-  //                     child: Container(
-  //                       margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-  //                       padding: const EdgeInsets.all(10.0),
-  //                       decoration: BoxDecoration(
-  //                         color: isAdmin ? Colors.blue[100] : Colors.grey[300],
-  //                         borderRadius: BorderRadius.circular(10.0),
-  //                       ),
-  //                       child: Column(
-  //                         crossAxisAlignment: CrossAxisAlignment.start,
-  //                         children: [
-  //                           Text(
-  //                             message['message'],
-  //                             style: TextStyle(
-  //                               color: isAdmin ? Colors.black : Colors.black,
-  //                             ),
-  //                           ),
-  //                           if (timestamp != null)
-  //                             Text(
-  //                               timestamp.toDate().toString(),
-  //                               style: const TextStyle(
-  //                                 fontSize: 10,
-  //                                 color: Colors.black54,
-  //                               ),
-  //                             ),
-  //                         ],
-  //                       ),
-  //                     ),
-  //                   );
-  //                 }).toList(),
-  //               );
-  //             },
-  //           ),
-  //         ),
-  //         actions: [
-  //           TextField(
-  //             controller: _messageController,
-  //             decoration: const InputDecoration(
-  //               labelText: 'Message',
-  //               border: OutlineInputBorder(),
-  //             ),
-  //           ),
-  //         Container(
-  //           margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
-  //           child: Row(
-  //             mainAxisAlignment: MainAxisAlignment.end,
-  //             children: [
-  //               TextButton(
-  //                 onPressed: () {
-  //                   Navigator.of(context).pop();
-  //                 },
-  //                 child: const Text("Close"),
-  //               ),
-  //               TextButton(
-  //                 onPressed: () {
-  //                   _sendMessage(widget.tableId, ''); // Pass the required arguments here
-  //                 },
-  //                 child: const Text("Send"),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //         ],
-  //       );
-  //     },
-  //   );
-  // }
-
-
 }

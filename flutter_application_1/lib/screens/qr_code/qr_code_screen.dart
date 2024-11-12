@@ -108,15 +108,41 @@ class _ScanScreenState extends State<ScanScreen> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Enter Your Name"),
-          content: TextField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: 'Name',
+          title: const Text(
+            "Enter Your Name",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          content: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Name',
+                hintText: 'Enter your name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+              ),
             ),
           ),
           actions: [
             TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text(
+                "Cancel",
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop(nameController.text);
               },
@@ -163,7 +189,7 @@ class _ScanScreenState extends State<ScanScreen> {
 
         // Show confirmation to user
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$tableId marked as active')),
+           SnackBar(content: Text('Hello, $userName')),
         );
 
         // Navigate to GuestRequestScreen and pass the tableId and userName

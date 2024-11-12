@@ -222,51 +222,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     );
   }
 }
-
-  void _showRequestHistory() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Request History"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              itemCount: requestHistory.length,
-              itemBuilder: (context, index) {
-                var request = requestHistory[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ListTile(
-                    title: Text(
-                      "Request: ${request['requestType'].join(', ')}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Status: ${request['status']}"),
-                        Text("Time: ${request['timestamp'].toDate()}"),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   void _showMessagesScreen() {
   Navigator.push(
     context,
@@ -275,7 +230,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     ),
   );
 }
-
 
   @override
   Widget build(BuildContext context) {
@@ -318,24 +272,87 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              if (tableId.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NotificationScreen(tableId: tableId),
+  StreamBuilder(
+    stream: FirebaseFirestore.instance
+        .collection('notifications')
+        .where('tableId', isEqualTo: tableId)
+        .where('status', whereIn: ['accepted', 'rejected'])
+        .where('viewed', isEqualTo: false) // Only show unviewed notifications
+        .snapshots(),
+    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+      if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+        return IconButton(
+          icon: Stack(
+            children: [
+              const Icon(Icons.notifications),
+              Positioned(
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(1),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("No table ID available")),
-                );
+                  constraints: const BoxConstraints(
+                    minWidth: 12,
+                    minHeight: 12,
+                  ),
+                  child: const Text(
+                    '!',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          onPressed: () async {
+            if (tableId.isNotEmpty) {
+              // Update the status of the notifications to 'viewed'
+              var batch = FirebaseFirestore.instance.batch();
+              for (var doc in snapshot.data!.docs) {
+                batch.update(doc.reference, {'viewed': true});
               }
-            } 
-          )
-        ],
+              await batch.commit();
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationScreen(tableId: tableId),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("No table ID available")),
+              );
+            }
+          },
+        );
+      } else {
+        return IconButton(
+          icon: const Icon(Icons.notifications),
+          onPressed: () {
+            if (tableId.isNotEmpty) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NotificationScreen(tableId: tableId),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("No table ID available")),
+              );
+            }
+          },
+        );
+      }
+    },
+  ),
+],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),
         elevation: 0,
