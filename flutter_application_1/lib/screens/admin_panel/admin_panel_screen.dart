@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'admin_message.dart';
 
 class AdminPanel extends StatelessWidget {
   const AdminPanel({super.key});
@@ -23,7 +24,7 @@ class AdminPanel extends StatelessWidget {
           return ListView(
             children: snapshot.data!.docs.map((doc) {
               return ListTile(
-                title: Text("Table ID: ${doc.id}"),
+                title: Text("${doc.id}"),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -51,8 +52,25 @@ class RequestDetailsScreen extends StatefulWidget {
 }
 
 class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
-  final TextEditingController _commentController = TextEditingController();
-  final TextEditingController _messageController = TextEditingController();
+  
+  String userName = "Guest";
+
+   @override
+  void initState() {
+    super.initState();
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    DocumentSnapshot doc = await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(widget.tableId)
+        .get();
+
+    setState(() {
+      userName = doc['userName'] ?? "Guest";
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +91,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
 
           return ListView(
             children: snapshot.data!.docs.map((doc) {
+              var data = doc.data() as Map<String, dynamic>;
               var requestType = doc['requestType'];
               String requestTypeText;
               if (requestType is List) {
@@ -80,6 +99,9 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
               } else {
                 requestTypeText = requestType.toString();
               }
+
+               userName = data['userName'] ?? "Guest";
+
 
               return ListTile(
                 title: Text("Request: $requestTypeText"),
@@ -103,7 +125,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () => _showMessagesPopup(),
+        onPressed: () => _showMessagesScreen(userName),
         backgroundColor: Colors.blue,
         child: const Icon(Icons.message),
       ),
@@ -118,137 +140,112 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> {
         .update({'status': status});
   }
 
-  void _showMessagesPopup() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Messages"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: StreamBuilder(
-              stream: FirebaseFirestore.instance
-                  .collection('guestRequests')
-                  .doc(widget.tableId)
-                  .collection('messages')
-                  .orderBy('timestamp', descending: true)
-                  .snapshots(),
-              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No messages"));
-                }
-
-                return ListView(
-                  reverse: true,
-                  children: snapshot.data!.docs.map((doc) {
-                    var message = doc.data() as Map<String, dynamic>;
-                    bool isAdmin = message['sender'] == 'admin';
-                    Timestamp? timestamp = message['timestamp'] as Timestamp?;
-                    return Align(
-                      alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                        padding: const EdgeInsets.all(10.0),
-                        decoration: BoxDecoration(
-                          color: isAdmin ? Colors.blue[100] : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              message['message'],
-                              style: TextStyle(
-                                color: isAdmin ? Colors.black : Colors.black,
-                              ),
-                            ),
-                            if (timestamp != null)
-                              Text(
-                                timestamp.toDate().toString(),
-                                style: const TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                labelText: 'Message',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          Container(
-            margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text("Close"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    _sendMessage(widget.tableId, ''); // Pass the required arguments here
-                  },
-                  child: const Text("Send"),
-                ),
-              ],
-            ),
-          ),
-          ],
-        );
-      },
+  void _showMessagesScreen(String userName) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AdminMessagesScreen(tableId: widget.tableId, userName: userName),
+      ),
     );
   }
 
-  void _sendComment() async {
-    if (_commentController.text.isNotEmpty) {
-      String docName = '${widget.tableId} - Message';
-      await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(widget.tableId)
-          .collection('messages')
-          .doc(docName)
-          .set({
-        'message': _commentController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'sender': 'admin',
-      });
-      _commentController.clear();
-    }
-  }
+  // void _showMessagesPopup() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         title: const Text("Messages"),
+  //         content: SizedBox(
+  //           width: double.maxFinite,
+  //           child: StreamBuilder(
+  //             stream: FirebaseFirestore.instance
+  //                 .collection('guestRequests')
+  //                 .doc(widget.tableId)
+  //                 .collection('messages')
+  //                 .orderBy('timestamp', descending: true)
+  //                 .snapshots(),
+  //             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+  //               if (snapshot.connectionState == ConnectionState.waiting) {
+  //                 return const Center(child: CircularProgressIndicator());
+  //               }
+  //               if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+  //                 return const Center(child: Text("No messages"));
+  //               }
 
-  void _sendMessage(String requestId, String requestType) async {
-    if (_messageController.text.isNotEmpty) {
-      String docName = '${widget.tableId} Request Message - ${DateTime.now()}';
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(requestId)
-          .collection('messages')
-          .doc(docName)
-          .set({
-        'tableId': widget.tableId,
-        'requestType': requestType,
-        'message': _messageController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'sender': 'admin',
-      });
-      _messageController.clear();
-    }
-  }
+  //               return ListView(
+  //                 reverse: true,
+  //                 children: snapshot.data!.docs.map((doc) {
+  //                   var message = doc.data() as Map<String, dynamic>;
+  //                   bool isAdmin = message['sender'] == 'admin';
+  //                   Timestamp? timestamp = message['timestamp'] as Timestamp?;
+  //                   return Align(
+  //                     alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+  //                     child: Container(
+  //                       margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+  //                       padding: const EdgeInsets.all(10.0),
+  //                       decoration: BoxDecoration(
+  //                         color: isAdmin ? Colors.blue[100] : Colors.grey[300],
+  //                         borderRadius: BorderRadius.circular(10.0),
+  //                       ),
+  //                       child: Column(
+  //                         crossAxisAlignment: CrossAxisAlignment.start,
+  //                         children: [
+  //                           Text(
+  //                             message['message'],
+  //                             style: TextStyle(
+  //                               color: isAdmin ? Colors.black : Colors.black,
+  //                             ),
+  //                           ),
+  //                           if (timestamp != null)
+  //                             Text(
+  //                               timestamp.toDate().toString(),
+  //                               style: const TextStyle(
+  //                                 fontSize: 10,
+  //                                 color: Colors.black54,
+  //                               ),
+  //                             ),
+  //                         ],
+  //                       ),
+  //                     ),
+  //                   );
+  //                 }).toList(),
+  //               );
+  //             },
+  //           ),
+  //         ),
+  //         actions: [
+  //           TextField(
+  //             controller: _messageController,
+  //             decoration: const InputDecoration(
+  //               labelText: 'Message',
+  //               border: OutlineInputBorder(),
+  //             ),
+  //           ),
+  //         Container(
+  //           margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
+  //           child: Row(
+  //             mainAxisAlignment: MainAxisAlignment.end,
+  //             children: [
+  //               TextButton(
+  //                 onPressed: () {
+  //                   Navigator.of(context).pop();
+  //                 },
+  //                 child: const Text("Close"),
+  //               ),
+  //               TextButton(
+  //                 onPressed: () {
+  //                   _sendMessage(widget.tableId, ''); // Pass the required arguments here
+  //                 },
+  //                 child: const Text("Send"),
+  //               ),
+  //             ],
+  //           ),
+  //         ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
+
+
 }
