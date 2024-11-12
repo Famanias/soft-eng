@@ -272,87 +272,87 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           ),
         ),
         actions: [
-  StreamBuilder(
-    stream: FirebaseFirestore.instance
-        .collection('notifications')
-        .where('tableId', isEqualTo: tableId)
-        .where('status', whereIn: ['accepted', 'rejected'])
-        .where('viewed', isEqualTo: false) // Only show unviewed notifications
-        .snapshots(),
-    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-      if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-        return IconButton(
-          icon: Stack(
-            children: [
-              const Icon(Icons.notifications),
-              Positioned(
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(1),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(6),
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .where('tableId', isEqualTo: tableId)
+                .where('status', whereIn: ['accepted', 'rejected'])
+                .where('viewed', isEqualTo: false) // Only show unviewed notifications
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.notifications),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: const Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 12,
-                    minHeight: 12,
-                  ),
-                  child: const Text(
-                    '!',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          onPressed: () async {
-            if (tableId.isNotEmpty) {
-              // Update the status of the notifications to 'viewed'
-              var batch = FirebaseFirestore.instance.batch();
-              for (var doc in snapshot.data!.docs) {
-                batch.update(doc.reference, {'viewed': true});
-              }
-              await batch.commit();
+                  onPressed: () async {
+                    if (tableId.isNotEmpty) {
+                      // Update the status of the notifications to 'viewed'
+                      var batch = FirebaseFirestore.instance.batch();
+                      for (var doc in snapshot.data!.docs) {
+                        batch.update(doc.reference, {'viewed': true});
+                      }
+                      await batch.commit();
 
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => NotificationScreen(tableId: tableId),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("No table ID available")),
-              );
-            }
-          },
-        );
-      } else {
-        return IconButton(
-          icon: const Icon(Icons.notifications),
-          onPressed: () {
-            if (tableId.isNotEmpty) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => NotificationScreen(tableId: tableId),
-                ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("No table ID available")),
-              );
-            }
-          },
-        );
-      }
-    },
-  ),
-],
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationScreen(tableId: tableId),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No table ID available")),
+                      );
+                    }
+                  },
+                );
+              } else {
+                return IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () {
+                    if (tableId.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationScreen(tableId: tableId),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No table ID available")),
+                      );
+                    }
+                  },
+                );
+              }
+            },
+          ),
+        ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),
         elevation: 0,
