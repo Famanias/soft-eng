@@ -74,13 +74,28 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
   // Placeholder list of request types (replace "Lorem Ipsum Request" with actual request types)
   List<String> requestTypes = [
-    "Eat",
-    "Sleep",
-    "Play",
-    "Rest",
-    "Swim",
+    "Frequently Asked Questions",
+    "Housekeeping Request",
+    "Assistance Request",
+    "Checkout Request",
+    "Summon a Staff",
   ];
 
+    // Define a map for request information
+  final Map<String, String> requestInformation = {
+    'Frequently Asked Questions': 'Request for information on common questions and answers',
+    'Housekeeping Request': 'Request for cottage cleaning or other housekeeping services',
+    'Assistance Request': 'Ask for help or support from the staff for various needs.',
+    "Checkout Request": "Notify the staff that you will be checking out and require assistance with the process.",
+    "Summon a Staff": "Request a staff member to come to your location for immediate assistance.",
+    
+    // Add more request types and their information here
+  };
+
+    // Function to get information based on request type
+  String getRequestInformation(String requestType) {
+    return requestInformation[requestType] ?? 'No information available';
+  }
 
   Future<void> _submitRequest() async {
     // Collect the selected request types
@@ -486,7 +501,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                                 builder: (BuildContext context) {
                                   return AlertDialog(
                                     title: Text('Information'),
-                                    content: Text('Details about the request type.'),
+                                    content: Text(getRequestInformation(requestTypes[index])),
                                     actions: <Widget>[
                                       TextButton(
                                         child: Text('Close'),
