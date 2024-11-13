@@ -4,6 +4,8 @@ import 'package:flutter_application_1/screens/custom_request/custom_request_scre
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification.dart';
+import 'message.dart';
+import 'dart:developer';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -17,8 +19,8 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
   String tableId = ""; // This will store the scanned table ID
+  String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
-    final TextEditingController _messageController = TextEditingController();
   List<Map<String, dynamic>> requestHistory = [];
 
   @override
@@ -32,12 +34,13 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Retrieve the tableId from the arguments
-    final args = ModalRoute.of(context)?.settings.arguments as String?;
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       setState(() {
-        tableId = args;
+        tableId = args['tableId'];
+        userName = args['userName'];
       });
-       _saveTableId(args);
+        _saveTableId(args['tableId'], args['userName']);
     }
   }
 
@@ -45,12 +48,15 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       tableId = prefs.getString('tableId') ?? "";
+      userName = prefs.getString('userName') ?? "Guest";
     });
+    _fetchRequestHistory();
   }
 
-  Future<void> _saveTableId(String id) async {
+  Future<void> _saveTableId(String id, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tableId', id);
+     await prefs.setString('userName', userName);
   }
 
   Future<void> _fetchRequestHistory() async {
@@ -133,6 +139,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           'requestType': requestType,
           'status': 'active',
           'timestamp': Timestamp.now(),
+          'userName': userName,
         });
       }
 
@@ -153,7 +160,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     }
   }
 
-  Future<void> _exitRequest() async {
+ Future<void> _exitRequest() async {
   try {
     // Update the status of the request to 'inactive' in Firestore
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -168,6 +175,9 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           .doc(doc.id)
           .update({'status': 'inactive'});
 
+      // Debug: Print the document ID being processed
+      log("Processing document ID: ${doc.id}");
+
       // Delete all messages in the messages subcollection
       QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
@@ -175,7 +185,13 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           .collection('messages')
           .get();
 
+      // Debug: Print the number of messages found
+      log("Found ${messagesSnapshot.docs.length} messages to delete");
+
       for (var messageDoc in messagesSnapshot.docs) {
+        // Debug: Print the message document ID being deleted
+        log("Deleting message ID: ${messageDoc.id}");
+
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(doc.id)
@@ -185,10 +201,21 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       }
     }
 
+    // Update the status and userName in the activeTables collection
     await FirebaseFirestore.instance
         .collection('activeTables')
         .doc(tableId)
-        .update({'status': 'inactive'});
+        .update({
+          'status': 'inactive',
+          'userName': 'null', // Set the userName to 'null'
+        });
+
+    // Debug: Verify the update
+    DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(tableId)
+        .get();
+    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
     // Notify the user of successful update
     ScaffoldMessenger.of(context).showSnackBar(
@@ -205,172 +232,20 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     Navigator.popAndPushNamed(context, '/qrCode');
   } catch (e) {
     // Show error message if update fails
+    print("Error: $e"); // Debug: Print the error
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Failed to mark request as inactive: $e")),
     );
   }
 }
-
-  void _showRequestHistory() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Request History"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              itemCount: requestHistory.length,
-              itemBuilder: (context, index) {
-                var request = requestHistory[index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: ListTile(
-                    title: Text(
-                      "Request: ${request['requestType'].join(', ')}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text("Status: ${request['status']}"),
-                        Text("Time: ${request['timestamp'].toDate()}"),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Close"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showMessageDialog() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Messages"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: Column(
-              children: [
-                Expanded(
-                  child: StreamBuilder(
-                    stream: FirebaseFirestore.instance
-                        .collection('guestRequests')
-                        .doc(tableId)
-                        .collection('messages')
-                        .orderBy('timestamp', descending: true)
-                        .snapshots(),
-                    builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return const Center(child: Text("No messages"));
-                      }
-
-                      return ListView(
-                         reverse: true,
-                        children: snapshot.data!.docs.map((doc) {
-                          var message = doc.data() as Map<String, dynamic>;
-                          bool isGuest = message['sender'] == 'guest';
-                           Timestamp? timestamp = message['timestamp'] as Timestamp?;
-                          return Align(
-                            alignment: isGuest ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                              padding: const EdgeInsets.all(10.0),
-                              decoration: BoxDecoration(
-                                color: isGuest ? Colors.blue[100] : Colors.grey[300],
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    message['message'],
-                                    style: TextStyle(
-                                      color: isGuest ? Colors.black : Colors.black,
-                                    ),
-                                  ),
-                                  if (timestamp != null)
-                                  Text(
-                                    timestamp.toDate().toString(),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      );
-                    },
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.only(top: 16.0), // Add margin at the top
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      labelText: 'Message',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Close"),
-            ),
-            TextButton(
-              onPressed: () {
-                _sendMessage();
-              },
-              child: const Text("Send"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-   void _sendMessage() async {
-    if (_messageController.text.isNotEmpty) {
-      String docName = 'Guest Message - ${DateTime.now()}';
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(tableId)
-          .collection('messages')
-          .doc(docName)
-          .set({
-        'message': _messageController.text,
-        'timestamp': FieldValue.serverTimestamp(),
-        'sender': 'guest',
-      });
-      _messageController.clear();
-    }
-  }
-
+  void _showMessagesScreen() {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => MessagesScreen(tableId: tableId, userName: userName),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -413,23 +288,86 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              if (tableId.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NotificationScreen(tableId: tableId),
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('notifications')
+                .where('tableId', isEqualTo: tableId)
+                .where('status', whereIn: ['accepted', 'rejected'])
+                .where('viewed', isEqualTo: false) // Only show unviewed notifications
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.notifications),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: const Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  onPressed: () async {
+                    if (tableId.isNotEmpty) {
+                      // Update the status of the notifications to 'viewed'
+                      var batch = FirebaseFirestore.instance.batch();
+                      for (var doc in snapshot.data!.docs) {
+                        batch.update(doc.reference, {'viewed': true});
+                      }
+                      await batch.commit();
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationScreen(tableId: tableId),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No table ID available")),
+                      );
+                    }
+                  },
                 );
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("No table ID available")),
+                return IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () {
+                    if (tableId.isNotEmpty) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => NotificationScreen(tableId: tableId),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No table ID available")),
+                      );
+                    }
+                  },
                 );
               }
-            } 
-          )
+            },
+          ),
         ],
         centerTitle: true,
         backgroundColor: const Color(0xFFE4CB9D),
@@ -603,7 +541,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showMessageDialog,
+        onPressed: _showMessagesScreen,
         child: const Icon(Icons.message),
       ),
       
