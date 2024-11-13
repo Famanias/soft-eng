@@ -45,7 +45,7 @@ class NotificationScreen extends StatelessWidget {
                 subtitle: Text("Status: ${data['status']}"),
                 onTap: () {
                   // Debug: Print the data when the notification is pressed
-                  print("Notification pressed: ${data}");
+                  print("Notification pressed: $data");
                 },
               );
             },

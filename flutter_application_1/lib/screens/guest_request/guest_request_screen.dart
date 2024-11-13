@@ -92,7 +92,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     // Collect the selected request types
     List<String> selectedRequests = [];
 
-    if(tableId.isEmpty) {
+    if (tableId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("No table ID available")),
       );
@@ -113,11 +113,10 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       return;
     }
 
-    String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}';
-
-    // Prepare Firestore data for each request
     try {
       for (var requestType in selectedRequests) {
+        String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
+
         await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
           'tableId': tableId,
           'requestType': requestType,
