@@ -31,11 +31,20 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
       // Save the custom request to Firestore
       await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
         'tableId': widget.tableId,
-        'requestType': 'Custom Request',
-        'customRequest': customRequestDetails,
-        'status': 'active',
+        'requestType': customRequestDetails,
+        'status': 'pending', // Set status to 'pending'
         'timestamp': Timestamp.now(),
         'userName': widget.userName,
+      });
+
+      // Add a notification document
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'tableId': widget.tableId,
+        'requestId': docName,
+        'requestType': 'Custom Request',
+        'status': 'pending',
+        'viewed': false,
+        'timestamp': FieldValue.serverTimestamp(),
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -49,7 +58,7 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const GuestRequestScreen()),
-        (Route<dynamic> route) => false
+        (Route<dynamic> route) => false,
       );
 
     } catch (e) {

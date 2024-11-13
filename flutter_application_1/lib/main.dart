@@ -1,7 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'screens/guest_request/guest_request_screen.dart';
-import 'screens/custom_request/custom_request_screen.dart';
+import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 

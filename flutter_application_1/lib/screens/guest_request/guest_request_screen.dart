@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'custom_request_screen.dart';
 import 'notification.dart';
 import 'message.dart';
 import 'dart:developer';
@@ -26,10 +27,10 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   void initState() {
     super.initState();
     _loadTableId();
-     _fetchRequestHistory();
+    _fetchRequestHistory();
   }
 
-   @override
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Retrieve the tableId from the arguments
@@ -39,11 +40,11 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         tableId = args['tableId'];
         userName = args['userName'];
       });
-        _saveTableId(args['tableId'], args['userName']);
+      _saveTableId(args['tableId'], args['userName']);
     }
   }
 
-    Future<void> _loadTableId() async {
+  Future<void> _loadTableId() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       tableId = prefs.getString('tableId') ?? "";
@@ -55,7 +56,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   Future<void> _saveTableId(String id, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tableId', id);
-     await prefs.setString('userName', userName);
+    await prefs.setString('userName', name);
   }
 
   Future<void> _fetchRequestHistory() async {
@@ -96,7 +97,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     // Add more request types and their information here
   };
 
-    // Function to get information based on request type
+  // Function to get information based on request type
   String getRequestInformation(String requestType) {
     return requestInformation[requestType] ?? 'No information available';
   }
@@ -133,7 +134,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
           'tableId': tableId,
           'requestType': requestType,
-          'status': 'active',
+          'status': 'pending', // Set status to 'pending'
           'timestamp': Timestamp.now(),
           'userName': userName,
         });
@@ -156,92 +157,93 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     }
   }
 
- Future<void> _exitRequest() async {
-  try {
-    // Update the status of the request to 'inactive' in Firestore
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('guestRequests')
-        .where('tableId', isEqualTo: tableId)
-        .where('status', isEqualTo: 'active')
-        .get();
-
-    for (var doc in querySnapshot.docs) {
-      await FirebaseFirestore.instance
+  Future<void> _exitRequest() async {
+    try {
+      // Update the status of the request to 'inactive' in Firestore
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
-          .doc(doc.id)
-          .update({'status': 'inactive'});
-
-      // Debug: Print the document ID being processed
-      log("Processing document ID: ${doc.id}");
-
-      // Delete all messages in the messages subcollection
-      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(doc.id)
-          .collection('messages')
+          .where('tableId', isEqualTo: tableId)
+          .where('status', isEqualTo: 'active')
           .get();
 
-      // Debug: Print the number of messages found
-      log("Found ${messagesSnapshot.docs.length} messages to delete");
-
-      for (var messageDoc in messagesSnapshot.docs) {
-        // Debug: Print the message document ID being deleted
-        log("Deleting message ID: ${messageDoc.id}");
-
+      for (var doc in querySnapshot.docs) {
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(doc.id)
+            .update({'status': 'inactive'});
+
+        // Debug: Print the document ID being processed
+        log("Processing document ID: ${doc.id}");
+
+        // Delete all messages in the messages subcollection
+        QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(doc.id)
             .collection('messages')
-            .doc(messageDoc.id)
-            .delete();
+            .get();
+
+        // Debug: Print the number of messages found
+        log("Found ${messagesSnapshot.docs.length} messages to delete");
+
+        for (var messageDoc in messagesSnapshot.docs) {
+          // Debug: Print the message document ID being deleted
+          log("Deleting message ID: ${messageDoc.id}");
+
+          await FirebaseFirestore.instance
+              .collection('guestRequests')
+              .doc(doc.id)
+              .collection('messages')
+              .doc(messageDoc.id)
+              .delete();
+        }
       }
+
+      // Update the status and userName in the activeTables collection
+      await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(tableId)
+          .update({
+            'status': 'inactive',
+            'userName': 'null', // Set the userName to 'null'
+          });
+
+      // Debug: Verify the update
+      DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(tableId)
+          .get();
+      print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+
+      // Notify the user of successful update
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Thank you for using the service")),
+      );
+
+      // Optionally, reset the state
+      setState(() {
+        tableId = "";
+        selectedItems = List.generate(5, (index) => false);
+      });
+
+      // Navigate back to the QR screen
+      Navigator.popAndPushNamed(context, '/qrCode');
+    } catch (e) {
+      // Show error message if update fails
+      print("Error: $e"); // Debug: Print the error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to mark request as inactive: $e")),
+      );
     }
+  }
 
-    // Update the status and userName in the activeTables collection
-    await FirebaseFirestore.instance
-        .collection('activeTables')
-        .doc(tableId)
-        .update({
-          'status': 'inactive',
-          'userName': 'null', // Set the userName to 'null'
-        });
-
-    // Debug: Verify the update
-    DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
-        .collection('activeTables')
-        .doc(tableId)
-        .get();
-    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
-
-    // Notify the user of successful update
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Thank you for using the service")),
-    );
-
-    // Optionally, reset the state
-    setState(() {
-      tableId = "";
-      selectedItems = List.generate(5, (index) => false);
-    });
-
-    // Navigate back to the QR screen
-    Navigator.popAndPushNamed(context, '/qrCode');
-  } catch (e) {
-    // Show error message if update fails
-    print("Error: $e"); // Debug: Print the error
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to mark request as inactive: $e")),
+  void _showMessagesScreen() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MessagesScreen(tableId: tableId, userName: userName),
+      ),
     );
   }
-}
-  void _showMessagesScreen() {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => MessagesScreen(tableId: tableId, userName: userName),
-    ),
-  );
-}
 
   @override
   Widget build(BuildContext context) {
@@ -249,32 +251,32 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
         leading: IconButton(
-        icon: const Icon(Icons.exit_to_app),
-        onPressed: () async {
-          bool? confirmExit = await showDialog<bool>(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text("Confirm Exit"),
-                content: const Text("Are you sure you want to exit?"),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text("Cancel"),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text("Exit"),
-                  ),
-                ],
-              );
-            },
-          );
-          if (confirmExit == true) {
-            _exitRequest();
-          }
-        },
-      ),
+          icon: const Icon(Icons.exit_to_app),
+          onPressed: () async {
+            bool? confirmExit = await showDialog<bool>(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  title: const Text("Confirm Exit"),
+                  content: const Text("Are you sure you want to exit?"),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text("Cancel"),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: const Text("Exit"),
+                    ),
+                  ],
+                );
+              },
+            );
+            if (confirmExit == true) {
+              _exitRequest();
+            }
+          },
+        ),
         title: const Text(
           "TableServe",
           style: TextStyle(
@@ -385,7 +387,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-                const Text(
+            const Text(
               "Guest Request",
               style: TextStyle(
                 fontSize: 28,
@@ -400,7 +402,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                 ],
               ),
             ),
-            
             const SizedBox(height: 5),
             const Text(
               "Select your request",
@@ -524,7 +525,15 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                 ),
               ),
               onPressed: () {
-                Navigator.pushNamed(context, '/customRequest');
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CustomRequestScreen(
+                      tableId: tableId,
+                      userName: userName,
+                    ),
+                  ),
+                );
               },
               child: const Text("Custom Request", style: TextStyle(fontSize: 18)),
             ),
@@ -535,7 +544,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         onPressed: _showMessagesScreen,
         child: const Icon(Icons.message),
       ),
-      
     );
   }
 }

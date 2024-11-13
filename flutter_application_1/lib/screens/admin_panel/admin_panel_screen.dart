@@ -139,24 +139,24 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
     );
   }
 
-  void _confirmDeleteRequest(String requestId) {
+  void _confirmMarkAsDone(String requestId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Delete Request"),
-          content: const Text("Are you sure you want to delete this request permanently?"),
+          title: const Text("Mark as Done"),
+          content: const Text("Are you sure you want to mark this request as done?"),
           actions: [
             TextButton(
-              child: const Text("Cancel"),
+              child: const Text("Not yet"),
               onPressed: () {
                 Navigator.of(context).pop();
               },
             ),
             TextButton(
-              child: const Text("Delete"),
+              child: const Text("Done"),
               onPressed: () {
-                _deleteRequest(requestId);
+                _markAsDone(requestId);
                 Navigator.of(context).pop();
               },
             ),
@@ -166,15 +166,46 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
     );
   }
 
-  Future<void> _deleteRequest(String requestId) async {
+  Future<void> _markAsDone(String requestId) async {
     try {
-      await FirebaseFirestore.instance.collection('guestRequests').doc(requestId).delete();
+      // Fetch the request document to get the current status and requestType
+      DocumentSnapshot requestDoc = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .get();
+
+      // String currentStatus = requestDoc['status'];
+      String tableId = requestDoc['tableId'];
+      String userName = requestDoc['userName'];
+      String requestType = requestDoc['requestType'];
+
+      // Only notify the user if the request is not already accepted
+        // Update the status to 'done'
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(requestId)
+            .update({'status': 'DONE'});
+
+
+        // Add a notification document
+        String docId = '$tableId - $requestType: DONE';
+        await FirebaseFirestore.instance.collection('notifications').doc(docId).set({
+          'tableId': tableId,
+          'requestId': requestId,
+          'requestType': requestType, // Use the actual request type
+          'status': 'DONE',
+          'viewed': false,
+          'timestamp': FieldValue.serverTimestamp(),
+          'userName': userName,
+        });
+      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request deleted successfully")),
+        const SnackBar(content: Text("Request marked as done successfully")),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete request: $e")),
+        SnackBar(content: Text("Failed to mark request as done: $e")),
       );
     }
   }
@@ -228,9 +259,9 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
                     },
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete, color: Colors.grey),
+                    icon: const Icon(Icons.done, color: Colors.grey),
                     onPressed: () {
-                      _confirmDeleteRequest(doc.id);
+                      _confirmMarkAsDone(doc.id);
                     },
                   ),
                 ],
@@ -250,7 +281,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: "Active"),
+            Tab(text: "Pending"),
             Tab(text: "Accepted"),
             Tab(text: "Rejected"),
           ],
@@ -259,7 +290,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildRequestList('active'),
+          _buildRequestList('pending'),
           _buildRequestList('accepted'),
           _buildRequestList('rejected'),
         ],
