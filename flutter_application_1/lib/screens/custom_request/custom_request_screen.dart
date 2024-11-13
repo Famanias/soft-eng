@@ -4,7 +4,8 @@ import 'package:flutter_application_1/screens/guest_request/guest_request_screen
 
 class CustomRequestScreen extends StatefulWidget {
   final String tableId;
-  const CustomRequestScreen({super.key, required this.tableId});
+  final String userName;
+  const CustomRequestScreen({super.key, required this.tableId, required this.userName});
 
   @override
   _CustomRequestScreenState createState() => _CustomRequestScreenState();
@@ -34,6 +35,7 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
         'customRequest': customRequestDetails,
         'status': 'active',
         'timestamp': Timestamp.now(),
+        'userName': widget.userName,
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -44,9 +46,10 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
       customRequestController.clear();
 
       // Navigate to the GuestRequestScreen after submission
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const GuestRequestScreen()),
+        (Route<dynamic> route) => false
       );
 
     } catch (e) {
