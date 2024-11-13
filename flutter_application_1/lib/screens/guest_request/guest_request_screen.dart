@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/screens/custom_request/custom_request_screen.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'notification.dart';
@@ -79,6 +80,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     "Assistance Request",
     "Checkout Request",
     "Summon a Staff",
+    "Custom Request",
   ];
 
     // Define a map for request information
@@ -88,7 +90,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     'Assistance Request': 'Ask for help or support from the staff for various needs.',
     "Checkout Request": "Notify the staff that you will be checking out and require assistance with the process.",
     "Summon a Staff": "Request a staff member to come to your location for immediate assistance.",
-    
     // Add more request types and their information here
   };
 
@@ -589,7 +590,12 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                 ),
               ),
               onPressed: () {
-                Navigator.pushNamed(context, '/customRequest');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CustomRequestScreen(tableId: tableId),
+                      ),
+                    );
               },
               child: const Text("Custom Request", style: TextStyle(fontSize: 18)),
             ),

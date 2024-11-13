@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
-        '/customRequest': (context) => const CustomRequestScreen(),
+        '/customRequest': (context) => const CustomRequestScreen(tableId: '',),
         '/adminPanel': (context) => const AdminPanel(),
       },
     );

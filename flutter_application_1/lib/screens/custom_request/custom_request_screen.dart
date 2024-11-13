@@ -1,7 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/screens/guest_request/guest_request_screen.dart';
 
-class CustomRequestScreen extends StatelessWidget {
-  const CustomRequestScreen({super.key});
+class CustomRequestScreen extends StatefulWidget {
+  final String tableId;
+  const CustomRequestScreen({super.key, required this.tableId});
+
+  @override
+  _CustomRequestScreenState createState() => _CustomRequestScreenState();
+}
+
+class _CustomRequestScreenState extends State<CustomRequestScreen> {
+  final TextEditingController customRequestController = TextEditingController();
+
+  Future<void> _submitCustomRequest() async {
+    String customRequestDetails = customRequestController.text.trim();
+
+    if (customRequestDetails.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a custom request")),
+      );
+      return;
+    }
+
+    try {
+      // Generate a custom document ID using the table ID and timestamp
+      String docName = '${widget.tableId}-${DateTime.now().millisecondsSinceEpoch}';
+
+      // Save the custom request to Firestore
+      await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
+        'tableId': widget.tableId,
+        'requestType': 'Custom Request',
+        'customRequest': customRequestDetails,
+        'status': 'active',
+        'timestamp': Timestamp.now(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Custom request submitted successfully")),
+      );
+
+      // Clear the text field after submission
+      customRequestController.clear();
+
+      // Navigate to the GuestRequestScreen after submission
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const GuestRequestScreen()),
+      );
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to submit request: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +107,7 @@ class CustomRequestScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             const Text(
-              "describe your service request in detail.",
+              "Describe your service request in detail.",
               style: TextStyle(fontSize: 16, color: Color(0xFF316175)),
               textAlign: TextAlign.center,
             ),
@@ -67,9 +120,10 @@ class CustomRequestScreen extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12.0),
               ),
-              child: const TextField(
+              child: TextField(
+                controller: customRequestController,
                 maxLines: 8,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: "Type here...",
                   border: InputBorder.none,
                 ),
@@ -80,14 +134,13 @@ class CustomRequestScreen extends StatelessWidget {
             // Submit Request Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0), backgroundColor: const Color(0xFF316175),
+                padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
+                backgroundColor: const Color(0xFF316175),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30.0),
                 ),
               ),
-              onPressed: () {
-                // Handle custom submit action
-              },
+              onPressed: _submitCustomRequest,
               child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
           ],
