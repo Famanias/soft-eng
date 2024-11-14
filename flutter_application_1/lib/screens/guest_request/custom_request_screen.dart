@@ -41,7 +41,7 @@ class _CustomRequestScreenState extends State<CustomRequestScreen> {
       await FirebaseFirestore.instance.collection('notifications').add({
         'tableId': widget.tableId,
         'requestId': docName,
-        'requestType': 'Custom Request',
+        'requestType': customRequestDetails,
         'status': 'pending',
         'viewed': false,
         'timestamp': FieldValue.serverTimestamp(),
