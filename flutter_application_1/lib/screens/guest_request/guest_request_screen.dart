@@ -290,7 +290,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             stream: FirebaseFirestore.instance
                 .collection('notifications')
                 .where('tableId', isEqualTo: tableId)
-                .where('status', whereIn: ['accepted', 'rejected'])
+                .where('userName', isEqualTo: userName) 
                 .where('viewed', isEqualTo: false) // Only show unviewed notifications
                 .snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -335,7 +335,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NotificationScreen(tableId: tableId),
+                          builder: (context) => NotificationScreen(tableId: tableId, userName: userName),
                         ),
                       );
                     } else {
@@ -353,7 +353,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NotificationScreen(tableId: tableId),
+                          builder: (context) => NotificationScreen(tableId: tableId, userName: userName),
                         ),
                       );
                     } else {

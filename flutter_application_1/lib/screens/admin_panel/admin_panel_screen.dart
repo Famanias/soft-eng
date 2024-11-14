@@ -91,6 +91,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
           .get();
 
       String requestType = requestDoc['requestType'];
+      String userName = requestDoc['userName'];
 
       // Update the status of the request
       await FirebaseFirestore.instance
@@ -99,17 +100,20 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
           .update({'status': status});
 
       // Add a notification document
-      await FirebaseFirestore.instance
-          .collection('notifications')
-          .doc('Status of $requestId')
-          .set({
-            'tableId': widget.tableId,
-            'requestId': requestId,
-            'requestType': requestType,
-            'status': status,
-            'viewed': false,
-            'timestamp': FieldValue.serverTimestamp(),
-          });
+      
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .doc('Status of $requestId for $userName')
+            .set({
+          'tableId': widget.tableId,
+          'requestId': requestId,
+          'requestType': requestType,
+          'status': status,
+          'viewed': false,
+          'timestamp': FieldValue.serverTimestamp(),
+          'userName': userName,
+        });
+      
 
       // Notify the user of successful update
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,28 +180,33 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
 
       // String currentStatus = requestDoc['status'];
       String tableId = requestDoc['tableId'];
-      String userName = requestDoc['userName'];
+      // String userName = requestDoc['userName'];
       String requestType = requestDoc['requestType'];
+      String userName = requestDoc['userName'];
 
       // Only notify the user if the request is not already accepted
         // Update the status to 'done'
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(requestId)
-            .update({'status': 'DONE'});
+            .update({'status': 'done'});
 
 
         // Add a notification document
-        String docId = '$tableId - $requestType: DONE';
-        await FirebaseFirestore.instance.collection('notifications').doc(docId).set({
+        
+        await FirebaseFirestore.instance
+            .collection('notifications')
+            .doc('Status of $requestId for $userName')
+            .set({
           'tableId': tableId,
           'requestId': requestId,
-          'requestType': requestType, // Use the actual request type
-          'status': 'DONE',
+          'requestType': requestType,
+          'status': 'done',
           'viewed': false,
           'timestamp': FieldValue.serverTimestamp(),
           'userName': userName,
         });
+      
       
 
       ScaffoldMessenger.of(context).showSnackBar(

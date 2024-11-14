@@ -3,8 +3,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String tableId;
+  final String userName;
 
-  const NotificationScreen({required this.tableId, super.key});
+  const NotificationScreen({required this.tableId, required this.userName, super.key});
 
   @override
   _NotificationScreenState createState() => _NotificationScreenState();
@@ -15,8 +16,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Debug print to check the value of tableId
-    print("NotificationScreen tableId: ${widget.tableId}");
+    // Debug print to check the value of tableId and userName
+    print("NotificationScreen tableId: ${widget.tableId}, userName: ${widget.userName}");
 
     return Scaffold(
       appBar: AppBar(
@@ -92,7 +93,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Stream<QuerySnapshot> _getNotificationStream() {
     var query = FirebaseFirestore.instance
         .collection('notifications')
-        .where('tableId', isEqualTo: widget.tableId);
+        .where('tableId', isEqualTo: widget.tableId)
+        .where('userName', isEqualTo: widget.userName); // Filter notifications by userName
 
     if (_selectedStatus != 'all') {
       query = query.where('status', isEqualTo: _selectedStatus);
@@ -124,6 +126,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   var snapshots = await FirebaseFirestore.instance
                       .collection('notifications')
                       .where('tableId', isEqualTo: widget.tableId)
+                      .where('userName', isEqualTo: widget.userName) // Filter notifications by userName
                       .get();
                   for (var doc in snapshots.docs) {
                     batch.delete(doc.reference);

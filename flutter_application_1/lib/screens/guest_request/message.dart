@@ -13,7 +13,7 @@ class MessagesScreen extends StatelessWidget {
 
     void sendMessage() async {
       if (messageController.text.isNotEmpty) {
-        String docName = 'Guest Message - ${DateTime.now()}';
+        String docName = 'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(tableId)
@@ -31,7 +31,7 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin"),
+        title: Text("$userName's Conversation"), // Set the title to the user's name
       ),
       body: Column(
         children: [
@@ -41,11 +41,17 @@ class MessagesScreen extends StatelessWidget {
                   .collection('guestRequests')
                   .doc(tableId)
                   .collection('messages')
+                  .where('userName', isEqualTo: userName) // Filter messages by userName
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  // Log the error for debugging
+                  print("Error loading messages: ${snapshot.error}");
+                  return const Center(child: Text("Error loading messages"));
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text("No messages"));
@@ -106,6 +112,9 @@ class MessagesScreen extends StatelessWidget {
                 labelText: 'Message',
                 border: OutlineInputBorder(),
               ),
+              onSubmitted: (text) {
+                sendMessage();
+              },
             ),
           ),
           Padding(
