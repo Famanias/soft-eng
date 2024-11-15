@@ -111,7 +111,7 @@ class _ScanScreenState extends State<ScanScreen> {
     builder: (context) {
       return AlertDialog(
         title: const Text(
-          "Enter Your Name",
+          "Enter Your Username",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
@@ -122,7 +122,7 @@ class _ScanScreenState extends State<ScanScreen> {
           child: TextField(
             controller: nameController,
             decoration: InputDecoration(
-              labelText: 'Name',
+              labelText: 'Username',
               hintText: 'Enter your name',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.0),
@@ -154,81 +154,101 @@ class _ScanScreenState extends State<ScanScreen> {
 }
 
   void _onQRViewCreated(QRViewController controller) {
+  setState(() {
+    this.controller = controller;
+  });
+  // Set up listener for QR code scan
+  controller.scannedDataStream.listen((scanData) async {
+    if (isScanning) return; // Prevent multiple scans
+
     setState(() {
-      this.controller = controller;
+      isScanning = true;
     });
-    // Set up listener for QR code scan
-    controller.scannedDataStream.listen((scanData) async {
-      if (isScanning) return; // Prevent multiple scans
 
-      setState(() {
-        isScanning = true;
-      });
+    try {
+      // Get tableId from scanned QR code
+      String tableId = scanData.code ?? '';
+      print("Scanned QR code: $tableId");
 
-      try {
-        // Get tableId from scanned QR code
-        String tableId = scanData.code ?? '';
-        print("Scanned QR code: $tableId");
+      // Ensure tableId is not empty
+      if (tableId.isNotEmpty) {
+        String? userName = await _promptForName();
+        if (userName == null || userName.isEmpty) {
+          userName = "Guest";
+        }
 
-        // Ensure tableId is not empty
-        if (tableId.isNotEmpty) {
-          String? userName = await _promptForName();
-          if (userName == null || userName.isEmpty) {
-            userName = "Guest";
-          }
+        // Add the user to the list of users for the table
+        DocumentReference tableRef = FirebaseFirestore.instance.collection('activeTables').doc(tableId);
+        DocumentSnapshot tableDoc = await tableRef.get();
 
-          // Add the user to the list of users for the table
-          DocumentReference tableRef = FirebaseFirestore.instance.collection('activeTables').doc(tableId);
-          DocumentSnapshot tableDoc = await tableRef.get();
-
-          if (tableDoc.exists) {
+        if (tableDoc.exists) {
+          List<dynamic> userNames = tableDoc['userNames'] ?? [];
+          if (userNames.contains(userName)) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Username "$userName" already exists. Please choose a different name.')),
+            );
+            setState(() {
+              isScanning = false;
+            });
+            return;
+          } else {
             await tableRef.update({
               'status': 'active',
               'timestamp': Timestamp.now(),
               'userNames': FieldValue.arrayUnion([userName]),
             });
-          } else {
-            await tableRef.set({
-              'status': 'active',
-              'timestamp': Timestamp.now(),
-              'userNames': [userName],
-            });
           }
-
-           // Save tableId and userName to shared preferences
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('tableId', tableId);
-          await prefs.setString('userName', userName);
-
-          // Show confirmation to user
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hello, $userName')),
-          );
-
-          // Navigate to GuestRequestScreen and pass the tableId and userName
-          Navigator.pushReplacementNamed(
-            context,
-            '/guestRequest',
-            arguments: {'tableId': tableId, 'userName': userName},  // Pass the tableId and userName here
-          );
         } else {
-          // Show error if tableId is invalid
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code')),
-          );
+          await tableRef.set({
+            'status': 'active',
+            'timestamp': Timestamp.now(),
+            'userNames': [userName],
+          });
         }
-      } catch (e) {
-        print("Error saving to Firebase: $e");
+
+        // Save tableId and userName to shared preferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('tableId', tableId);
+        await prefs.setString('userName', userName);
+
+        // Show confirmation to user
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error processing QR code')),
+          SnackBar(content: Text('Hello, $userName')),
         );
-      } finally {
-        // Allow scanning again after a delay
-        await Future.delayed(const Duration(seconds: 2));
-        setState(() {
-          isScanning = false;
-        });
+
+        // create a new collection of users for analytics
+        CollectionReference analyticsRef = FirebaseFirestore.instance.collection('analytics');
+        DocumentReference analyticsDoc = analyticsRef.doc("$tableId + userCount"); 
+
+        await analyticsDoc.set({
+          'tableId': tableId,
+          'usersCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+
+        // Navigate to GuestRequestScreen and pass the tableId and userName
+        Navigator.pushReplacementNamed(
+          context,
+          '/guestRequest',
+          arguments: {'tableId': tableId, 'userName': userName},  // Pass the tableId and userName here
+        );
+      } else {
+        // Show error if tableId is invalid
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Invalid QR code')),
+        );
       }
-    });
-  }
+    } catch (e) {
+      print("Error saving to Firebase: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Error processing QR code')),
+      );
+    } finally {
+      // Allow scanning again after a delay
+      await Future.delayed(const Duration(seconds: 2));
+      setState(() {
+        isScanning = false;
+      });
+    }
+  });
+}
 }

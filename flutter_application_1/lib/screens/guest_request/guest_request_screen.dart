@@ -156,6 +156,15 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
           'timestamp': Timestamp.now(),
           'userName': userName,
         });
+
+         // create a new collection of users for analytics
+        CollectionReference analyticsRef = FirebaseFirestore.instance.collection('analytics');
+        DocumentReference analyticsDoc = analyticsRef.doc("$tableId + requestCount"); 
+
+        await analyticsDoc.set({
+          'tableId': tableId,
+          'requestCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
       }
 
       // Notify the user of successful submission
