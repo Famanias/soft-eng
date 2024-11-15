@@ -160,49 +160,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
   Future<void> _exitRequest() async {
   try {
-<<<<<<< HEAD
-=======
-    // Fetch all requests for the table
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('guestRequests')
         .where('tableId', isEqualTo: tableId)
-        .get();
-
-    // Delete each request and its associated messages
-    for (var doc in querySnapshot.docs) {
-      // Debug: Print the document ID being processed
-      log("Processing document ID: ${doc.id}");
-
-      // Delete all messages in the messages subcollection
-      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(doc.id)
-          .collection('messages')
-          .get();
-
-      // Debug: Print the number of messages found
-      log("Found ${messagesSnapshot.docs.length} messages to delete");
-
-      for (var messageDoc in messagesSnapshot.docs) {
-        // Debug: Print the message document ID being deleted
-        log("Deleting message ID: ${messageDoc.id}");
-
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(doc.id)
-            .collection('messages')
-            .doc(messageDoc.id)
-            .delete();
-      }
-
-      // Delete the request document
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(doc.id)
-          .delete();
-    }
-
->>>>>>> parent of c9eff76 (fixed exit bug)
     // Update the status and userName in the activeTables collection
       await FirebaseFirestore.instance
         .collection('activeTables')
