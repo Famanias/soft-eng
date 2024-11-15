@@ -15,7 +15,7 @@ class GuestRequestScreen extends StatefulWidget {
 }
 
 
-class _GuestRequestScreenState extends State<GuestRequestScreen> {
+class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
@@ -23,10 +23,12 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
+  Timer? _exitTimer;
 
   @override
   void initState() {
     super.initState();
+     WidgetsBinding.instance.addObserver(this);
     _loadTableId();
     _fetchRequestHistory();
   }
@@ -43,6 +45,27 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       });
       _saveTableId(args['tableId'], args['userName']);
     }
+  }
+
+   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      // Start a timer for 2 minutes
+      _exitTimer = Timer(const Duration(minutes: 2), () {
+        _exitRequest();
+      });
+    } else if (state == AppLifecycleState.resumed) {
+      // Cancel the timer if the user comes back
+      _exitTimer?.cancel();
+    }
+  }
+
+    @override
+  void dispose() {
+     WidgetsBinding.instance.removeObserver(this);
+    qrController?.dispose();
+     _exitTimer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadTableId() async {
@@ -72,12 +95,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
         requestHistory = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
       });
     }
-  }
-
-  @override
-  void dispose() {
-    qrController?.dispose();
-    super.dispose();
   }
 
   // Placeholder list of request types (replace "Lorem Ipsum Request" with actual request types)
@@ -160,7 +177,46 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
   Future<void> _exitRequest() async {
   try {
+    // Fetch all requests for the table
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('guestRequests')
         .where('tableId', isEqualTo: tableId)
+        .get();
+
+    // Delete each request and its associated messages
+    for (var doc in querySnapshot.docs) {
+      // Debug: Print the document ID being processed
+      log("Processing document ID: ${doc.id}");
+
+      // Delete all messages in the messages subcollection
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(doc.id)
+          .collection('messages')
+          .get();
+
+      // Debug: Print the number of messages found
+      log("Found ${messagesSnapshot.docs.length} messages to delete");
+
+      for (var messageDoc in messagesSnapshot.docs) {
+        // Debug: Print the message document ID being deleted
+        log("Deleting message ID: ${messageDoc.id}");
+
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(doc.id)
+            .collection('messages')
+            .doc(messageDoc.id)
+            .delete();
+      }
+
+      // Delete the request document
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(doc.id)
+          .delete();
+    }
+
     // Update the status and userName in the activeTables collection
       await FirebaseFirestore.instance
         .collection('activeTables')
@@ -213,6 +269,15 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
+         title: const Text(
+          "TableServe",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        
         leading: IconButton(
           icon: const Icon(Icons.exit_to_app),
           onPressed: () async {
@@ -240,14 +305,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             }
           },
         ),
-        title: const Text(
-          "TableServe",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
