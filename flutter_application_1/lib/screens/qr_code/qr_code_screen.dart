@@ -103,57 +103,55 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 
-  Future<String?> _promptForName() async {
-    TextEditingController nameController = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text(
-            "Enter Your Name",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
+ Future<String?> _promptForName() async {
+  TextEditingController nameController = TextEditingController();
+  return showDialog<String>(
+    context: context,
+    barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
+    builder: (context) {
+      return AlertDialog(
+        title: const Text(
+          "Enter Your Name",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
           ),
-          content: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Name',
-                hintText: 'Enter your name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
+        ),
+        content: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: 'Name',
+              hintText: 'Enter your name',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                borderRadius: BorderRadius.circular(10.0),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
                 Navigator.of(context).pop(nameController.text);
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Name is required")),
+                );
+              }
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   void _onQRViewCreated(QRViewController controller) {
     setState(() {
