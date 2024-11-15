@@ -251,6 +251,15 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
+         title: const Text(
+          "TableServe",
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        
         leading: IconButton(
           icon: const Icon(Icons.exit_to_app),
           onPressed: () async {
@@ -278,14 +287,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
             }
           },
         ),
-        title: const Text(
-          "TableServe",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+        
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
