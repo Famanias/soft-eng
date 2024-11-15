@@ -12,6 +12,7 @@ class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _GuestRequestScreenState createState() => _GuestRequestScreenState();
 }
 
@@ -159,6 +160,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
       }
 
       // Notify the user of successful submission
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Requests submitted successfully")),
       );
@@ -169,56 +171,17 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
       });
     } catch (e) {
       // Show error message if submission fails
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
     }
   }
 
-  Future<void> _exitRequest() async {
+Future<void> _exitRequest() async {
   try {
-    // Fetch all requests for the table
-    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-        .collection('guestRequests')
-        .where('tableId', isEqualTo: tableId)
-        .get();
-
-    // Delete each request and its associated messages
-    for (var doc in querySnapshot.docs) {
-      // Debug: Print the document ID being processed
-      log("Processing document ID: ${doc.id}");
-
-      // Delete all messages in the messages subcollection
-      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(doc.id)
-          .collection('messages')
-          .get();
-
-      // Debug: Print the number of messages found
-      log("Found ${messagesSnapshot.docs.length} messages to delete");
-
-      for (var messageDoc in messagesSnapshot.docs) {
-        // Debug: Print the message document ID being deleted
-        log("Deleting message ID: ${messageDoc.id}");
-
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(doc.id)
-            .collection('messages')
-            .doc(messageDoc.id)
-            .delete();
-      }
-
-      // Delete the request document
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(doc.id)
-          .delete();
-    }
-
     // Update the status and userName in the activeTables collection
-      await FirebaseFirestore.instance
+    await FirebaseFirestore.instance
         .collection('activeTables')
         .doc(tableId)
         .update({
@@ -231,9 +194,10 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
         .collection('activeTables')
         .doc(tableId)
         .get();
-    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+    log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
     // Notify the user of successful update
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Thank you for using the service")),
     );
@@ -245,15 +209,18 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
     });
 
     // Navigate back to the QR screen
+    // ignore: use_build_context_synchronously
     Navigator.popAndPushNamed(context, '/qrCode');
   } catch (e) {
     // Show error message if update fails
-    print("Error: $e"); // Debug: Print the error
+    log("Error: $e"); // Debug: Print the error
+    // ignore: use_build_context_synchronously
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to mark request as inactive: $e")),
+      SnackBar(content: Text("Failed to update the table status: $e")),
     );
   }
 }
+
 
   Future<void> _showMessagesScreen() async {
     Navigator.push(
@@ -354,6 +321,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
                       await batch.commit();
 
                       Navigator.push(
+                        // ignore: use_build_context_synchronously
                         context,
                         MaterialPageRoute(
                           builder: (context) => NotificationScreen(tableId: tableId, userName: userName),

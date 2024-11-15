@@ -224,13 +224,14 @@ class _ScanScreenState extends State<ScanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error processing QR code')),
         );
-      } finally {
-        // Allow scanning again after a delay
-        await Future.delayed(const Duration(seconds: 2));
-        setState(() {
-          isScanning = false;
-        });
-      }
+      } 
+        // finally {
+        //   // Allow scanning again after a delay
+        //   await Future.delayed(const Duration(seconds: 2));
+        //   setState(() {
+        //     isScanning = false;
+        //   });
+        // }
     });
   }
 }
