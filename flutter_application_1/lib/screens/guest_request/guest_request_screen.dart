@@ -6,6 +6,7 @@ import 'custom_request_screen.dart';
 import 'notification.dart';
 import 'message.dart';
 import 'dart:developer';
+import 'dart:async';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -14,12 +15,7 @@ class GuestRequestScreen extends StatefulWidget {
   _GuestRequestScreenState createState() => _GuestRequestScreenState();
 }
 
-<<<<<<< Updated upstream
-
 class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
-=======
-class _GuestRequestScreenState extends State<GuestRequestScreen> {
->>>>>>> Stashed changes
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
@@ -173,7 +169,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
       });
     } catch (e) {
       // Show error message if submission fails
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
@@ -181,7 +176,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   }
 
   Future<void> _exitRequest() async {
-<<<<<<< Updated upstream
   try {
     // Fetch all requests for the table
     QuerySnapshot querySnapshot = await FirebaseFirestore.instance
@@ -224,48 +218,42 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     }
 
     // Update the status and userName in the activeTables collection
-=======
-    try {
-      // Update the status and userName in the activeTables collection
->>>>>>> Stashed changes
       await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .update({
-            'status': 'inactive',
-            'userNames': FieldValue.arrayRemove([userName]), // Remove the userName from the array
-          });
+        .collection('activeTables')
+        .doc(tableId)
+        .update({
+          'status': 'inactive',
+          'userNames': FieldValue.arrayRemove([userName]), // Remove the userName from the array
+        });
 
-      // Debug: Verify the update
-      DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .get();
-      log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+    // Debug: Verify the update
+    DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(tableId)
+        .get();
+    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
-      // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Thank you for using the service")),
-      );
+    // Notify the user of successful update
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Thank you for using the service")),
+    );
 
-      // Optionally, reset the state
-      setState(() {
-        tableId = "";
-        selectedItems = List.generate(5, (index) => false);
-      });
+    // Optionally, reset the state
+    setState(() {
+      tableId = "";
+      selectedItems = List.generate(5, (index) => false);
+    });
 
-      // Navigate back to the QR screen
-      Navigator.popAndPushNamed(context, '/qrCode');
-    } catch (e) {
-      // Show error message if update fails
-      log("Error: $e"); // Debug: Print the error
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update the table status: $e")),
-      );
-    }
+    // Navigate back to the QR screen
+    Navigator.popAndPushNamed(context, '/qrCode');
+  } catch (e) {
+    // Show error message if update fails
+    print("Error: $e"); // Debug: Print the error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to mark request as inactive: $e")),
+    );
   }
-
+}
 
   Future<void> _showMessagesScreen() async {
     Navigator.push(
@@ -313,7 +301,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
               },
             );
             if (confirmExit == true) {
-               Navigator.pop(context);
+              _exitRequest();
             }
           },
         ),
