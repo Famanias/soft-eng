@@ -158,10 +158,53 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
     }
   }
 
-Future<void> _exitRequest() async {
+  Future<void> _exitRequest() async {
   try {
+<<<<<<< HEAD
+=======
+    // Fetch all requests for the table
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .where('tableId', isEqualTo: tableId)
+        .get();
+
+    // Delete each request and its associated messages
+    for (var doc in querySnapshot.docs) {
+      // Debug: Print the document ID being processed
+      log("Processing document ID: ${doc.id}");
+
+      // Delete all messages in the messages subcollection
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(doc.id)
+          .collection('messages')
+          .get();
+
+      // Debug: Print the number of messages found
+      log("Found ${messagesSnapshot.docs.length} messages to delete");
+
+      for (var messageDoc in messagesSnapshot.docs) {
+        // Debug: Print the message document ID being deleted
+        log("Deleting message ID: ${messageDoc.id}");
+
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(doc.id)
+            .collection('messages')
+            .doc(messageDoc.id)
+            .delete();
+      }
+
+      // Delete the request document
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(doc.id)
+          .delete();
+    }
+
+>>>>>>> parent of c9eff76 (fixed exit bug)
     // Update the status and userName in the activeTables collection
-    await FirebaseFirestore.instance
+      await FirebaseFirestore.instance
         .collection('activeTables')
         .doc(tableId)
         .update({
@@ -174,7 +217,7 @@ Future<void> _exitRequest() async {
         .collection('activeTables')
         .doc(tableId)
         .get();
-    log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
     // Notify the user of successful update
     ScaffoldMessenger.of(context).showSnackBar(
@@ -191,13 +234,12 @@ Future<void> _exitRequest() async {
     Navigator.popAndPushNamed(context, '/qrCode');
   } catch (e) {
     // Show error message if update fails
-    log("Error: $e"); // Debug: Print the error
+    print("Error: $e"); // Debug: Print the error
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to update the table status: $e")),
+      SnackBar(content: Text("Failed to mark request as inactive: $e")),
     );
   }
 }
-
 
   Future<void> _showMessagesScreen() async {
     Navigator.push(
