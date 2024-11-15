@@ -6,13 +6,14 @@ import 'custom_request_screen.dart';
 import 'notification.dart';
 import 'message.dart';
 import 'dart:developer';
+import 'dart:async';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
-
   @override
   _GuestRequestScreenState createState() => _GuestRequestScreenState();
 }
+
 
 class _GuestRequestScreenState extends State<GuestRequestScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -159,7 +160,6 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
 
 Future<void> _exitRequest() async {
   try {
-        .where('tableId', isEqualTo: tableId)
     // Update the status and userName in the activeTables collection
     await FirebaseFirestore.instance
         .collection('activeTables')
