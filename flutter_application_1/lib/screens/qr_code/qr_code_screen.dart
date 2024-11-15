@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -195,6 +196,11 @@ class _ScanScreenState extends State<ScanScreen> {
               'userNames': [userName],
             });
           }
+
+           // Save tableId and userName to shared preferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('tableId', tableId);
+          await prefs.setString('userName', userName);
 
           // Show confirmation to user
           ScaffoldMessenger.of(context).showSnackBar(

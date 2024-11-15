@@ -249,7 +249,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
 
             return ListTile(
               title: Text("Request: $requestTypeText"),
-              subtitle: Text("Status: ${doc['status']}"),
+              subtitle: Text("Status: ${doc['status']} : Name: $userName"),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [

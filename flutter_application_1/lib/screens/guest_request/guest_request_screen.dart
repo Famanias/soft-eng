@@ -158,85 +158,86 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> {
   }
 
   Future<void> _exitRequest() async {
-    try {
-      // Update the status of the request to 'inactive' in Firestore
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+  try {
+    // Fetch all requests for the table
+    QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .where('tableId', isEqualTo: tableId)
+        .get();
+
+    // Delete each request and its associated messages
+    for (var doc in querySnapshot.docs) {
+      // Debug: Print the document ID being processed
+      log("Processing document ID: ${doc.id}");
+
+      // Delete all messages in the messages subcollection
+      QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
-          .where('tableId', isEqualTo: tableId)
-          .where('status', isEqualTo: 'active')
+          .doc(doc.id)
+          .collection('messages')
           .get();
 
-      for (var doc in querySnapshot.docs) {
+      // Debug: Print the number of messages found
+      log("Found ${messagesSnapshot.docs.length} messages to delete");
+
+      for (var messageDoc in messagesSnapshot.docs) {
+        // Debug: Print the message document ID being deleted
+        log("Deleting message ID: ${messageDoc.id}");
+
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(doc.id)
-            .update({'status': 'inactive'});
-
-        // Debug: Print the document ID being processed
-        log("Processing document ID: ${doc.id}");
-
-        // Delete all messages in the messages subcollection
-        QuerySnapshot messagesSnapshot = await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(doc.id)
             .collection('messages')
-            .get();
-
-        // Debug: Print the number of messages found
-        log("Found ${messagesSnapshot.docs.length} messages to delete");
-
-        for (var messageDoc in messagesSnapshot.docs) {
-          // Debug: Print the message document ID being deleted
-          log("Deleting message ID: ${messageDoc.id}");
-
-          await FirebaseFirestore.instance
-              .collection('guestRequests')
-              .doc(doc.id)
-              .collection('messages')
-              .doc(messageDoc.id)
-              .delete();
-        }
+            .doc(messageDoc.id)
+            .delete();
       }
 
-      // Update the status and userName in the activeTables collection
+      // Delete the request document
       await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .update({
-            'status': 'inactive',
-            'userName': 'null', // Set the userName to 'null'
-          });
-
-      // Debug: Verify the update
-      DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .get();
-      print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
-
-      // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Thank you for using the service")),
-      );
-
-      // Optionally, reset the state
-      setState(() {
-        tableId = "";
-        selectedItems = List.generate(5, (index) => false);
-      });
-
-      // Navigate back to the QR screen
-      Navigator.popAndPushNamed(context, '/qrCode');
-    } catch (e) {
-      // Show error message if update fails
-      print("Error: $e"); // Debug: Print the error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to mark request as inactive: $e")),
-      );
+          .collection('guestRequests')
+          .doc(doc.id)
+          .delete();
     }
-  }
 
-  void _showMessagesScreen() {
+    // Update the status and userName in the activeTables collection
+      await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(tableId)
+        .update({
+          'status': 'inactive',
+          'userNames': FieldValue.arrayRemove([userName]), // Remove the userName from the array
+        });
+
+    // Debug: Verify the update
+    DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
+        .collection('activeTables')
+        .doc(tableId)
+        .get();
+    print("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+
+    // Notify the user of successful update
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Thank you for using the service")),
+    );
+
+    // Optionally, reset the state
+    setState(() {
+      tableId = "";
+      selectedItems = List.generate(5, (index) => false);
+    });
+
+    // Navigate back to the QR screen
+    Navigator.popAndPushNamed(context, '/qrCode');
+  } catch (e) {
+    // Show error message if update fails
+    print("Error: $e"); // Debug: Print the error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to mark request as inactive: $e")),
+    );
+  }
+}
+
+  Future<void> _showMessagesScreen() async {
     Navigator.push(
       context,
       MaterialPageRoute(
