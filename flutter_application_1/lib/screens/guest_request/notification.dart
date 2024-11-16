@@ -32,7 +32,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 _selectedStatus = newValue!;
               });
             },
-            items: <String>['all', 'accepted', 'rejected', 'pending', 'done']
+            items: <String>['all', 'accepted', 'rejected', 'pending', 'done', 'newMessage']
                 .map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
@@ -76,8 +76,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
               var data = doc.data() as Map<String, dynamic>;
 
               return ListTile(
-                title: Text("Request: ${data['requestType']}"),
-                subtitle: Text("Status: ${data['status']}"),
+                title: Text(data['type'] == 'newMessage'
+                    ? "Message from Admin"
+                    : "Request: ${data['requestType']}"),
+                subtitle: Text(data['type'] == 'newMessage'
+                    ? data['message']
+                    : "Status: ${data['status']}"),
                 onTap: () {
                   // Debug: Print the data when the notification is pressed
                   print("Notification pressed: $data");

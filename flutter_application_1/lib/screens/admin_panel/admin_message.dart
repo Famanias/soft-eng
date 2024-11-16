@@ -14,6 +14,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
   late TabController _tabController;
   List<String> activeUsers = [];
   final TextEditingController messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -25,6 +26,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
   void dispose() {
     _tabController.dispose();
     messageController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -71,8 +73,27 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
         'sender': 'admin',
         'userName': userName, // Save the userName separately
       });
+
+      await FirebaseFirestore.instance.collection('notifications').add({
+      'tableId': widget.tableId,
+      'userName': userName,
+      'type': 'newMessage',
+      'message': 'New message from admin',
+      'timestamp': FieldValue.serverTimestamp(),
+      'viewed': false,
+    });
+
       messageController.clear();
+      _scrollToBottom(); // Scroll to bottom after sending a message
     }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+      }
+    });
   }
 
   @override
@@ -108,14 +129,21 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
                             return const Center(child: CircularProgressIndicator());
                           }
                           if (snapshot.hasError) {
-                             print("Error loading messages: ${snapshot.error}");
+                            print("Error loading messages: ${snapshot.error}");
                             return const Center(child: Text("Error loading messages"));
                           }
                           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                             return const Center(child: Text("No messages"));
                           }
 
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (_scrollController.hasClients) {
+                              _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                            }
+                          });
+
                           return ListView(
+                            controller: _scrollController,
                             reverse: false, // Do not reverse the order of the messages
                             children: snapshot.data!.docs.map((doc) {
                               var message = doc.data() as Map<String, dynamic>;
@@ -151,7 +179,6 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
                                                 color: Colors.black54,
                                               ),
                                             ),
-                                          
                                         ],
                                       ),
                                     ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_message.dart';
+import 'admin_notification.dart';
 
 class AdminPanel extends StatelessWidget {
   const AdminPanel({super.key});
@@ -8,9 +9,73 @@ class AdminPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Admin Panel")),
+      appBar: AppBar(
+        title: const Text("Admin Panel"),
+        actions: [
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('adminNotifications')
+                .where('viewed', isEqualTo: false)
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.notifications),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: const Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              } else {
+                return IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+            },
+          ),
+        ],
+      ),
       body: StreamBuilder(
-        stream: FirebaseFirestore.instance.collection('activeTables').snapshots(),
+        stream:
+            FirebaseFirestore.instance.collection('activeTables').snapshots(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
@@ -29,7 +94,8 @@ class AdminPanel extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => RequestDetailsScreen(tableId: doc.id),
+                      builder: (context) =>
+                          RequestDetailsScreen(tableId: doc.id),
                     ),
                   );
                 },
@@ -51,14 +117,17 @@ class RequestDetailsScreen extends StatefulWidget {
   _RequestDetailsScreenState createState() => _RequestDetailsScreenState();
 }
 
-class _RequestDetailsScreenState extends State<RequestDetailsScreen> with SingleTickerProviderStateMixin {
+class _RequestDetailsScreenState extends State<RequestDetailsScreen>
+    with SingleTickerProviderStateMixin {
   String userName = "Guest";
   late TabController _tabController;
+  String? _selectedTableId;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _selectedTableId = widget.tableId;
     _fetchUserName();
   }
 
@@ -100,20 +169,19 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
           .update({'status': status});
 
       // Add a notification document
-      
-        await FirebaseFirestore.instance
-            .collection('notifications')
-            .doc('Status of $requestId for $userName')
-            .set({
-          'tableId': widget.tableId,
-          'requestId': requestId,
-          'requestType': requestType,
-          'status': status,
-          'viewed': false,
-          'timestamp': FieldValue.serverTimestamp(),
-          'userName': userName,
-        });
-      
+
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc('Status of $requestId for $userName')
+          .set({
+        'tableId': widget.tableId,
+        'requestId': requestId,
+        'requestType': requestType,
+        'status': status,
+        'viewed': false,
+        'timestamp': FieldValue.serverTimestamp(),
+        'userName': userName,
+      });
 
       // Notify the user of successful update
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +206,8 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AdminMessagesScreen(tableId: widget.tableId, userName: userName),
+        builder: (context) =>
+            AdminMessagesScreen(tableId: widget.tableId, userName: userName),
       ),
     );
   }
@@ -149,7 +218,8 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Mark as Done"),
-          content: const Text("Are you sure you want to mark this request as done?"),
+          content:
+              const Text("Are you sure you want to mark this request as done?"),
           actions: [
             TextButton(
               child: const Text("Not yet"),
@@ -185,29 +255,26 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
       String userName = requestDoc['userName'];
 
       // Only notify the user if the request is not already accepted
-        // Update the status to 'done'
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(requestId)
-            .update({'status': 'done'});
+      // Update the status to 'done'
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .update({'status': 'done'});
 
+      // Add a notification document
 
-        // Add a notification document
-        
-        await FirebaseFirestore.instance
-            .collection('notifications')
-            .doc('Status of $requestId for $userName')
-            .set({
-          'tableId': tableId,
-          'requestId': requestId,
-          'requestType': requestType,
-          'status': 'done',
-          'viewed': false,
-          'timestamp': FieldValue.serverTimestamp(),
-          'userName': userName,
-        });
-      
-      
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc('Status of $requestId for $userName')
+          .set({
+        'tableId': tableId,
+        'requestId': requestId,
+        'requestType': requestType,
+        'status': 'done',
+        'viewed': false,
+        'timestamp': FieldValue.serverTimestamp(),
+        'userName': userName,
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Request marked as done successfully")),
@@ -219,11 +286,71 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
     }
   }
 
+  void _showDeleteConfirmationDialog() {
+    TextEditingController confirmationController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Confirm Deletion"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                  "Type 'I UNDERSTAND' to confirm deletion of all requests."),
+              const SizedBox(height: 10),
+              TextField(
+                controller: confirmationController,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmation',
+                  hintText: 'I UNDERSTAND',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (confirmationController.text == 'I UNDERSTAND') {
+                  _deleteAllRequests();
+                  Navigator.of(context).pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text("Incorrect confirmation text")),
+                  );
+                }
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _deleteAllRequests() async {
+    var snapshots = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .where('tableId', isEqualTo: widget.tableId)
+        .get();
+    for (var doc in snapshots.docs) {
+      await doc.reference.delete();
+    }
+  }
+
   Widget _buildRequestList(String status) {
     return StreamBuilder(
       stream: FirebaseFirestore.instance
           .collection('guestRequests')
-          .where('tableId', isEqualTo: widget.tableId)
+          .where('tableId', isEqualTo: _selectedTableId)
           .where('status', isEqualTo: status)
           .snapshots(),
       builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -245,7 +372,7 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
               requestTypeText = requestType.toString();
             }
 
-            userName = data['userName'] ?? "Guest";
+            String userName = data['userName'] ?? "Guest";
 
             return ListTile(
               title: Text("Request: $requestTypeText"),
@@ -256,14 +383,12 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
                   IconButton(
                     icon: const Icon(Icons.check, color: Colors.green),
                     onPressed: () {
-                      print("Check button pressed for request ID: ${doc.id}"); // Debug: Print when check button is pressed
                       _updateRequestStatus(doc.id, 'accepted');
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.red),
                     onPressed: () {
-                      print("Close button pressed for request ID: ${doc.id}"); // Debug: Print when close button is pressed
                       _updateRequestStatus(doc.id, 'rejected');
                     },
                   ),
@@ -295,6 +420,97 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen> with Single
             Tab(text: "Rejected"),
           ],
         ),
+        actions: [
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('activeTables')
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (!snapshot.hasData) {
+                return const SizedBox.shrink();
+              }
+              var tableIds = snapshot.data!.docs.map((doc) => doc.id).toList();
+              return DropdownButton<String>(
+                value: _selectedTableId,
+                icon: const Icon(Icons.list, color: Colors.black),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedTableId = newValue!;
+                  });
+                },
+                items: tableIds.map<DropdownMenuItem<String>>((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('adminNotifications')
+                .where('viewed', isEqualTo: false)
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.notifications),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: const Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              } else {
+                return IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: _showDeleteConfirmationDialog,
+          ),
+        ],
       ),
       body: TabBarView(
         controller: _tabController,
