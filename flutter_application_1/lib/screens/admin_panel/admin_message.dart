@@ -7,10 +7,10 @@ class AdminMessagesScreen extends StatefulWidget {
   const AdminMessagesScreen({required this.tableId, super.key, required String userName});
 
   @override
-  _AdminMessagesScreenState createState() => _AdminMessagesScreenState();
+  AdminMessagesScreenState createState() => AdminMessagesScreenState();
 }
 
-class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTickerProviderStateMixin {
+class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<String> activeUsers = [];
   final TextEditingController messageController = TextEditingController();
@@ -74,14 +74,16 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
         'userName': userName, // Save the userName separately
       });
 
-      await FirebaseFirestore.instance.collection('notifications').add({
-      'tableId': widget.tableId,
-      'userName': userName,
-      'type': 'newMessage',
-      'message': 'New message from admin',
-      'timestamp': FieldValue.serverTimestamp(),
-      'viewed': false,
-    });
+      String messageAdminNotify = "Message";
+
+      await FirebaseFirestore.instance.collection('notifications').doc(messageAdminNotify).set({
+        'tableId': widget.tableId,
+        'userName': userName,
+        'type': 'newMessage',
+        'message': 'New message from admin',
+        'timestamp': FieldValue.serverTimestamp(),
+        'viewed': false,
+      });
 
       messageController.clear();
       _scrollToBottom(); // Scroll to bottom after sending a message
@@ -227,7 +229,7 @@ class _AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTi
                 );
               }).toList(),
             )
-          : const Center(child: CircularProgressIndicator()),
+          : const Center(child: Text("No users found")),
     );
   }
 }

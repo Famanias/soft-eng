@@ -7,10 +7,10 @@ class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
   @override
-  _ScanScreenState createState() => _ScanScreenState();
+  ScanScreenState createState() => ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen> {
+class ScanScreenState extends State<ScanScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   String tableId = ""; // Store the tableId here
@@ -33,7 +33,19 @@ class _ScanScreenState extends State<ScanScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Scan Table QR Code"),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("TableServe"),
+            const SizedBox(height: 1),
+            Image(
+              image: AssetImage('images/line.png'),
+              height: 2,
+              width: 100,
+            )
+          ],
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -44,7 +56,9 @@ class _ScanScreenState extends State<ScanScreen> {
             onPressed: _showAdminPanel,
           ),
         ],
+        backgroundColor: Color(0xFFE4CB9D),
       ),
+      backgroundColor: Color(0xFFE4CB9D),
       body: Column(
         children: [
           Expanded(
@@ -55,7 +69,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
                   overlay: QrScannerOverlayShape(
-                    borderColor: Colors.red,
+                    borderColor: Color(0xFFE4CB9D),
                     borderRadius: 10,
                     borderLength: 30,
                     borderWidth: 10,
@@ -193,9 +207,11 @@ class _ScanScreenState extends State<ScanScreen> {
                     content: Text(
                         'Username "$userName" already exists. Please choose a different name.')),
               );
-              setState(() {
-                isScanning = false;
-              });
+              if (mounted) {
+                setState(() {
+                  isScanning = false;
+                });
+              }
               return;
             } else {
               await tableRef.update({
@@ -275,9 +291,11 @@ class _ScanScreenState extends State<ScanScreen> {
       } finally {
         // Allow scanning again after a delay
         await Future.delayed(const Duration(seconds: 2));
-        setState(() {
-          isScanning = false;
-        });
+        if (mounted) {
+          setState(() {
+            isScanning = false;
+          });
+        }
       }
     });
   }

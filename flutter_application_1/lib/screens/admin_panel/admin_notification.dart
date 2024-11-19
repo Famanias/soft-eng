@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AdminNotificationScreen extends StatefulWidget {
+  const AdminNotificationScreen({super.key});
+
   @override
-  _AdminNotificationScreenState createState() =>
-      _AdminNotificationScreenState();
+  AdminNotificationScreenState createState() =>
+      AdminNotificationScreenState();
 }
 
-class _AdminNotificationScreenState extends State<AdminNotificationScreen> {
+class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   String _selectedFilter = 'all';
 
   @override

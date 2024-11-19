@@ -4,6 +4,13 @@ import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +23,7 @@ void main() async {
       projectId: 'tableserve-b0183',
     ),
   );
-
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   
   runApp(const MyApp());
 }

@@ -8,10 +8,10 @@ class CustomRequestScreen extends StatefulWidget {
   const CustomRequestScreen({super.key, required this.tableId, required this.userName});
 
   @override
-  _CustomRequestScreenState createState() => _CustomRequestScreenState();
+  CustomRequestScreenState createState() => CustomRequestScreenState();
 }
 
-class _CustomRequestScreenState extends State<CustomRequestScreen> {
+class CustomRequestScreenState extends State<CustomRequestScreen> {
   final TextEditingController customRequestController = TextEditingController();
 
   Future<void> _submitCustomRequest() async {

@@ -114,10 +114,10 @@ class RequestDetailsScreen extends StatefulWidget {
   const RequestDetailsScreen({required this.tableId, super.key});
 
   @override
-  _RequestDetailsScreenState createState() => _RequestDetailsScreenState();
+  RequestDetailsScreenState createState() => RequestDetailsScreenState();
 }
 
-class _RequestDetailsScreenState extends State<RequestDetailsScreen>
+class RequestDetailsScreenState extends State<RequestDetailsScreen>
     with SingleTickerProviderStateMixin {
   String userName = "Guest";
   late TabController _tabController;
@@ -143,9 +143,17 @@ class _RequestDetailsScreenState extends State<RequestDetailsScreen>
         .doc(widget.tableId)
         .get();
 
-    setState(() {
-      userName = doc['userName'] ?? "Guest";
-    });
+    if (doc.exists &&
+        doc.data() != null &&
+        (doc.data() as Map<String, dynamic>).containsKey('userName')) {
+      setState(() {
+        userName = doc['userName'] ?? "Guest";
+      });
+    } else {
+      setState(() {
+        userName = "Guest";
+      });
+    }
   }
 
   void _updateRequestStatus(String requestId, String status) async {
