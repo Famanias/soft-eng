@@ -7,10 +7,10 @@ class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
   @override
-  _ScanScreenState createState() => _ScanScreenState();
+  ScanScreenState createState() => ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen> {
+class ScanScreenState extends State<ScanScreen> {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   String tableId = ""; // Store the tableId here
@@ -28,11 +28,24 @@ class _ScanScreenState extends State<ScanScreen> {
 
   @override
   Widget build(BuildContext context) {
-    double scanArea = MediaQuery.of(context).size.width * 0.75; // 75% of the screen width
+    double scanArea =
+        MediaQuery.of(context).size.width * 0.75; // 75% of the screen width
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Scan Table QR Code"),
+        title: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("TableServe"),
+            const SizedBox(height: 1),
+            Image(
+              image: AssetImage('images/line.png'),
+              height: 2,
+              width: 100,
+            )
+          ],
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline),
@@ -43,7 +56,9 @@ class _ScanScreenState extends State<ScanScreen> {
             onPressed: _showAdminPanel,
           ),
         ],
+        backgroundColor: Color(0xFFE4CB9D),
       ),
+      backgroundColor: Color(0xFFE4CB9D),
       body: Column(
         children: [
           Expanded(
@@ -54,7 +69,7 @@ class _ScanScreenState extends State<ScanScreen> {
                   key: qrKey,
                   onQRViewCreated: _onQRViewCreated,
                   overlay: QrScannerOverlayShape(
-                    borderColor: Colors.red,
+                    borderColor: Color(0xFFE4CB9D),
                     borderRadius: 10,
                     borderLength: 30,
                     borderWidth: 10,
@@ -103,55 +118,56 @@ class _ScanScreenState extends State<ScanScreen> {
     );
   }
 
- Future<String?> _promptForName() async {
-  TextEditingController nameController = TextEditingController();
-  return showDialog<String>(
-    context: context,
-    barrierDismissible: false, // Prevent dismissing the dialog by tapping outside
-    builder: (context) {
-      return AlertDialog(
-        title: const Text(
-          "Enter Your Name",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
+  Future<String?> _promptForName() async {
+    TextEditingController nameController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible:
+          false, // Prevent dismissing the dialog by tapping outside
+      builder: (context) {
+        return AlertDialog(
+          title: const Text(
+            "Enter Your Username",
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
           ),
-        ),
-        content: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: TextField(
-            controller: nameController,
-            decoration: InputDecoration(
-              labelText: 'Name',
-              hintText: 'Enter your name',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                borderRadius: BorderRadius.circular(10.0),
+          content: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Username',
+                hintText: 'Enter your name',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
               ),
             ),
           ),
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              if (nameController.text.isNotEmpty) {
-                Navigator.of(context).pop(nameController.text);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Name is required")),
-                );
-              }
-            },
-            child: const Text("OK"),
-          ),
-        ],
-      );
-    },
-  );
-}
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                if (nameController.text.isNotEmpty) {
+                  Navigator.of(context).pop(nameController.text);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Name is required")),
+                  );
+                }
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   void _onQRViewCreated(QRViewController controller) {
     setState(() {
@@ -178,15 +194,32 @@ class _ScanScreenState extends State<ScanScreen> {
           }
 
           // Add the user to the list of users for the table
-          DocumentReference tableRef = FirebaseFirestore.instance.collection('activeTables').doc(tableId);
+          DocumentReference tableRef = FirebaseFirestore.instance
+              .collection('activeTables')
+              .doc(tableId);
           DocumentSnapshot tableDoc = await tableRef.get();
 
           if (tableDoc.exists) {
-            await tableRef.update({
-              'status': 'active',
-              'timestamp': Timestamp.now(),
-              'userNames': FieldValue.arrayUnion([userName]),
-            });
+            List<dynamic> userNames = tableDoc['userNames'] ?? [];
+            if (userNames.contains(userName)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(
+                        'Username "$userName" already exists. Please choose a different name.')),
+              );
+              if (mounted) {
+                setState(() {
+                  isScanning = false;
+                });
+              }
+              return;
+            } else {
+              await tableRef.update({
+                'status': 'active',
+                'timestamp': Timestamp.now(),
+                'userNames': FieldValue.arrayUnion([userName]),
+              });
+            }
           } else {
             await tableRef.set({
               'status': 'active',
@@ -195,7 +228,7 @@ class _ScanScreenState extends State<ScanScreen> {
             });
           }
 
-           // Save tableId and userName to shared preferences
+          // Save tableId and userName to shared preferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('tableId', tableId);
           await prefs.setString('userName', userName);
@@ -205,11 +238,44 @@ class _ScanScreenState extends State<ScanScreen> {
             SnackBar(content: Text('Hello, $userName')),
           );
 
+          // create a new collection of users for analytics
+          CollectionReference analyticsRef =
+              FirebaseFirestore.instance.collection('analytics');
+          DocumentReference analyticsDoc =
+              analyticsRef.doc("$tableId + userCount");
+
+          await analyticsDoc.set({
+            'tableId': tableId,
+            'usersCount': FieldValue.increment(1),
+          }, SetOptions(merge: true));
+
+          // notify the admin
+          await FirebaseFirestore.instance
+              .collection('adminNotifications')
+              .add({
+            'type': 'newUser',
+            'message': 'New user "$userName" added to table "$tableId"',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
+
+          await FirebaseFirestore.instance
+              .collection('adminNotifications')
+              .add({
+            'type': 'newTable',
+            'message': 'New table "$tableId" added',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
+
           // Navigate to GuestRequestScreen and pass the tableId and userName
           Navigator.pushReplacementNamed(
             context,
             '/guestRequest',
-            arguments: {'tableId': tableId, 'userName': userName},  // Pass the tableId and userName here
+            arguments: {
+              'tableId': tableId,
+              'userName': userName
+            }, // Pass the tableId and userName here
           );
         } else {
           // Show error if tableId is invalid
@@ -222,14 +288,15 @@ class _ScanScreenState extends State<ScanScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error processing QR code')),
         );
-      } 
-        // finally {
-        //   // Allow scanning again after a delay
-        //   await Future.delayed(const Duration(seconds: 2));
-        //   setState(() {
-        //     isScanning = false;
-        //   });
-        // }
+      } finally {
+        // Allow scanning again after a delay
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          setState(() {
+            isScanning = false;
+          });
+        }
+      }
     });
   }
 }
