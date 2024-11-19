@@ -398,8 +398,16 @@
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Container(
-                height: 4,
-                color: Colors.teal.shade800,
+                height: 5,
+                color: Color(0xFF80ACB2),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFA3C8CE),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFD9D3C1),
               ),
             ],
           ),
@@ -505,8 +513,8 @@
                                   },
                                   child: Icon(
                                     Icons.info,
-                                    size: 30, // Adjust the size as needed
-                                    color: selectedItems[index] ? const Color(0xFF316175) : const Color(0xFF316175),
+                                    size: 50, // Adjust the size as needed
+                                    color: selectedItems[index] ? const Color(0xFF316175) : const Color.fromARGB(255, 255, 255, 255),
                                   ),
                                 ),
                               ),
@@ -526,40 +534,82 @@
                                       ),
                                     ],
                                   ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12.0),
-                                    child: Row(
-                                      children: [
-                                        const SizedBox(width: 10), // Add some space between the button and the text
-                                        Expanded(
-                                          child: Text(
-                                            requestTypes[index], // Display request type name
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              color: selectedItems[index] ? Colors.white : const Color.fromARGB(255, 49, 97, 117),
-                                            ),
-                                          ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  children: [
+                                    const SizedBox(
+                                        width:
+                                            10), // Add some space between the button and the text
+                                    Expanded(
+                                      child: Text(
+                                        requestTypes[
+                                            index], // Display request type name
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: selectedItems[index]
+                                              ? Colors.white
+                                              : const Color.fromARGB(
+                                                  255, 49, 97, 117),
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        );
-                      },
-                    ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // Submit Request Button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
+                  backgroundColor: const Color(0xFF316175),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
                   ),
+                ),
+                onPressed: _submitRequest, // Call Firestore submission
+                child: const Text("Submit Request",
+                    style: TextStyle(fontSize: 18, color: Colors.white)),
+              ),
+              const SizedBox(height: 10),
+
+              // Custom Request Button
+              ElevatedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF316175),
+                  padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CustomRequestScreen(
+                        tableId: tableId,
+                        userName: userName,
+                      ),
+                    ),
+                  );
+                },
+                child:
+                    const Text("Custom Request", style: TextStyle(fontSize: 18)),
+              ),
                 ],
               ),
             ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _showMessagesScreen,
-          child: const Icon(Icons.message),
-        ),
-      );
+          ]),
+        );
     }
   }

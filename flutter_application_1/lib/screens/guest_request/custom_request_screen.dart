@@ -88,10 +88,18 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         flexibleSpace: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Container(
-              height: 5,
-              color: Colors.teal.shade800,
-            ),
+              Container(
+                height: 5,
+                color: Color(0xFF80ACB2),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFA3C8CE),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFD9D3C1),
+              ),
           ],
         ),
       ),
