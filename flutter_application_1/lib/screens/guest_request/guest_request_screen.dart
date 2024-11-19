@@ -12,11 +12,11 @@ class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _GuestRequestScreenState createState() => _GuestRequestScreenState();
+  GuestRequestScreenState createState() => GuestRequestScreenState();
 }
 
-class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
+class GuestRequestScreenState extends State<GuestRequestScreen>
+    with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
@@ -29,7 +29,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
   @override
   void initState() {
     super.initState();
-     WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addObserver(this);
     _loadTableId();
     _fetchRequestHistory();
   }
@@ -38,7 +38,8 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Retrieve the tableId from the arguments
-    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       setState(() {
         tableId = args['tableId'];
@@ -48,9 +49,10 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
     }
   }
 
-   @override
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
       // Start a timer for 2 minutes
       _exitTimer = Timer(const Duration(minutes: 2), () {
         _exitRequest();
@@ -61,11 +63,11 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
     }
   }
 
-    @override
+  @override
   void dispose() {
-     WidgetsBinding.instance.removeObserver(this);
+    WidgetsBinding.instance.removeObserver(this);
     qrController?.dispose();
-     _exitTimer?.cancel();
+    _exitTimer?.cancel();
     super.dispose();
   }
 
@@ -93,7 +95,9 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
           .get();
 
       setState(() {
-        requestHistory = snapshot.docs.map((doc) => doc.data() as Map<String, dynamic>).toList();
+        requestHistory = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
       });
     }
   }
@@ -108,11 +112,16 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
   ];
 
   final Map<String, String> requestInformation = {
-    'Frequently Asked Questions': 'Request for information on common questions and answers',
-    'Housekeeping Request': 'Request for cottage cleaning or other housekeeping services',
-    'Assistance Request': 'Ask for help or support from the staff for various needs.',
-    "Checkout Request": "Notify the staff that you will be checking out and require assistance with the process.",
-    "Summon a Staff": "Request a staff member to come to your location for immediate assistance.",
+    'Frequently Asked Questions':
+        'Request for information on common questions and answers',
+    'Housekeeping Request':
+        'Request for cottage cleaning or other housekeeping services',
+    'Assistance Request':
+        'Ask for help or support from the staff for various needs.',
+    "Checkout Request":
+        "Notify the staff that you will be checking out and require assistance with the process.",
+    "Summon a Staff":
+        "Request a staff member to come to your location for immediate assistance.",
     // Add more request types and their information here
   };
 
@@ -148,14 +157,38 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
 
     try {
       for (var requestType in selectedRequests) {
-        String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
+        String docName =
+            '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(docName)
+            .set({
           'tableId': tableId,
           'requestType': requestType,
           'status': 'pending', // Set status to 'pending'
           'timestamp': Timestamp.now(),
           'userName': userName,
+        });
+
+        // create a new collection of users for analytics
+        CollectionReference analyticsRef =
+            FirebaseFirestore.instance.collection('analytics');
+        DocumentReference analyticsDoc =
+            analyticsRef.doc("$tableId + requestCount");
+
+        await analyticsDoc.set({
+          'tableId': tableId,
+          'requestCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+
+        // notify the admin
+        await FirebaseFirestore.instance.collection('adminNotifications').add({
+          'type': 'newRequest',
+          'message':
+              'New request "$requestType" from user "$userName" at table "$tableId"',
+          'timestamp': FieldValue.serverTimestamp(),
+          'viewed': false,
         });
       }
 
@@ -178,7 +211,7 @@ class _GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBin
     }
   }
 
-Future<void> _exitRequest() async {
+  Future<void> _exitRequest() async {
   try {
     // Update the status and userName in the activeTables collection
     await FirebaseFirestore.instance
@@ -189,24 +222,24 @@ Future<void> _exitRequest() async {
           'userNames': FieldValue.arrayRemove([userName]), // Remove the userName from the array
         });
 
-    // Debug: Verify the update
-    DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
-        .collection('activeTables')
-        .doc(tableId)
-        .get();
-    log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
+      // Debug: Verify the update
+      DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(tableId)
+          .get();
+      log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
-    // Notify the user of successful update
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Thank you for using the service")),
-    );
+      // Notify the user of successful update
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Thank you for using the service")),
+      );
 
-    // Optionally, reset the state
-    setState(() {
-      tableId = "";
-      selectedItems = List.generate(5, (index) => false);
-    });
+      // Optionally, reset the state
+      setState(() {
+        tableId = "";
+        selectedItems = List.generate(5, (index) => false);
+      });
 
     // Navigate back to the QR screen
     // ignore: use_build_context_synchronously
@@ -221,12 +254,12 @@ Future<void> _exitRequest() async {
   }
 }
 
-
   Future<void> _showMessagesScreen() async {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MessagesScreen(tableId: tableId, userName: userName),
+        builder: (context) =>
+            MessagesScreen(tableId: tableId, userName: userName),
       ),
     );
   }
@@ -236,7 +269,7 @@ Future<void> _exitRequest() async {
     return Scaffold(
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
-         title: const Text(
+        title: const Text(
           "TableServe",
           style: TextStyle(
             fontSize: 24,
@@ -244,7 +277,6 @@ Future<void> _exitRequest() async {
             color: Colors.white,
           ),
         ),
-        
         leading: IconButton(
           icon: const Icon(Icons.exit_to_app),
           onPressed: () async {
@@ -272,14 +304,14 @@ Future<void> _exitRequest() async {
             }
           },
         ),
-        
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('notifications')
                 .where('tableId', isEqualTo: tableId)
-                .where('userName', isEqualTo: userName) 
-                .where('viewed', isEqualTo: false) // Only show unviewed notifications
+                .where('userName', isEqualTo: userName)
+                .where('viewed',
+                    isEqualTo: false) // Only show unviewed notifications
                 .snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
               if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
@@ -324,7 +356,8 @@ Future<void> _exitRequest() async {
                         // ignore: use_build_context_synchronously
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NotificationScreen(tableId: tableId, userName: userName),
+                          builder: (context) => NotificationScreen(
+                              tableId: tableId, userName: userName),
                         ),
                       );
                     } else {
@@ -342,7 +375,8 @@ Future<void> _exitRequest() async {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => NotificationScreen(tableId: tableId, userName: userName),
+                          builder: (context) => NotificationScreen(
+                              tableId: tableId, userName: userName),
                         ),
                       );
                     } else {
@@ -413,7 +447,8 @@ Future<void> _exitRequest() async {
                     child: Row(
                       children: [
                         Container(
-                          height: 60, // Set this to match the height of the white box
+                          height:
+                              60, // Set this to match the height of the white box
                           alignment: Alignment.center,
                           child: InkWell(
                             borderRadius: BorderRadius.circular(30),
@@ -426,7 +461,8 @@ Future<void> _exitRequest() async {
                                 builder: (BuildContext context) {
                                   return AlertDialog(
                                     title: Text('Information'),
-                                    content: Text(getRequestInformation(requestTypes[index])),
+                                    content: Text(getRequestInformation(
+                                        requestTypes[index])),
                                     actions: <Widget>[
                                       TextButton(
                                         child: Text('Close'),
@@ -442,16 +478,22 @@ Future<void> _exitRequest() async {
                             child: Icon(
                               Icons.info,
                               size: 50, // Adjust the size as needed
-                              color: selectedItems[index] ? const Color(0xFF316175) : const Color.fromARGB(255, 255, 255, 255),
+                              color: selectedItems[index]
+                                  ? const Color(0xFF316175)
+                                  : const Color.fromARGB(255, 255, 255, 255),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10), // Add some space between the button and the container
+                        const SizedBox(
+                            width:
+                                10), // Add some space between the button and the container
                         Expanded(
                           child: Container(
                             margin: const EdgeInsets.symmetric(vertical: 8.0),
                             decoration: BoxDecoration(
-                              color: selectedItems[index] ? const Color(0xFF316175) : Colors.white,
+                              color: selectedItems[index]
+                                  ? const Color(0xFF316175)
+                                  : Colors.white,
                               borderRadius: BorderRadius.circular(30.0),
                               boxShadow: [
                                 BoxShadow(
@@ -466,13 +508,19 @@ Future<void> _exitRequest() async {
                               padding: const EdgeInsets.all(12.0),
                               child: Row(
                                 children: [
-                                  const SizedBox(width: 10), // Add some space between the button and the text
+                                  const SizedBox(
+                                      width:
+                                          10), // Add some space between the button and the text
                                   Expanded(
                                     child: Text(
-                                      requestTypes[index], // Display request type name
+                                      requestTypes[
+                                          index], // Display request type name
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: selectedItems[index] ? Colors.white : const Color.fromARGB(255, 49, 97, 117),
+                                        color: selectedItems[index]
+                                            ? Colors.white
+                                            : const Color.fromARGB(
+                                                255, 49, 97, 117),
                                       ),
                                     ),
                                   ),
@@ -499,7 +547,8 @@ Future<void> _exitRequest() async {
                 ),
               ),
               onPressed: _submitRequest, // Call Firestore submission
-              child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
+              child: const Text("Submit Request",
+                  style: TextStyle(fontSize: 18, color: Colors.white)),
             ),
             const SizedBox(height: 10),
 
@@ -524,7 +573,8 @@ Future<void> _exitRequest() async {
                   ),
                 );
               },
-              child: const Text("Custom Request", style: TextStyle(fontSize: 18)),
+              child:
+                  const Text("Custom Request", style: TextStyle(fontSize: 18)),
             ),
           ],
         ),

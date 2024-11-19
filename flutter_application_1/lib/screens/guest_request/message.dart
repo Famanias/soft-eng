@@ -5,7 +5,8 @@ class MessagesScreen extends StatelessWidget {
   final String tableId;
   final String userName;
 
-  const MessagesScreen({required this.tableId, required this.userName, super.key});
+  const MessagesScreen(
+      {required this.tableId, required this.userName, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +14,8 @@ class MessagesScreen extends StatelessWidget {
 
     void sendMessage() async {
       if (messageController.text.isNotEmpty) {
-        String docName = 'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
+        String docName =
+            'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
         await FirebaseFirestore.instance
             .collection('guestRequests')
             .doc(tableId)
@@ -26,12 +28,20 @@ class MessagesScreen extends StatelessWidget {
           'userName': userName, // Save the userName separately
         });
         messageController.clear();
+
+        await FirebaseFirestore.instance.collection('adminNotifications').add({
+          'type': 'newMessage',
+          'message': 'New message from user "$userName" at table "$tableId"',
+          'timestamp': FieldValue.serverTimestamp(),
+          'viewed': false,
+        });
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("$userName's Conversation"), // Set the title to the user's name
+        title: Text(
+            "$userName's Conversation"), // Set the title to the user's name
       ),
       body: Column(
         children: [
@@ -41,7 +51,8 @@ class MessagesScreen extends StatelessWidget {
                   .collection('guestRequests')
                   .doc(tableId)
                   .collection('messages')
-                  .where('userName', isEqualTo: userName) // Filter messages by userName
+                  .where('userName',
+                      isEqualTo: userName) // Filter messages by userName
                   .orderBy('timestamp', descending: true)
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
@@ -64,16 +75,22 @@ class MessagesScreen extends StatelessWidget {
                     bool isGuest = message['sender'] == 'guest';
                     Timestamp? timestamp = message['timestamp'] as Timestamp?;
                     return Column(
-                      crossAxisAlignment: isGuest ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                      crossAxisAlignment: isGuest
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 5),
                         Align(
-                          alignment: isGuest ? Alignment.centerRight : Alignment.centerLeft,
+                          alignment: isGuest
+                              ? Alignment.centerRight
+                              : Alignment.centerLeft,
                           child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                            margin: const EdgeInsets.symmetric(
+                                vertical: 5.0, horizontal: 10.0),
                             padding: const EdgeInsets.all(10.0),
                             decoration: BoxDecoration(
-                              color: isGuest ? Colors.blue[100] : Colors.grey[300],
+                              color:
+                                  isGuest ? Colors.blue[100] : Colors.grey[300],
                               borderRadius: BorderRadius.circular(10.0),
                             ),
                             child: Column(
@@ -82,7 +99,8 @@ class MessagesScreen extends StatelessWidget {
                                 Text(
                                   message['message'],
                                   style: TextStyle(
-                                    color: isGuest ? Colors.black : Colors.black,
+                                    color:
+                                        isGuest ? Colors.black : Colors.black,
                                   ),
                                 ),
                                 if (timestamp != null)
