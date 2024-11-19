@@ -14,14 +14,24 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Future.delayed(const Duration(milliseconds: 100));
+  WidgetsFlutterBinding.ensureInitialized();  
+  
+  // Load environment variables and ensure it completes
+  await dotenv.load(fileName: "assets/.env");
+
+  // Debugging print to verify .env loading
+  print('Dotenv loaded: ${dotenv.env}');
+  print('Loaded API Key: ${dotenv.env['apiKey']}');
+
+  // await Future.delayed(const Duration(milliseconds: 100));
+
+  // Initialize firebase
   await Firebase.initializeApp(
     options: FirebaseOptions(
-      apiKey: dotenv.env['API_KEY']!,
-      appId: dotenv.env['APP_ID']!,
-      messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
-      projectId: dotenv.env['PROJECT_ID']!,
+      apiKey: dotenv.env['apiKey']!,
+      appId: dotenv.env['appId']!,
+      messagingSenderId: dotenv.env['messagingSenderId']!,
+      projectId: dotenv.env['projectId']!,
     ),
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
