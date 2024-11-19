@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
@@ -16,11 +17,11 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Future.delayed(const Duration(milliseconds: 100));
   await Firebase.initializeApp(
-    options: const FirebaseOptions(
-      apiKey: 'AIzaSyBzWodEQCoiKxigxPrYpvR1w18RU34w7J0',
-      appId: '1:866243564535:android:765971cef2c2e3b174d4f2',
-      messagingSenderId: '866243564535',
-      projectId: 'tableserve-b0183',
+    options: FirebaseOptions(
+      apiKey: dotenv.env['API_KEY']!,
+      appId: dotenv.env['APP_ID']!,
+      messagingSenderId: dotenv.env['MESSAGING_SENDER_ID']!,
+      projectId: dotenv.env['PROJECT_ID']!,
     ),
   );
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
