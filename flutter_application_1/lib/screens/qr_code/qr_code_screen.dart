@@ -37,12 +37,21 @@ class ScanScreenState extends State<ScanScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text("TableServe"),
-            const SizedBox(height: 1),
-            Image(
-              image: AssetImage('images/line.png'),
-              height: 2,
-              width: 100,
-            )
+          ],
+        ),
+        elevation: 0,
+        // toolbarHeight: 75,
+        flexibleSpace: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              height: 5,
+              color: Color(0xFF80ACB2),
+            ),
+            Container(
+              height: 5,
+              color: Color(0xFFA3C8CE),
+            ),
           ],
         ),
         centerTitle: true,

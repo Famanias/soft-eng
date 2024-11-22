@@ -663,8 +663,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       ]),
       floatingActionButton: FloatingActionButton(
         onPressed: _showMessagesScreen,
+        // ignore: sort_child_properties_last
         child: const Icon(Icons.message),
-        backgroundColor: const Color.fromARGB(255, 106, 161, 184),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
     );
   }
