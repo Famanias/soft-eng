@@ -25,7 +25,7 @@ class ScanScreenState extends State<ScanScreen> {
   void _showAdminPanel() {
     Navigator.pushNamed(context, '/adminPanel');
   }
-
+  
   @override
   Widget build(BuildContext context) {
     double scanArea =
