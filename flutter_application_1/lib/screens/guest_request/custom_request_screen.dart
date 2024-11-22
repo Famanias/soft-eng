@@ -88,75 +88,114 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         flexibleSpace: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-            Container(
-              height: 4,
-              color: Colors.teal.shade800,
-            ),
+              Container(
+                height: 5,
+                color: Color(0xFF80ACB2),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFA3C8CE),
+              ),
+              Container(
+                height: 5,
+                color: Color(0xFFD9D3C1),
+              ),
           ],
         ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const SizedBox(height: 20),
-            const Text(
-              "How can we help you?",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF316175),
-                shadows: [
-                  Shadow(
-                    offset: Offset(1.0, 1.0),
-                    blurRadius: 3.0,
-                    color: Colors.black26,
+      body: Stack(
+        children: [
+          // Background image that takes the full width and responsive height based on aspect ratio
+          Positioned(
+            bottom: 0, // Make sure it's at the top of the screen
+            left: 0,
+            right: 0,
+            child: Builder(
+              builder: (context) {
+                // Get the screen width
+                double screenWidth = MediaQuery.of(context).size.width;
+
+                // Assuming the image's aspect ratio (width / height) is 16:9 (you can adjust based on your image)
+                double aspectRatio = 16 / 9;
+                double imageHeight = screenWidth / aspectRatio;
+
+                return Container(
+                  width: screenWidth,
+                  height: imageHeight, // Responsive height based on aspect ratio
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage('images/bg.png'), // Replace with your background image path
+                      fit: BoxFit.cover, // Ensure it covers the width and scales the height responsively
+                    ),
                   ),
-                ],
-              ),
-              textAlign: TextAlign.center,
+                );
+              },
             ),
-            const SizedBox(height: 8),
-            const Text(
-              "Describe your service request in detail.",
-              style: TextStyle(fontSize: 16, color: Color(0xFF316175)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-
-            // Text Input Field
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12.0),
-              ),
-              child: TextField(
-                controller: customRequestController,
-                maxLines: 8,
-                decoration: const InputDecoration(
-                  hintText: "Type here...",
-                  border: InputBorder.none,
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  "How can we help you?",
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF316175),
+                    shadows: [
+                      Shadow(
+                        offset: Offset(1.0, 1.0),
+                        blurRadius: 3.0,
+                        color: Colors.black26,
+                      ),
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Submit Request Button
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
-                backgroundColor: const Color(0xFF316175),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30.0),
+                const SizedBox(height: 8),
+                const Text(
+                  "Describe your service request in detail.",
+                  style: TextStyle(fontSize: 16, color: Color(0xFF316175)),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              onPressed: _submitCustomRequest,
-              child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
+                const SizedBox(height: 20),
+
+                // Text Input Field
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                  child: TextField(
+                    controller: customRequestController,
+                    maxLines: 8,
+                    decoration: const InputDecoration(
+                      hintText: "Type here...",
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Submit Request Button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.fromLTRB(20.0, 15.0, 20.0, 15.0),
+                    backgroundColor: const Color(0xFF316175),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(30.0),
+                    ),
+                  ),
+                  onPressed: _submitCustomRequest,
+                  child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

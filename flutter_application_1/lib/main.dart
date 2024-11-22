@@ -19,6 +19,12 @@ void main() async {
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
 
+  // Debugging print to verify .env loading
+  print('Dotenv loaded: ${dotenv.env}');
+  print('Loaded API Key: ${dotenv.env['apiKey']}');
+
+  // await Future.delayed(const Duration(milliseconds: 100));
+
   // Initialize firebase
   await Firebase.initializeApp(
     options: FirebaseOptions(
