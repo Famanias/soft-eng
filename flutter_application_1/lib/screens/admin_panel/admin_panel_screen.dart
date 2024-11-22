@@ -126,7 +126,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _selectedTableId = widget.tableId;
     _fetchUserName();
   }
@@ -385,35 +385,78 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
             return ListTile(
               title: Text("Request: $requestTypeText"),
               subtitle: Text("Status: ${doc['status']} : Name: $userName"),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.check, color: Colors.green),
-                    onPressed: () {
-                      _updateRequestStatus(doc.id, 'accepted');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    onPressed: () {
-                      _updateRequestStatus(doc.id, 'rejected');
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.done, color: Colors.grey),
-                    onPressed: () {
-                      _confirmMarkAsDone(doc.id);
-                    },
-                  ),
-                ],
-              ),
+              trailing: _buildTrailingButtons(status, doc.id),
             );
           }).toList(),
         );
       },
     );
   }
+
+  Widget? _buildTrailingButtons(String status, String requestId) {
+    if (status == 'pending') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.green),
+            onPressed: () {
+              _updateRequestStatus(requestId, 'accepted');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.red),
+            onPressed: () {
+              _updateRequestStatus(requestId, 'rejected');
+            },
+          ),
+        ],
+      );
+    } else if (status == 'accepted') {
+      return IconButton(
+        icon: const Icon(Icons.checklist, color: Colors.grey),
+        onPressed: () {
+          _confirmMarkAsDone(requestId);
+        },
+      );
+    } else if (status == 'rejected') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.check, color: Colors.green),
+            onPressed: () {
+              _updateRequestStatus(requestId, 'accepted');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              _deleteRequest(requestId);
+            },
+          ),
+        ],
+      );
+    } else {
+      return null;
+    }
+  }
+
+  Future<void> _deleteRequest(String requestId) async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .doc(requestId)
+        .delete();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Request deleted successfully")),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Failed to delete request: $e")),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -426,6 +469,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
             Tab(text: "Pending"),
             Tab(text: "Accepted"),
             Tab(text: "Rejected"),
+            Tab(text: "Done")
           ],
         ),
         actions: [
@@ -526,6 +570,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           _buildRequestList('pending'),
           _buildRequestList('accepted'),
           _buildRequestList('rejected'),
+          _buildRequestList('done'),
         ],
       ),
       floatingActionButton: FloatingActionButton(
