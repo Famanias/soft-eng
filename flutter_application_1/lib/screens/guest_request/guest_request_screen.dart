@@ -7,6 +7,8 @@ import 'notification.dart';
 import 'message.dart';
 import 'dart:developer';
 import 'dart:async';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -26,12 +28,47 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   List<Map<String, dynamic>> requestHistory = [];
   Timer? _exitTimer;
 
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   @override
   void initState() {
     super.initState();
+    _initializeLocalNotifications();
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android = message.notification?.android;
+      if (notification != null && android != null) {
+        _showLocalNotification(notification);
+      }
+    });
     WidgetsBinding.instance.addObserver(this);
     _loadTableId();
     _fetchRequestHistory();
+  }
+
+   void _initializeLocalNotifications() {
+    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
+    _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  void _showLocalNotification(RemoteNotification notification) {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'high_importance_channel', // Channel ID
+      'High Importance Notifications', // Channel name
+      channelDescription: 'This channel is used for important notifications.', // Channel description
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: true,
+    );
+    const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
+    _flutterLocalNotificationsPlugin.show(
+      0,
+      notification.title,
+      notification.body,
+      platformChannelSpecifics,
+      payload: 'item x',
+    );
   }
 
   @override
@@ -212,15 +249,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   Future<void> _exitRequest() async {
-  try {
-    // Update the status and userName in the activeTables collection
-    await FirebaseFirestore.instance
-        .collection('activeTables')
-        .doc(tableId)
-        .update({
-          'status': 'inactive',
-          'userNames': FieldValue.arrayRemove([userName]), // Remove the userName from the array
-        });
+    try {
+      // Update the status and userName in the activeTables collection
+      await FirebaseFirestore.instance
+          .collection('activeTables')
+          .doc(tableId)
+          .update({
+        'status': 'inactive',
+        'userNames': FieldValue.arrayRemove(
+            [userName]), // Remove the userName from the array
+      });
 
       // Debug: Verify the update
       DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
@@ -241,18 +279,18 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         selectedItems = List.generate(5, (index) => false);
       });
 
-    // Navigate back to the QR screen
-    // ignore: use_build_context_synchronously
-    Navigator.popAndPushNamed(context, '/qrCode');
-  } catch (e) {
-    // Show error message if update fails
-    log("Error: $e"); // Debug: Print the error
-    // ignore: use_build_context_synchronously
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Failed to update the table status: $e")),
-    );
+      // Navigate back to the QR screen
+      // ignore: use_build_context_synchronously
+      Navigator.popAndPushNamed(context, '/qrCode');
+    } catch (e) {
+      // Show error message if update fails
+      log("Error: $e"); // Debug: Print the error
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to update the table status: $e")),
+      );
+    }
   }
-}
 
   Future<void> _showMessagesScreen() async {
     Navigator.push(

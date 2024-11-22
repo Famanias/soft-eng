@@ -6,24 +6,18 @@ import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print("Handling a background message: ${message.messageId}");
 }
 
-
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();  
+  WidgetsFlutterBinding.ensureInitialized();
   
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
-
-  // Debugging print to verify .env loading
-  print('Dotenv loaded: ${dotenv.env}');
-  print('Loaded API Key: ${dotenv.env['apiKey']}');
-
-  // await Future.delayed(const Duration(milliseconds: 100));
 
   // Initialize firebase
   await Firebase.initializeApp(
@@ -34,8 +28,33 @@ void main() async {
       projectId: dotenv.env['projectId']!,
     ),
   );
+
+  // Initialize awesome_notifications
+  AwesomeNotifications().initialize(
+    'resource://drawable/res_app_icon', // Replace with your app icon
+    [
+      NotificationChannel(
+        channelKey: 'high_importance_channel',
+        channelName: 'High Importance Notifications',
+        channelDescription: 'This channel is used for important notifications.',
+        defaultColor: Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.Max,
+        channelShowBadge: true,
+      )
+    ],
+  );
+
+  // Request notification permissions
+   await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+    if (!isAllowed) {
+      // This is just an example. You can show a dialog or any other UI element to request permission.
+      AwesomeNotifications().requestPermissionToSendNotifications();
+    }
+  });
+
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  
+
   runApp(const MyApp());
 }
 
@@ -50,14 +69,11 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      
-      // Set the initial route to main screen
       initialRoute: '/qrCode',
-      // Define routes for navigation
       routes: {
         '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
-        '/customRequest': (context) => const CustomRequestScreen(tableId: '', userName: '',),
+        '/customRequest': (context) => const CustomRequestScreen(tableId: '', userName: ''),
         '/adminPanel': (context) => const AdminPanel(),
       },
     );

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String tableId;
@@ -15,47 +14,40 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   String _selectedStatus = 'all';
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
-    _initializeLocalNotifications();
-    _firebaseMessaging.requestPermission();
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-      if (notification != null && android != null) {
-        _showLocalNotification(notification);
+    _listenForNotifications();
+  }
+
+  void _listenForNotifications() {
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('tableId', isEqualTo: widget.tableId)
+        .where('userName', isEqualTo: widget.userName)
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          var data = change.doc.data() as Map<String, dynamic>;
+          _showLocalNotification(data);
+        }
       }
     });
   }
 
-  void _initializeLocalNotifications() {
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings = InitializationSettings(android: initializationSettingsAndroid);
-    _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  void _showLocalNotification(Map<String, dynamic> data) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'high_importance_channel',
+        title: data['type'] == 'newMessage' ? 'Message from Admin' : 'Request: ${data['requestType']}',
+        body: data['type'] == 'newMessage' ? data['message'] : 'Status: ${data['status']}',
+        notificationLayout: NotificationLayout.Default,
+      ),
+    );
   }
-
-  void _showLocalNotification(RemoteNotification notification) {
-  const AndroidNotificationDetails androidPlatformChannelSpecifics = AndroidNotificationDetails(
-    'high_importance_channel', // Channel ID
-    'High Importance Notifications', // Channel name
-    channelDescription: 'This channel is used for important notifications.', // Channel description
-    importance: Importance.max,
-    priority: Priority.high,
-    showWhen: false,
-  );
-  const NotificationDetails platformChannelSpecifics = NotificationDetails(android: androidPlatformChannelSpecifics);
-  _flutterLocalNotificationsPlugin.show(
-    0,
-    notification.title,
-    notification.body,
-    platformChannelSpecifics,
-    payload: 'item x',
-  );
-}
 
   @override
   Widget build(BuildContext context) {
