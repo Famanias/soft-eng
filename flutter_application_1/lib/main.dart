@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/screens/login/login.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
@@ -76,7 +77,8 @@ class MyApp extends StatelessWidget {
         '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) => const CustomRequestScreen(tableId: '', userName: ''),
-        '/adminPanel': (context) => const AdminPanel(),
+        '/login': (context) => LoginScreen(),
+        '/adminPanel': (context) => AdminPanel(),
       },
     );
   }
