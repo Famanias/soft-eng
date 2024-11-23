@@ -248,59 +248,87 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     }
   }
 
-  void _updateRequestStatus(String requestId, String status) async {
-    try {
-      // Debug: Print the request ID and status being updated
-      print("Updating request ID: $requestId to status: $status");
+void _updateRequestStatus(String requestId, String status) async {
+  try {
+    // Fetch the current user's email (admin's email)
+    String? adminEmail = FirebaseAuth.instance.currentUser?.email;
 
-      // Fetch the request document to get the requestType
-      DocumentSnapshot requestDoc = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(requestId)
-          .get();
-
-      String requestType = requestDoc['requestType'];
-      String userName = requestDoc['userName'];
-
-      // Update the status of the request
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(requestId)
-          .update({'status': status});
-
-      // Add a notification document
-
-      await FirebaseFirestore.instance
-          .collection('notifications')
-          .doc('Status of $requestId for $userName')
-          .set({
-        'tableId': widget.tableId,
-        'requestId': requestId,
-        'requestType': requestType,
-        'status': status,
-        'viewed': false,
-        'timestamp': FieldValue.serverTimestamp(),
-        'userName': userName,
-      });
-
-      // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Request status updated to $status"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
-      );
-    } catch (e) {
-      // Show error message if update fails
-      print("Error updating request status: $e"); // Debug: Print the error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to update request status: $e"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
-      );
+    if (adminEmail == null) {
+      print("No admin email found.");
+      return;
     }
+
+    // Debug: Print the request ID and status being updated
+    print("Updating request ID: $requestId to status: $status");
+
+    // Fetch the staffName using the admin email from staffCredentials
+    DocumentSnapshot staffDoc = await FirebaseFirestore.instance
+        .collection('staffCredentials')
+        .where('email', isEqualTo: adminEmail)
+        .limit(1)  // Limit to one result
+        .get()
+        .then((querySnapshot) => querySnapshot.docs.isNotEmpty
+            ? querySnapshot.docs.first as DocumentSnapshot<Object?>
+            : throw Exception("No staff document found"));
+
+    String staffName = staffDoc['staffName']; // Retrieve staffName from staffCredentials
+
+    // Fetch the request document to get the requestType and userName
+    DocumentSnapshot requestDoc = await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .doc(requestId)
+        .get();
+
+    if (!requestDoc.exists) {
+      print("Request document does not exist.");
+      return;
+    }
+
+    String requestType = requestDoc['requestType'];
+    String userName = requestDoc['userName'];  // Get the userName of the guest
+
+    // Update the status of the request and set updatedBy to staffName
+    await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .doc(requestId)
+        .update({
+      'status': status,
+      'updatedBy': staffName,  // Use staffName for updatedBy
+    });
+
+    // Add a notification document
+    await FirebaseFirestore.instance
+        .collection('notifications')
+        .doc('Status of $requestId for $userName')
+        .set({
+      'tableId': widget.tableId,
+      'requestId': requestId,
+      'requestType': requestType,
+      'status': status,
+      'viewed': false,
+      'timestamp': FieldValue.serverTimestamp(),
+      'userName': userName,
+      'updatedBy': staffName,  // Also use staffName for the notification
+    });
+
+    // Notify the user of successful update
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Request status updated to $status"),
+        duration: Duration(seconds: 3), // Set the duration for the SnackBar
+      ),
+    );
+  } catch (e) {
+    // Show error message if update fails
+    print("Error updating request status: $e"); // Debug: Print the error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Failed to update request status: $e"),
+        duration: Duration(seconds: 3), // Set the duration for the SnackBar
+      ),
+    );
   }
+}
 
   void _showMessagesScreen(String userName) {
     Navigator.push(
