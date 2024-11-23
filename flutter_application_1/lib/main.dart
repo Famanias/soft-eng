@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_application_1/screens/login/login.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
@@ -18,10 +19,6 @@ void main() async {
   
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
-
-  // Debugging print to verify .env loading
-  print('Dotenv loaded: ${dotenv.env}');
-  print('Loaded API Key: ${dotenv.env['apiKey']}');
 
   // await Future.delayed(const Duration(milliseconds: 100));
 
@@ -80,7 +77,8 @@ class MyApp extends StatelessWidget {
         '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) => const CustomRequestScreen(tableId: '', userName: ''),
-        '/adminPanel': (context) => const AdminPanel(),
+        '/login': (context) => LoginScreen(),
+        '/adminPanel': (context) => AdminPanel(),
       },
     );
   }

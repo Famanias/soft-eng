@@ -2,12 +2,53 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'admin_message.dart';
 import 'admin_notification.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class AdminPanel extends StatelessWidget {
-  const AdminPanel({super.key});
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      await _auth.signOut();
+      Navigator.pushReplacementNamed(context, '/qrCode'); // Redirect to login screen
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
+    }
+  }
+
+  Future<void> _confirmLogout(BuildContext context) async {
+    bool? shouldLogout = await showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Confirm Logout"),
+          content: Text("Are you sure you want to logout?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text("Logout"),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout == true) {
+      _logout(context);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text("Admin Panel"),
@@ -71,6 +112,10 @@ class AdminPanel extends StatelessWidget {
               }
             },
           ),
+          IconButton(
+            icon: Icon(Icons.logout),
+            onPressed: () => _confirmLogout(context), // Call the logout function
+          ),
         ],
       ),
       body: StreamBuilder(
@@ -88,14 +133,61 @@ class AdminPanel extends StatelessWidget {
 
           return ListView(
             children: snapshot.data!.docs.map((doc) {
+              String tableId = doc.id;
               return ListTile(
-                title: Text("Table ID: ${doc.id}"),
+                title: Text("Table ID: $tableId"),
+                trailing: StreamBuilder(
+                  stream: FirebaseFirestore.instance
+                      .collection('guestRequests')
+                      .where('tableId', isEqualTo: tableId)
+                      .where('status', isEqualTo: 'pending')
+                      .snapshots(),
+                  builder: (context, AsyncSnapshot<QuerySnapshot> requestSnapshot) {
+                    if (requestSnapshot.connectionState == ConnectionState.waiting) {
+                      return const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      );
+                    }
+                    int pendingCount = requestSnapshot.data?.docs.length ?? 0;
+                    return Stack(
+                      children: [
+                        const Icon(Icons.table_restaurant,size: 30),
+                        if (pendingCount > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 20,
+                                minHeight: 20,
+                              ),
+                              child: Text(
+                                '$pendingCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          RequestDetailsScreen(tableId: doc.id),
+                          RequestDetailsScreen(tableId: tableId),
                     ),
                   );
                 },
