@@ -206,6 +206,8 @@ class ScanScreenState extends State<ScanScreen> {
       setState(() {
         isScanning = true;
       });
+       // Turn off the camera
+          _toggleCamera();
 
       try {
         // Get tableId from scanned QR code
