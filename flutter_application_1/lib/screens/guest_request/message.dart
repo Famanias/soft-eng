@@ -5,8 +5,7 @@ class MessagesScreen extends StatelessWidget {
   final String tableId;
   final String userName;
 
-  const MessagesScreen(
-      {required this.tableId, required this.userName, super.key});
+  const MessagesScreen({required this.tableId, required this.userName, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,14 +13,14 @@ class MessagesScreen extends StatelessWidget {
 
     void sendMessage() async {
       if (messageController.text.isNotEmpty) {
-        String docName =
-            'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
+        String docName = 'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
+
+        // Save the message to the new 'messages' collection
         await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(tableId)
             .collection('messages')
             .doc(docName)
             .set({
+          'tableId': tableId,
           'message': messageController.text,
           'timestamp': FieldValue.serverTimestamp(),
           'sender': 'guest',
@@ -29,6 +28,7 @@ class MessagesScreen extends StatelessWidget {
         });
         messageController.clear();
 
+        // Add a notification document
         await FirebaseFirestore.instance.collection('adminNotifications').add({
           'type': 'newMessage',
           'message': 'New message from user "$userName" at table "$tableId"',
@@ -40,20 +40,17 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-            "$userName's Conversation"), // Set the title to the user's name
+        title: Text("$userName's Conversation"), // Set the title to the user's name
       ),
       body: Column(
         children: [
           Expanded(
             child: StreamBuilder(
               stream: FirebaseFirestore.instance
-                  .collection('guestRequests')
-                  .doc(tableId)
                   .collection('messages')
-                  .where('userName',
-                      isEqualTo: userName) // Filter messages by userName
-                  .orderBy('timestamp', descending: true)
+                  .where('tableId', isEqualTo: tableId)
+                  .where('userName', isEqualTo: userName) // Filter messages by userName
+                  .orderBy('timestamp', descending: true) // Order messages by timestamp
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -89,18 +86,16 @@ class MessagesScreen extends StatelessWidget {
                                 vertical: 5.0, horizontal: 10.0),
                             padding: const EdgeInsets.all(10.0),
                             decoration: BoxDecoration(
-                              color:
-                                  isGuest ? Colors.blue[100] : Colors.grey[300],
+                              color: isGuest ? Colors.blue[100] : Colors.grey[300],
                               borderRadius: BorderRadius.circular(10.0),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  message['message'],
+                                  message['message'] ?? 'No message',
                                   style: TextStyle(
-                                    color:
-                                        isGuest ? Colors.black : Colors.black,
+                                    color: isGuest ? Colors.black : Colors.black,
                                   ),
                                 ),
                                 if (timestamp != null)

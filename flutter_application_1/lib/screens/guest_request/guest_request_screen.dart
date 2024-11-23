@@ -208,7 +208,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                margin: const EdgeInsets.only(top: 13), 
+                margin: const EdgeInsets.only(top: 13),
                 child: const CircularProgressIndicator(),
               ),
               const SizedBox(height: 20),
@@ -319,35 +319,22 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         log("No notifications found for userName: $userName");
       }
 
-      // Step 3: Delete messages in guestRequests subcollections
-      var guestRequestSnapshots =
-          await FirebaseFirestore.instance.collection('guestRequests').get();
+      // Step 3: Delete messages in the messages collection
+      var messageSnapshots = await FirebaseFirestore.instance
+          .collection('messages')
+          .where('tableId', isEqualTo: tableId)
+          .where('userName', isEqualTo: userName)
+          .get();
 
-      // Collect deletion tasks for messages
-      List<Future> deletionTasks = [];
-      for (var guestRequestDoc in guestRequestSnapshots.docs) {
-        log("Processing guestRequest: ${guestRequestDoc.id}");
-
-        // Check and delete messages
-        var messageSnapshots = await guestRequestDoc.reference
-            .collection('messages')
-            .where('userName', isEqualTo: userName)
-            .get();
-
-        if (messageSnapshots.docs.isNotEmpty) {
-          log("Deleting ${messageSnapshots.docs.length} messages for userName: $userName in guestRequest: ${guestRequestDoc.id}");
-          for (var messageDoc in messageSnapshots.docs) {
-            log("Queueing deletion for message: ${messageDoc.id}");
-            deletionTasks.add(messageDoc.reference.delete());
-          }
-        } else {
-          log("No messages found for userName: $userName in guestRequest: ${guestRequestDoc.id}");
+      if (messageSnapshots.docs.isNotEmpty) {
+        log("Deleting ${messageSnapshots.docs.length} messages for userName: $userName");
+        for (var doc in messageSnapshots.docs) {
+          await doc.reference.delete();
+          log("Deleted message: ${doc.id}");
         }
+      } else {
+        log("No messages found for userName: $userName");
       }
-
-      // Execute all deletion tasks
-      await Future.wait(deletionTasks);
-      log("All messages deleted successfully");
 
       // Step 4: Notify the user of success
       // ignore: use_build_context_synchronously
