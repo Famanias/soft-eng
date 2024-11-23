@@ -268,15 +268,6 @@ class ScanScreenState extends State<ScanScreen> {
             'viewed': false,
           });
 
-          await FirebaseFirestore.instance
-              .collection('adminNotifications')
-              .add({
-            'type': 'newTable',
-            'message': 'New table "$tableId" added',
-            'timestamp': FieldValue.serverTimestamp(),
-            'viewed': false,
-          });
-
           // Navigate to GuestRequestScreen and pass the tableId and userName
           Navigator.pushReplacementNamed(
             context,

@@ -197,6 +197,28 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 13),
+                child: const CircularProgressIndicator(),
+              ),
+              const SizedBox(height: 20),
+              const Text("Please wait a moment..."),
+            ],
+          ),
+        );
+      },
+    );
+
     try {
       for (var requestType in selectedRequests) {
         String docName =
@@ -250,46 +272,87 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
+    } finally {
+      // Dismiss the loading dialog
+      Navigator.of(context).pop();
     }
   }
 
   Future<void> _exitRequest() async {
     try {
-      // Update the status and userName in the activeTables collection
-      await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .update({
-        'status': 'inactive',
-        'userNames': FieldValue.arrayRemove(
-            [userName]), // Remove the userName from the array
+      // Step 1: Update the activeTables collection
+      DocumentReference tableRef =
+          FirebaseFirestore.instance.collection('activeTables').doc(tableId);
+
+      // Remove the userName from the array
+      await tableRef.update({
+        'userNames': FieldValue.arrayRemove([userName]),
       });
 
-      // Debug: Verify the update
-      DocumentSnapshot updatedDoc = await FirebaseFirestore.instance
-          .collection('activeTables')
-          .doc(tableId)
-          .get();
+      // Fetch the updated document to check the userNames array
+      DocumentSnapshot updatedDoc = await tableRef.get();
+      List<dynamic> userNames = updatedDoc['userNames'] ?? [];
+
+      // If the userNames array is empty, set the status to inactive
+      if (userNames.isEmpty) {
+        await tableRef.update({
+          'status': 'inactive',
+        });
+      }
+
       log("Updated document: ${updatedDoc.data()}"); // Debug: Print the updated document
 
-      // Notify the user of successful update
+      // Step 2: Delete notifications for the user
+      var notificationSnapshots = await FirebaseFirestore.instance
+          .collection('notifications')
+          .where('tableId', isEqualTo: tableId)
+          .where('userName', isEqualTo: userName)
+          .get();
+
+      if (notificationSnapshots.docs.isNotEmpty) {
+        log("Deleting ${notificationSnapshots.docs.length} notifications for userName: $userName");
+        for (var doc in notificationSnapshots.docs) {
+          await doc.reference.delete();
+          log("Deleted notification: ${doc.id}");
+        }
+      } else {
+        log("No notifications found for userName: $userName");
+      }
+
+      // Step 3: Delete messages in the messages collection
+      var messageSnapshots = await FirebaseFirestore.instance
+          .collection('messages')
+          .where('tableId', isEqualTo: tableId)
+          .where('userName', isEqualTo: userName)
+          .get();
+
+      if (messageSnapshots.docs.isNotEmpty) {
+        log("Deleting ${messageSnapshots.docs.length} messages for userName: $userName");
+        for (var doc in messageSnapshots.docs) {
+          await doc.reference.delete();
+          log("Deleted message: ${doc.id}");
+        }
+      } else {
+        log("No messages found for userName: $userName");
+      }
+
+      // Step 4: Notify the user of success
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Thank you for using the service")),
       );
 
-      // Optionally, reset the state
+      // Step 5: Reset state and navigate
       setState(() {
         tableId = "";
         selectedItems = List.generate(5, (index) => false);
       });
 
-      // Navigate back to the QR screen
       // ignore: use_build_context_synchronously
       Navigator.popAndPushNamed(context, '/qrCode');
     } catch (e) {
-      // Show error message if update fails
-      log("Error: $e"); // Debug: Print the error
+      // Handle errors and log
+      log("Error: $e");
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to update the table status: $e")),
@@ -328,7 +391,15 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
               builder: (BuildContext context) {
                 return AlertDialog(
                   title: const Text("Confirm Exit"),
-                  content: const Text("Are you sure you want to exit?"),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("Are you sure you want to exit?"),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(false),
@@ -342,6 +413,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                 );
               },
             );
+
             if (confirmExit == true) {
               _exitRequest();
             }

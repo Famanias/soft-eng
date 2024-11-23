@@ -1,26 +1,71 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AdminNotificationScreen extends StatefulWidget {
   const AdminNotificationScreen({super.key});
 
   @override
-  AdminNotificationScreenState createState() =>
-      AdminNotificationScreenState();
+  AdminNotificationScreenState createState() => AdminNotificationScreenState();
 }
 
 class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   String _selectedFilter = 'all';
 
   @override
+  void initState() {
+    super.initState();
+    _listenForNotifications();
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showLocalNotification(message.data);
+    });
+  }
+
+  void _listenForNotifications() {
+    FirebaseFirestore.instance
+        .collection('adminNotifications')
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          var data = change.doc.data() as Map<String, dynamic>;
+          _showLocalNotification(data);
+        }
+      }
+    });
+  }
+
+  void _showLocalNotification(Map<String, dynamic> data) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'high_importance_channel',
+        title: data['type'] == 'newMessage'
+            ? 'Message from Admin'
+            : 'Request: ${data['requestType']}',
+        body: data['type'] == 'newMessage'
+            ? data['message']
+            : 'Status: ${data['status']}',
+        notificationLayout: NotificationLayout.Default,
+        icon: 'resource://drawable/ic_launcher',
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Notifications"),
+        title: const Text(
+          "Notifications",
+          style: TextStyle(fontSize: 14),
+        ),
         actions: [
           DropdownButton<String>(
             value: _selectedFilter,
-            icon: const Icon(Icons.filter_list, color: Colors.white),
+            icon: const Icon(Icons.filter_list,
+                color: Color.fromARGB(255, 97, 97, 97)),
             onChanged: (String? newValue) {
               setState(() {
                 _selectedFilter = newValue!;
@@ -38,6 +83,10 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                 child: Text(value),
               );
             }).toList(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.mark_email_read),
+            onPressed: _markAllAsRead,
           ),
           IconButton(
             icon: const Icon(Icons.delete),
@@ -67,22 +116,16 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
               return ListTile(
                 tileColor: data['viewed']
                     ? Colors.transparent
-                    : Colors.grey[
-                        300], // Change background color based on viewed status
+                    : Colors.grey[300], // Change background color based on viewed status
                 title: Text(
                   data['message'],
                 ),
                 subtitle: Text(data['timestamp'].toDate().toString()),
                 onTap: () async {
-                  // Mark notification as viewed
-                  await FirebaseFirestore.instance
-                      .collection('adminNotifications')
-                      .doc(doc.id)
-                      .update({'viewed': true});
-                  setState(() {
-                    // Update the specific notification's viewed status locally
-                    data['viewed'] = true;
-                  });
+                  // Mark notification as viewed using a WriteBatch
+                  WriteBatch batch = FirebaseFirestore.instance.batch();
+                  batch.update(doc.reference, {'viewed': true});
+                  await batch.commit();
                 },
               );
             },
@@ -101,11 +144,23 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
     return query.snapshots();
   }
 
+  void _markAllAsRead() async {
+    var snapshots =
+        await FirebaseFirestore.instance.collection('adminNotifications').get();
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+    for (var doc in snapshots.docs) {
+      batch.update(doc.reference, {'viewed': true});
+    }
+    await batch.commit();
+  }
+
   void _clearNotifications() async {
     var snapshots =
         await FirebaseFirestore.instance.collection('adminNotifications').get();
+    WriteBatch batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshots.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 }

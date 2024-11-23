@@ -32,9 +32,8 @@ void main() async {
     ),
   );
 
-  // Initialize awesome_notifications
   AwesomeNotifications().initialize(
-    'resource://drawable/res_app_icon', // Replace with your app icon
+    'resource://drawable/ic_launcher', // Default icon for notifications
     [
       NotificationChannel(
         channelKey: 'high_importance_channel',
@@ -42,9 +41,8 @@ void main() async {
         channelDescription: 'This channel is used for important notifications.',
         defaultColor: Color(0xFF9D50DD),
         ledColor: Colors.white,
-        importance: NotificationImportance.Max,
-        channelShowBadge: true,
-      )
+        importance: NotificationImportance.High,
+      ),
     ],
   );
 

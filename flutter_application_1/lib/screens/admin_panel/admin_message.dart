@@ -4,13 +4,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class AdminMessagesScreen extends StatefulWidget {
   final String tableId;
 
-  const AdminMessagesScreen({required this.tableId, super.key, required String userName});
+  const AdminMessagesScreen(
+      {required this.tableId, super.key, required String userName});
 
   @override
   AdminMessagesScreenState createState() => AdminMessagesScreenState();
 }
 
-class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTickerProviderStateMixin {
+class AdminMessagesScreenState extends State<AdminMessagesScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<String> activeUsers = [];
   final TextEditingController messageController = TextEditingController();
@@ -41,7 +43,8 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
         List<dynamic> users = tableDoc['userNames'];
         setState(() {
           activeUsers = users.cast<String>();
-          _tabController = TabController(length: activeUsers.length, vsync: this);
+          _tabController =
+              TabController(length: activeUsers.length, vsync: this);
         });
       } else {
         // Handle the case where 'userNames' field does not exist
@@ -61,13 +64,12 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
 
   void sendMessage(String userName) async {
     if (messageController.text.isNotEmpty) {
-      String docName = 'Admin Message - ${DateTime.now().millisecondsSinceEpoch}';
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(widget.tableId)
-          .collection('messages')
-          .doc(docName)
-          .set({
+      String docName =
+          'Admin Message - ${DateTime.now().millisecondsSinceEpoch}';
+
+      // Save the message to the new 'messages' collection
+      await FirebaseFirestore.instance.collection('messages').doc(docName).set({
+        'tableId': widget.tableId,
         'message': messageController.text,
         'timestamp': FieldValue.serverTimestamp(),
         'sender': 'admin',
@@ -76,7 +78,11 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
 
       String messageAdminNotify = "Message";
 
-      await FirebaseFirestore.instance.collection('notifications').doc(messageAdminNotify).set({
+      // Add a notification document
+      await FirebaseFirestore.instance
+          .collection('notifications')
+          .doc(messageAdminNotify)
+          .set({
         'tableId': widget.tableId,
         'userName': userName,
         'type': 'newMessage',
@@ -102,7 +108,7 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Messages"),
+        title: const Text("Messages"),
         bottom: activeUsers.isNotEmpty
             ? TabBar(
                 controller: _tabController,
@@ -120,57 +126,78 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
                     Expanded(
                       child: StreamBuilder(
                         stream: FirebaseFirestore.instance
-                            .collection('guestRequests')
-                            .doc(widget.tableId)
                             .collection('messages')
-                            .where('userName', isEqualTo: user) // Filter messages by userName
-                            .orderBy('timestamp', descending: false) // Order messages by timestamp
+                            .where('tableId', isEqualTo: widget.tableId)
+                            .where('userName',
+                                isEqualTo: user) // Filter messages by userName
+                            .orderBy('timestamp',
+                                descending:
+                                    false) // Order messages by timestamp
                             .snapshots(),
-                        builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
+                        builder:
+                            (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                                child: CircularProgressIndicator());
                           }
                           if (snapshot.hasError) {
                             print("Error loading messages: ${snapshot.error}");
-                            return const Center(child: Text("Error loading messages"));
+                            return const Center(
+                                child: Text("Error loading messages"));
                           }
-                          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          if (!snapshot.hasData ||
+                              snapshot.data!.docs.isEmpty) {
                             return const Center(child: Text("No messages"));
                           }
 
                           WidgetsBinding.instance.addPostFrameCallback((_) {
                             if (_scrollController.hasClients) {
-                              _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+                              _scrollController.jumpTo(
+                                  _scrollController.position.maxScrollExtent);
                             }
                           });
 
                           return ListView(
                             controller: _scrollController,
-                            reverse: false, // Do not reverse the order of the messages
+                            reverse:
+                                false, // Do not reverse the order of the messages
                             children: snapshot.data!.docs.map((doc) {
                               var message = doc.data() as Map<String, dynamic>;
                               bool isAdmin = message['sender'] == 'admin';
-                              Timestamp? timestamp = message['timestamp'] as Timestamp?;
+                              Timestamp? timestamp =
+                                  message['timestamp'] as Timestamp?;
                               return Column(
-                                crossAxisAlignment: isAdmin ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                crossAxisAlignment: isAdmin
+                                    ? CrossAxisAlignment.end
+                                    : CrossAxisAlignment.start,
                                 children: [
                                   const SizedBox(height: 5),
                                   Align(
-                                    alignment: isAdmin ? Alignment.centerRight : Alignment.centerLeft,
+                                    alignment: isAdmin
+                                        ? Alignment.centerRight
+                                        : Alignment.centerLeft,
                                     child: Container(
-                                      margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                                      margin: const EdgeInsets.symmetric(
+                                          vertical: 5.0, horizontal: 10.0),
                                       padding: const EdgeInsets.all(10.0),
                                       decoration: BoxDecoration(
-                                        color: isAdmin ? Colors.blue[100] : Colors.grey[300],
-                                        borderRadius: BorderRadius.circular(10.0),
+                                        color: isAdmin
+                                            ? Colors.blue[100]
+                                            : Colors.grey[300],
+                                        borderRadius:
+                                            BorderRadius.circular(10.0),
                                       ),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             message['message'],
                                             style: TextStyle(
-                                              color: isAdmin ? Colors.black : Colors.black,
+                                              color: isAdmin
+                                                  ? Colors.black
+                                                  : Colors.black,
                                             ),
                                           ),
                                           if (timestamp != null)
