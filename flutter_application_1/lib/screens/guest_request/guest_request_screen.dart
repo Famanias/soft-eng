@@ -197,6 +197,28 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                margin: const EdgeInsets.only(top: 13), 
+                child: const CircularProgressIndicator(),
+              ),
+              const SizedBox(height: 20),
+              const Text("Please wait a moment..."),
+            ],
+          ),
+        );
+      },
+    );
+
     try {
       for (var requestType in selectedRequests) {
         String docName =
@@ -250,6 +272,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
+    } finally {
+      // Dismiss the loading dialog
+      Navigator.of(context).pop();
     }
   }
 

@@ -102,7 +102,7 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen> with SingleTic
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Messages"),
+        title: const Text("Messages"),
         bottom: activeUsers.isNotEmpty
             ? TabBar(
                 controller: _tabController,

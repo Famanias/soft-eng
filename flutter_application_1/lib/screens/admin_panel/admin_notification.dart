@@ -5,8 +5,7 @@ class AdminNotificationScreen extends StatefulWidget {
   const AdminNotificationScreen({super.key});
 
   @override
-  AdminNotificationScreenState createState() =>
-      AdminNotificationScreenState();
+  AdminNotificationScreenState createState() => AdminNotificationScreenState();
 }
 
 class AdminNotificationScreenState extends State<AdminNotificationScreen> {
@@ -16,11 +15,15 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Notifications"),
+        title: const Text(
+          "Notifications",
+          style: TextStyle(fontSize: 14),
+        ),
         actions: [
           DropdownButton<String>(
             value: _selectedFilter,
-            icon: const Icon(Icons.filter_list, color: Colors.white),
+            icon: const Icon(Icons.filter_list,
+                color: Color.fromARGB(255, 97, 97, 97)),
             onChanged: (String? newValue) {
               setState(() {
                 _selectedFilter = newValue!;
@@ -38,6 +41,10 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                 child: Text(value),
               );
             }).toList(),
+          ),
+          IconButton(
+            icon: const Icon(Icons.mark_email_read),
+            onPressed: _markAllAsRead,
           ),
           IconButton(
             icon: const Icon(Icons.delete),
@@ -74,15 +81,10 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                 ),
                 subtitle: Text(data['timestamp'].toDate().toString()),
                 onTap: () async {
-                  // Mark notification as viewed
-                  await FirebaseFirestore.instance
-                      .collection('adminNotifications')
-                      .doc(doc.id)
-                      .update({'viewed': true});
-                  setState(() {
-                    // Update the specific notification's viewed status locally
-                    data['viewed'] = true;
-                  });
+                  // Mark notification as viewed using a WriteBatch
+                  WriteBatch batch = FirebaseFirestore.instance.batch();
+                  batch.update(doc.reference, {'viewed': true});
+                  await batch.commit();
                 },
               );
             },
@@ -101,11 +103,23 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
     return query.snapshots();
   }
 
+  void _markAllAsRead() async {
+    var snapshots =
+        await FirebaseFirestore.instance.collection('adminNotifications').get();
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+    for (var doc in snapshots.docs) {
+      batch.update(doc.reference, {'viewed': true});
+    }
+    await batch.commit();
+  }
+
   void _clearNotifications() async {
     var snapshots =
         await FirebaseFirestore.instance.collection('adminNotifications').get();
+    WriteBatch batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshots.docs) {
-      await doc.reference.delete();
+      batch.delete(doc.reference);
     }
+    await batch.commit();
   }
 }

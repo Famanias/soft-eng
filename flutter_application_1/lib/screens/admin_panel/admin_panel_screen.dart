@@ -51,7 +51,7 @@ class AdminPanel extends StatelessWidget {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Panel"),
+        title: const Text("TableServe"),
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
@@ -554,7 +554,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Request Details"),
+        title: const Text("Details"),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [

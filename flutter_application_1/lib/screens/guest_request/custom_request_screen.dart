@@ -5,7 +5,8 @@ import 'package:flutter_application_1/screens/guest_request/guest_request_screen
 class CustomRequestScreen extends StatefulWidget {
   final String tableId;
   final String userName;
-  const CustomRequestScreen({super.key, required this.tableId, required this.userName});
+  const CustomRequestScreen(
+      {super.key, required this.tableId, required this.userName});
 
   @override
   CustomRequestScreenState createState() => CustomRequestScreenState();
@@ -24,12 +25,35 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
       return;
     }
 
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 20),
+              const Text("Please wait a moment..."),
+            ],
+          ),
+        );
+      },
+    );
+
     try {
       // Generate a custom document ID using the table ID and timestamp
-      String docName = '${widget.tableId}-${DateTime.now().millisecondsSinceEpoch}';
+      String docName =
+          '${widget.tableId}-${DateTime.now().millisecondsSinceEpoch}';
 
       // Save the custom request to Firestore
-      await FirebaseFirestore.instance.collection('guestRequests').doc(docName).set({
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(docName)
+          .set({
         'tableId': widget.tableId,
         'requestType': customRequestDetails,
         'status': 'pending', // Set status to 'pending'
@@ -47,6 +71,7 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         'timestamp': FieldValue.serverTimestamp(),
       });
 
+      // Notify the user of successful submission
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Custom request submitted successfully")),
       );
@@ -60,11 +85,15 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         MaterialPageRoute(builder: (context) => const GuestRequestScreen()),
         (Route<dynamic> route) => false,
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
+    } finally {
+      // Dismiss the loading dialog if it is still visible
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -88,18 +117,18 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         flexibleSpace: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
-              Container(
-                height: 5,
-                color: Color(0xFF80ACB2),
-              ),
-              Container(
-                height: 5,
-                color: Color(0xFFA3C8CE),
-              ),
-              Container(
-                height: 5,
-                color: Color(0xFFD9D3C1),
-              ),
+            Container(
+              height: 5,
+              color: Color(0xFF80ACB2),
+            ),
+            Container(
+              height: 5,
+              color: Color(0xFFA3C8CE),
+            ),
+            Container(
+              height: 5,
+              color: Color(0xFFD9D3C1),
+            ),
           ],
         ),
       ),
@@ -121,11 +150,14 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
 
                 return Container(
                   width: screenWidth,
-                  height: imageHeight, // Responsive height based on aspect ratio
+                  height:
+                      imageHeight, // Responsive height based on aspect ratio
                   decoration: BoxDecoration(
                     image: DecorationImage(
-                      image: AssetImage('images/bg.png'), // Replace with your background image path
-                      fit: BoxFit.cover, // Ensure it covers the width and scales the height responsively
+                      image: AssetImage(
+                          'images/bg.png'), // Replace with your background image path
+                      fit: BoxFit
+                          .cover, // Ensure it covers the width and scales the height responsively
                     ),
                   ),
                 );
@@ -164,7 +196,8 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
 
                 // Text Input Field
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12.0, vertical: 8.0),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12.0),
@@ -190,7 +223,8 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
                     ),
                   ),
                   onPressed: _submitCustomRequest,
-                  child: const Text("Submit Request", style: TextStyle(fontSize: 18, color: Colors.white)),
+                  child: const Text("Submit Request",
+                      style: TextStyle(fontSize: 18, color: Colors.white)),
                 ),
               ],
             ),
