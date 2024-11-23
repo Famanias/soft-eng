@@ -11,7 +11,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
+  AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
 
 void main() async {

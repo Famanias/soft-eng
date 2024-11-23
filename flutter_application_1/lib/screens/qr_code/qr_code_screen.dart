@@ -15,6 +15,7 @@ class ScanScreenState extends State<ScanScreen> {
   QRViewController? controller;
   String tableId = ""; // Store the tableId here
   bool isScanning = false; // Prevent multiple scans
+  bool isCameraActive = true; // Track camera state
 
   @override
   void dispose() {
@@ -24,6 +25,17 @@ class ScanScreenState extends State<ScanScreen> {
 
   void _showAdminPanel() {
     Navigator.pushNamed(context, '/login');
+  }
+
+  void _toggleCamera() {
+    if (isCameraActive) {
+      controller?.pauseCamera();
+    } else {
+      controller?.resumeCamera();
+    }
+    setState(() {
+      isCameraActive = !isCameraActive;
+    });
   }
 
   @override
@@ -87,6 +99,11 @@ class ScanScreenState extends State<ScanScreen> {
                 ),
               ),
             ),
+          ),
+          const SizedBox(height: 10), // Add some spacing
+          IconButton(
+            icon: Icon(isCameraActive ? Icons.camera_alt : Icons.videocam_off),
+            onPressed: _toggleCamera,
           ),
           const Expanded(
             flex: 1,

@@ -42,11 +42,11 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
         id: 10,
         channelKey: 'high_importance_channel',
         title: data['type'] == 'newMessage'
-            ? 'Message from Admin'
-            : 'Request: ${data['requestType']}',
+            ? '${data['message']}'
+            : 'Request',
         body: data['type'] == 'newMessage'
             ? data['message']
-            : 'Status: ${data['status']}',
+            : '${data['message']}',
         notificationLayout: NotificationLayout.Default,
         icon: 'resource://drawable/ic_launcher',
       ),
