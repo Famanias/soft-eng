@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AdminNotificationScreen extends StatefulWidget {
   const AdminNotificationScreen({super.key});
@@ -10,6 +12,46 @@ class AdminNotificationScreen extends StatefulWidget {
 
 class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   String _selectedFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForNotifications();
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showLocalNotification(message.data);
+    });
+  }
+
+  void _listenForNotifications() {
+    FirebaseFirestore.instance
+        .collection('adminNotifications')
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          var data = change.doc.data() as Map<String, dynamic>;
+          _showLocalNotification(data);
+        }
+      }
+    });
+  }
+
+  void _showLocalNotification(Map<String, dynamic> data) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'high_importance_channel',
+        title: data['type'] == 'newMessage'
+            ? 'Message from Admin'
+            : 'Request: ${data['requestType']}',
+        body: data['type'] == 'newMessage'
+            ? data['message']
+            : 'Status: ${data['status']}',
+        notificationLayout: NotificationLayout.Default,
+        icon: 'resource://drawable/ic_launcher',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,8 +116,7 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
               return ListTile(
                 tileColor: data['viewed']
                     ? Colors.transparent
-                    : Colors.grey[
-                        300], // Change background color based on viewed status
+                    : Colors.grey[300], // Change background color based on viewed status
                 title: Text(
                   data['message'],
                 ),

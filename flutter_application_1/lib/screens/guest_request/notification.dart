@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String tableId;
   final String userName;
 
-  const NotificationScreen({required this.tableId, required this.userName, super.key});
+  const NotificationScreen(
+      {required this.tableId, required this.userName, super.key});
 
   @override
   _NotificationScreenState createState() => _NotificationScreenState();
@@ -19,6 +21,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void initState() {
     super.initState();
     _listenForNotifications();
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showLocalNotification(message.data);
+    });
   }
 
   void _listenForNotifications() {
@@ -42,17 +47,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
       content: NotificationContent(
         id: 10,
         channelKey: 'high_importance_channel',
-        title: data['type'] == 'newMessage' ? 'Message from Admin' : 'Request: ${data['requestType']}',
-        body: data['type'] == 'newMessage' ? data['message'] : 'Status: ${data['status']}',
+        title: data['type'] == 'newMessage'
+            ? 'Message from Admin'
+            : 'Request: ${data['requestType']}',
+        body: data['type'] == 'newMessage'
+            ? data['message']
+            : 'Status: ${data['status']}',
         notificationLayout: NotificationLayout.Default,
+        icon: 'resource://drawable/ic_launcher',
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    print("NotificationScreen tableId: ${widget.tableId}, userName: ${widget.userName}");
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Notifications"),
@@ -66,8 +74,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 _selectedStatus = newValue!;
               });
             },
-            items: <String>['all', 'accepted', 'rejected', 'pending', 'done', 'newMessage']
-                .map<DropdownMenuItem<String>>((String value) {
+            items: <String>[
+              'all',
+              'accepted',
+              'rejected',
+              'pending',
+              'done',
+              'newMessage'
+            ].map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
                 child: Text(
@@ -89,22 +103,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
         stream: _getNotificationStream(),
         builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            print("Loading notifications...");
             return const Center(child: CircularProgressIndicator());
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            print("No notifications found.");
             return const Center(child: Text("No notifications"));
           }
-
-          print("Fetched data: ${snapshot.data!.docs}");
 
           return ListView.builder(
             padding: EdgeInsets.zero,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
-              print("Document data: ${doc.data()}");
+              var doc =
+                  snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
               var data = doc.data() as Map<String, dynamic>;
 
               return ListTile(
@@ -144,7 +154,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Clear Notifications"),
-          content: const Text("Are you sure you want to clear all notifications?"),
+          content:
+              const Text("Are you sure you want to clear all notifications?"),
           actions: [
             TextButton(
               child: const Text("Cancel"),
@@ -168,11 +179,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   }
                   await batch.commit();
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Notifications cleared successfully")),
+                    const SnackBar(
+                        content: Text("Notifications cleared successfully")),
                   );
                 } catch (e) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Failed to clear notifications: $e")),
+                    SnackBar(
+                        content: Text("Failed to clear notifications: $e")),
                   );
                 }
               },
