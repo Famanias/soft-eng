@@ -169,7 +169,17 @@ class AdminPanelState extends State<AdminPanel> {
           children: snapshot.data!.docs.map((doc) {
             String tableId = doc.id;
             return ListTile(
-              title: Text("Table ID: $tableId"),
+
+              title: Text(
+                {
+                  "table_1": "Table 1",
+                  "table_2": "Table 2",
+                  "table_3": "Table 3",
+                  "table_4": "Table 4",
+                  "table_5": "Table 5",
+                }[tableId] ?? tableId, // Default to tableId if not found in the map
+              ),
+              // title: Text("$tableId"), // Display the tableId as the title
               trailing: StreamBuilder(
                 stream: FirebaseFirestore.instance
                     .collection('guestRequests')
@@ -622,7 +632,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         return ListView(
           children: snapshot.data!.docs.map((doc) {
             var data = doc.data() as Map<String, dynamic>;
-            print("Document data: $data");
             
             var requestType = doc['requestType'];
             String requestTypeText;
@@ -684,7 +693,30 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           IconButton(
             icon: const Icon(Icons.delete, color: Colors.red),
             onPressed: () {
-              _deleteRequest(requestId);
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text("Confirm Deletion"),
+                    content: const Text("Are you sure you want to delete this request?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                        child: const Text("Cancel"),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          _deleteRequest(requestId); // Perform the delete action
+                        },
+                        child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  );
+                },
+              );
             },
           ),
         ],
@@ -711,125 +743,129 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Details"),
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: "Pending"),
-            Tab(text: "Accepted"),
-            Tab(text: "Rejected"),
-            Tab(text: "Done")
-          ],
-        ),
-        actions: [
-          StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('activeTables')
-                .snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (!snapshot.hasData) {
-                return const SizedBox.shrink();
-              }
-              var tableIds = snapshot.data!.docs.map((doc) => doc.id).toList();
-              return DropdownButton<String>(
-                value: _selectedTableId,
-                icon: const Icon(Icons.list, color: Colors.black),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedTableId = newValue!;
-                  });
-                },
-                items: tableIds.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              );
-            },
-          ),
-          StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('adminNotifications')
-                .where('viewed', isEqualTo: false)
-                .snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                return IconButton(
-                  icon: Stack(
-                    children: [
-                      const Icon(Icons.notifications),
-                      Positioned(
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(1),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Row(
+        children: [
+                  Text(
+                    {
+                      "table_1": "Table 1",
+                      "table_2": "Table 2",
+                      "table_3": "Table 3",
+                      "table_4": "Table 4",
+                      "table_5": "Table 5",
+                    }[widget.tableId] ?? widget.tableId, // Default to tableId if not found in the map
+                  ),
+        ],
+      ),
+      bottom: TabBar(
+        controller: _tabController,
+        tabs: const [
+          Tab(text: "Pending"),
+          Tab(text: "Accepted"),
+          Tab(text: "Rejected"),
+          Tab(text: "Done")
+        ],
+      ),
+      actions: [
+        StreamBuilder(
+          stream: FirebaseFirestore.instance
+              .collection('adminNotifications')
+              .where('viewed', isEqualTo: false)
+              .snapshots(),
+          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+              return IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.notifications),
+                    Positioned(
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 12,
+                          minHeight: 12,
+                        ),
+                        child: const Text(
+                          '!',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
                           ),
-                          constraints: const BoxConstraints(
-                            minWidth: 12,
-                            minHeight: 12,
-                          ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AdminNotificationScreen(),
-                      ),
-                    );
-                  },
-                );
-              } else {
-                return IconButton(
-                  icon: const Icon(Icons.notifications),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AdminNotificationScreen(),
-                      ),
-                    );
-                  },
-                );
-              }
-            },
+                    ),
+                  ],
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminNotificationScreen(),
+                    ),
+                  );
+                },
+              );
+            } else {
+              return IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AdminNotificationScreen(),
+                    ),
+                  );
+                },
+              );
+            }
+          },
+        ),
+        // IconButton(
+        //   icon: const Icon(Icons.delete),
+        //   onPressed: _showDeleteConfirmationDialog,
+        // ),
+      ],
+    ),
+    body: TabBarView(
+      controller: _tabController,
+      children: [
+        _buildRequestList('pending'),
+        _buildRequestList('accepted'),
+        _buildRequestList('rejected'),
+        _buildRequestList('done'),
+      ],
+    ),
+    floatingActionButton: Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        TextButton(
+          onPressed: _showDeleteConfirmationDialog,
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.red, backgroundColor: Colors.transparent, // Set icon color to grey
+            shape: CircleBorder(), // Make the button round
+            padding: EdgeInsets.all(16), // Square padding for the button
           ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: _showDeleteConfirmationDialog,
-          ),
-        ],
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildRequestList('pending'),
-          _buildRequestList('accepted'),
-          _buildRequestList('rejected'),
-          _buildRequestList('done'),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showMessagesScreen(userName),
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.message),
-      ),
-    );
-  }
+          child: const Icon(Icons.delete),
+        ),
+        SizedBox(height: 20),
+        FloatingActionButton(
+          onPressed: () => _showMessagesScreen(userName),
+          backgroundColor: Colors.white,
+          child: const Icon(Icons.message),
+        ),
+      ],
+    ),
+
+  );
+}
+
 }
