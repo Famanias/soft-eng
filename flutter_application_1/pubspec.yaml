@@ -47,6 +47,7 @@ dependencies:
   firebase_remote_config: ^5.1.5
   flutter_local_notifications: ^18.0.1
   awesome_notifications: ^0.10.0
+  syncfusion_flutter_charts: ^20.2.47
 
 
 
@@ -81,6 +82,7 @@ flutter:
   assets:
     - images/bg.png
     - images/line.png
+    - images/logo.png
     - assets/.env
 
   # An image asset can refer to one or more resolution-specific "variants", see
