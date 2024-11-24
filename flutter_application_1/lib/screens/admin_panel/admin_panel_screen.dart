@@ -65,7 +65,13 @@ class AdminPanelState extends State<AdminPanel> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("TableServe"),
+        title: const Text("TableServe",
+            style: TextStyle(
+              color: Color(0xffD4C4AB),
+              fontSize: 32,
+              fontFamily: "RubikOne",
+            )),
+            centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           StreamBuilder(
@@ -133,6 +139,25 @@ class AdminPanelState extends State<AdminPanel> {
                 _confirmLogout(context), // Call the logout function
           ),
         ],
+        
+        toolbarHeight: 80,
+        flexibleSpace: Column(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              height: 5,
+              color: Color(0xFF80ACB2),
+            ),
+            Container(
+              height: 5,
+              color: Color(0xFFA3C8CE),
+            ),
+            Container(
+              height: 5,
+              color: Color(0xFFD9D3C1),
+            ),
+          ],
+        ),
       ),
       body: _selectedIndex == 0 ? _buildActiveTables() : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
@@ -165,81 +190,97 @@ class AdminPanelState extends State<AdminPanel> {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text("No active tables"));
         }
+        
+        return Column(
+          children: [
+            Text(
+                'Tables',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Color(0xFF316175),
+                  fontSize: 32,
+                  fontFamily: 'RubikOne',
+                ),
+            ),
+            Expanded(
+              child: ListView(
+                  children: snapshot.data!.docs.map((doc) {
+                  String tableId = doc.id;
+                  return ListTile(
 
-        return ListView(
-          children: snapshot.data!.docs.map((doc) {
-            String tableId = doc.id;
-            return ListTile(
-
-              title: Text(
-                {
-                  "table_1": "Table 1",
-                  "table_2": "Table 2",
-                  "table_3": "Table 3",
-                  "table_4": "Table 4",
-                  "table_5": "Table 5",
-                }[tableId] ?? tableId, // Default to tableId if not found in the map
-              ),
-              // title: Text("$tableId"), // Display the tableId as the title
-              trailing: StreamBuilder(
-                stream: FirebaseFirestore.instance
-                    .collection('guestRequests')
-                    .where('tableId', isEqualTo: tableId)
-                    .where('status', isEqualTo: 'pending')
-                    .snapshots(),
-                builder:
-                    (context, AsyncSnapshot<QuerySnapshot> requestSnapshot) {
-                  if (requestSnapshot.connectionState ==
-                      ConnectionState.waiting) {
-                    return const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    );
-                  }
-                  int pendingCount = requestSnapshot.data?.docs.length ?? 0;
-                  return Stack(
-                    children: [
-                      const Icon(Icons.table_restaurant, size: 30),
-                      if (pendingCount > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 20,
-                              minHeight: 20,
-                            ),
-                            child: Text(
-                              '$pendingCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 9,
+                    title: Text(
+                      {
+                        "table_1": "Table 1A",
+                        "table_2": "Table 2",
+                        "table_3": "Table 3",
+                        "table_4": "Table 4",
+                        "table_5": "Table 5",
+                      }[tableId] ?? tableId, // Default to tableId if not found in the map
+                    ),
+                    // title: Text("$tableId"), // Display the tableId as the title
+                    trailing: StreamBuilder(
+                      stream: FirebaseFirestore.instance
+                          .collection('guestRequests')
+                          .where('tableId', isEqualTo: tableId)
+                          .where('status', isEqualTo: 'pending')
+                          .snapshots(),
+                      builder:
+                          (context, AsyncSnapshot<QuerySnapshot> requestSnapshot) {
+                        if (requestSnapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          );
+                        }
+                        int pendingCount = requestSnapshot.data?.docs.length ?? 0;
+                        return Stack(
+                          children: [
+                            const Icon(Icons.table_restaurant, size: 30),
+                            if (pendingCount > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 20,
+                                    minHeight: 20,
+                                  ),
+                                  child: Text(
+                                    '$pendingCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 9,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
                               ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
+                          ],
+                        );
+                      },
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              RequestDetailsScreen(tableId: tableId),
                         ),
-                    ],
+                      );
+                    },
                   );
-                },
+                }).toList(),
+
               ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        RequestDetailsScreen(tableId: tableId),
-                  ),
-                );
-              },
-            );
-          }).toList(),
+            )
+          ],
         );
       },
     );
@@ -562,18 +603,18 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Confirm Deletion"),
+          title: const Text("Clear Table Requests"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                  "Type 'I UNDERSTAND' to confirm deletion of all requests."),
+                  "Type 'CLEAR' to confirm clearing of all requests."),
               const SizedBox(height: 10),
               TextField(
                 controller: confirmationController,
                 decoration: const InputDecoration(
                   labelText: 'Confirmation',
-                  hintText: 'I UNDERSTAND',
+                  hintText: 'CLEAR' ,
                 ),
               ),
             ],
@@ -587,7 +628,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
             ),
             ElevatedButton(
               onPressed: () {
-                if (confirmationController.text == 'I UNDERSTAND') {
+                if (confirmationController.text == 'CLEAR') {
                   _deleteAllRequests();
                   Navigator.of(context).pop();
                 } else {
@@ -597,7 +638,10 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   );
                 }
               },
-              child: const Text("Delete"),
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.all(Colors.white),
+              ),
+              child: const Text("CLEAR"),
             ),
           ],
         );
@@ -758,6 +802,13 @@ Widget build(BuildContext context) {
                       "table_5": "Table 5",
                     }[widget.tableId] ?? widget.tableId, // Default to tableId if not found in the map
                   ),
+                  TextButton(
+                    onPressed: _showDeleteConfirmationDialog,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.grey, backgroundColor: Colors.transparent, // Set icon color to grey
+                    ),
+                    child: const Text("CLEAR"),
+                  ),
         ],
       ),
       bottom: TabBar(
@@ -848,15 +899,6 @@ Widget build(BuildContext context) {
       mainAxisAlignment: MainAxisAlignment.end,
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        TextButton(
-          onPressed: _showDeleteConfirmationDialog,
-          style: TextButton.styleFrom(
-            foregroundColor: Colors.red, backgroundColor: Colors.transparent, // Set icon color to grey
-            shape: CircleBorder(), // Make the button round
-            padding: EdgeInsets.all(16), // Square padding for the button
-          ),
-          child: const Icon(Icons.delete),
-        ),
         SizedBox(height: 20),
         FloatingActionButton(
           onPressed: () => _showMessagesScreen(userName),
