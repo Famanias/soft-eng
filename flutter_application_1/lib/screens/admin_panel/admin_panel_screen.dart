@@ -42,7 +42,8 @@ class AdminPanelState extends State<AdminPanel> {
             ),
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: Text("Logout"),
+              child: Text("Logout",
+                  style: TextStyle(color: Colors.red)), // Set the text color to red
             ),
           ],
         );
