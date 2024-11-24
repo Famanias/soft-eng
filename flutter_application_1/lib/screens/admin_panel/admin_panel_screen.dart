@@ -622,6 +622,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         return ListView(
           children: snapshot.data!.docs.map((doc) {
             var data = doc.data() as Map<String, dynamic>;
+            print("Document data: $data");
+            
             var requestType = doc['requestType'];
             String requestTypeText;
             if (requestType is List) {
@@ -634,7 +636,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
 
             return ListTile(
               title: Text("Request: $requestTypeText"),
-              subtitle: Text("Status: ${doc['status']} : Name: $userName"),
+              subtitle: Text("Status: ${doc['status']}\nName: $userName\nStaff: ${data['updatedBy'] ?? 'Unassigned'}"),
               trailing: _buildTrailingButtons(status, doc.id),
             );
           }).toList(),
