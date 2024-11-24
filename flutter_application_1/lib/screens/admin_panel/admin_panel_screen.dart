@@ -4,8 +4,6 @@ import 'admin_message.dart';
 import 'admin_notification.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
-import 'package:intl/intl.dart';
-
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -236,15 +234,6 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
-  String _selectedFilter = 'This Week';
-  List<String> _filters = [
-    'Today',
-    'This Week',
-    'Last Week',
-    '2 Weeks Ago',
-    '3 Weeks Ago'
-  ];
-
   Widget _buildAnalytics() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
@@ -259,24 +248,19 @@ class AdminPanelState extends State<AdminPanel> {
         }
 
         // Aggregate data
-        Map<String, Map<String, dynamic>> aggregatedData = {};
+        Map<String, Map<String, int>> aggregatedData = {};
         for (var doc in snapshot.data!.docs) {
           var data = doc.data() as Map<String, dynamic>;
           String tableId = data['tableId'];
           int requestCount = data['requestCount'] ?? 0;
           int usersCount = data['usersCount'] ?? 0;
-          Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
 
           if (!aggregatedData.containsKey(tableId)) {
-            aggregatedData[tableId] = {
-              'requestCount': 0,
-              'usersCount': 0,
-              'timestamp': timestamp,
-            };
+            aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
           }
 
-          aggregatedData[tableId]!['requestCount'] += requestCount;
-          aggregatedData[tableId]!['usersCount'] += usersCount;
+          aggregatedData[tableId]!['requestCount'] = (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+          aggregatedData[tableId]!['usersCount'] = (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
         }
 
         List<_ChartData> requestData = aggregatedData.entries.map((entry) {
@@ -285,47 +269,6 @@ class AdminPanelState extends State<AdminPanel> {
 
         List<_ChartData> userData = aggregatedData.entries.map((entry) {
           return _ChartData(entry.key, entry.value['usersCount']!);
-        }).toList();
-
-        // Filter data based on selected filter
-        DateTime now = DateTime.now();
-        DateTime startDate;
-        DateTime endDate;
-
-        switch (_selectedFilter) {
-          case 'Today':
-            startDate = DateTime(now.year, now.month, now.day);
-            endDate = startDate.add(Duration(days: 1));
-            break;
-          case 'Last Week':
-            startDate = now.subtract(Duration(days: now.weekday + 7));
-            endDate = startDate.add(Duration(days: 6));
-            break;
-          case '2 Weeks Ago':
-            startDate = now.subtract(Duration(days: now.weekday + 14));
-            endDate = startDate.add(Duration(days: 6));
-            break;
-          case '3 Weeks Ago':
-            startDate = now.subtract(Duration(days: now.weekday + 21));
-            endDate = startDate.add(Duration(days: 6));
-            break;
-          default:
-            startDate = now.subtract(Duration(days: now.weekday - 1));
-            endDate = startDate.add(Duration(days: 6));
-        }
-
-        List<_ChartData> filteredRequestData = requestData.where((data) {
-          DateTime date =
-              (aggregatedData[data.tableId]!['timestamp'] as Timestamp)
-                  .toDate();
-          return date.isAfter(startDate) && date.isBefore(endDate);
-        }).toList();
-
-        List<_ChartData> filteredUserData = userData.where((data) {
-          DateTime date =
-              (aggregatedData[data.tableId]!['timestamp'] as Timestamp)
-                  .toDate();
-          return date.isAfter(startDate) && date.isBefore(endDate);
         }).toList();
 
         return SingleChildScrollView(
@@ -337,28 +280,13 @@ class AdminPanelState extends State<AdminPanel> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-              DropdownButton<String>(
-                value: _selectedFilter,
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedFilter = newValue!;
-                  });
-                },
-                items: _filters.map<DropdownMenuItem<String>>((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 10),
               SizedBox(
                 height: 300,
                 child: SfCartesianChart(
                   primaryXAxis: CategoryAxis(),
                   series: <ChartSeries>[
                     ColumnSeries<_ChartData, String>(
-                      dataSource: filteredRequestData,
+                      dataSource: requestData,
                       xValueMapper: (_ChartData data, _) => data.tableId,
                       yValueMapper: (_ChartData data, _) => data.count,
                       color: Colors.blue,
@@ -377,8 +305,8 @@ class AdminPanelState extends State<AdminPanel> {
                 child: SfCartesianChart(
                   primaryXAxis: CategoryAxis(),
                   series: <ChartSeries>[
-                    LineSeries<_ChartData, String>(
-                      dataSource: filteredUserData,
+                    ColumnSeries<_ChartData, String>(
+                      dataSource: userData,
                       xValueMapper: (_ChartData data, _) => data.tableId,
                       yValueMapper: (_ChartData data, _) => data.count,
                       color: Colors.green,

@@ -234,23 +234,17 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           'timestamp': Timestamp.now(),
           'userName': userName,
         });
+
+        // create a new collection of users for analytics
         CollectionReference analyticsRef =
             FirebaseFirestore.instance.collection('analytics');
+        DocumentReference analyticsDoc =
+            analyticsRef.doc("$tableId + requestCount");
 
-        // Create a document with the table number as the document ID
-        DocumentReference tableDoc = analyticsRef.doc("$tableId Request Count");
-
-        // Create a subcollection for requestCount
-        CollectionReference requestCountSubcollection =
-            tableDoc.collection('requestCount');
-
-        // Create a new document in the subcollection with the current timestamp as the document ID
-        String docId = DateTime.now().millisecondsSinceEpoch.toString();
-
-        await requestCountSubcollection.doc(docId).set({
-          'requestCount': 1, // Each document represents a single request
-          'timestamp': FieldValue.serverTimestamp(), // Add timestamp field
-        });
+        await analyticsDoc.set({
+          'tableId': tableId,
+          'requestCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
 
         // notify the admin
         await FirebaseFirestore.instance.collection('adminNotifications').add({

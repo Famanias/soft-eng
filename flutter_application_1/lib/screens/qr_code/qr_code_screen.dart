@@ -266,23 +266,17 @@ class ScanScreenState extends State<ScanScreen> {
             SnackBar(content: Text('Hello, $userName')),
           );
 
-          // Create a new collection of users for analytics
-          CollectionReference analyticsRef = FirebaseFirestore.instance.collection('analytics');
+          // create a new collection of users for analytics
+          CollectionReference analyticsRef =
+              FirebaseFirestore.instance.collection('analytics');
+          DocumentReference analyticsDoc =
+              analyticsRef.doc("$tableId + userCount");
 
-          // Create a document with the table number as the document ID
-          DocumentReference tDoc = analyticsRef.doc("$tableId User Count");
-
-          // Create a subcollection for userCount
-          CollectionReference userCountSubcollection = tDoc.collection('userCount');
-
-          // Create a new document in the subcollection with the current timestamp as the document ID
-          String docId = DateTime.now().millisecondsSinceEpoch.toString();
-
-          await userCountSubcollection.doc(docId).set({
+          await analyticsDoc.set({
             'tableId': tableId,
-            'usersCount': 1, // Each document represents a single user count
-            'timestamp': FieldValue.serverTimestamp(), // Add timestamp field
-          });
+            'usersCount': FieldValue.increment(1),
+          }, SetOptions(merge: true));
+
           // notify the admin
           await FirebaseFirestore.instance
               .collection('adminNotifications')
