@@ -210,7 +210,7 @@ class AdminPanelState extends State<AdminPanel> {
 
                     title: Text(
                       {
-                        "table_1": "Table 1A",
+                        "table_1": "Table 1",
                         "table_2": "Table 2",
                         "table_3": "Table 3",
                         "table_4": "Table 4",
