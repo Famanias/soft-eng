@@ -607,6 +607,14 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       String requestType = requestDoc['requestType'];
       String userName = requestDoc['userName'];
 
+      // add to guest request
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .update({
+        'status': 'done',
+      });
+
       // Add a new notification document
       await FirebaseFirestore.instance.collection('notifications').add({
         'tableId': tableId,
