@@ -42,6 +42,7 @@ class AdminPanelState extends State<AdminPanel> {
    void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('adminNotifications')
+        .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
       for (var change in snapshot.docChanges) {
