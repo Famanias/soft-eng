@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login/login.dart';
@@ -9,14 +10,9 @@ import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  AwesomeNotifications().createNotificationFromJsonData(message.data);
-}
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
 
@@ -47,7 +43,7 @@ void main() async {
   );
 
   // Request notification permissions
-   await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
+  await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
     if (!isAllowed) {
       // This is just an example. You can show a dialog or any other UI element to request permission.
       AwesomeNotifications().requestPermissionToSendNotifications();
@@ -57,6 +53,45 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const MyApp());
+
+  _setupGlobalNotificationListener();
+}
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  AwesomeNotifications().createNotificationFromJsonData(message.data);
+}
+
+
+void _setupGlobalNotificationListener() {
+  FirebaseFirestore.instance
+      .collection('notifications')
+      .snapshots()
+      .listen((QuerySnapshot snapshot) {
+    for (var change in snapshot.docChanges) {
+      if (change.type == DocumentChangeType.added) {
+        var data = change.doc.data() as Map<String, dynamic>;
+        _showLocalNotification(data);
+      }
+    }
+  });
+}
+
+void _showLocalNotification(Map<String, dynamic> data) {
+  AwesomeNotifications().createNotification(
+    content: NotificationContent(
+      id: 10,
+      channelKey: 'high_importance_channel',
+      title: data['type'] == 'newMessage'
+          ? 'Message from Admin'
+          : 'Request: ${data['requestType']}',
+      body: data['type'] == 'newMessage'
+          ? data['message']
+          : 'Status: ${data['status']}',
+      notificationLayout: NotificationLayout.Default,
+      icon: 'resource://drawable/ic_launcher',
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -66,7 +101,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-
       title: 'TableServe',
       theme: ThemeData(
         primarySwatch: Colors.blue,
@@ -76,7 +110,8 @@ class MyApp extends StatelessWidget {
       routes: {
         '/qrCode': (context) => const ScanScreen(),
         '/guestRequest': (context) => const GuestRequestScreen(),
-        '/customRequest': (context) => const CustomRequestScreen(tableId: '', userName: ''),
+        '/customRequest': (context) =>
+            const CustomRequestScreen(tableId: '', userName: ''),
         '/login': (context) => LoginScreen(),
         '/adminPanel': (context) => AdminPanel(),
       },

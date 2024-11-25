@@ -9,6 +9,7 @@ import 'dart:developer';
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -34,12 +35,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   void initState() {
     super.initState();
     _initializeLocalNotifications();
+     _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-      if (notification != null && android != null) {
-        _showLocalNotification(notification);
-      }
+      _showLocalNotification(message.data);
     });
     WidgetsBinding.instance.addObserver(this);
     _loadTableId();
@@ -54,25 +52,36 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
-  void _showLocalNotification(RemoteNotification notification) {
-    const AndroidNotificationDetails androidPlatformChannelSpecifics =
-        AndroidNotificationDetails(
-      'high_importance_channel', // Channel ID
-      'High Importance Notifications', // Channel name
-      channelDescription:
-          'This channel is used for important notifications.', // Channel description
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-    );
-    const NotificationDetails platformChannelSpecifics =
-        NotificationDetails(android: androidPlatformChannelSpecifics);
-    _flutterLocalNotificationsPlugin.show(
-      0,
-      notification.title,
-      notification.body,
-      platformChannelSpecifics,
-      payload: 'item x',
+  void _listenForNotifications() {
+    FirebaseFirestore.instance
+        .collection('notifications')
+        .where('tableId', isEqualTo: tableId)
+        .where('userName', isEqualTo: userName)
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          var data = change.doc.data() as Map<String, dynamic>;
+          _showLocalNotification(data);
+        }
+      }
+    });
+  }
+
+  void _showLocalNotification(Map<String, dynamic> data) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'high_importance_channel',
+        title: data['type'] == 'newMessage'
+            ? 'Message from Admin'
+            : 'Request: ${data['requestType']}',
+        body: data['type'] == 'newMessage'
+            ? data['message']
+            : 'Status: ${data['status']}',
+        notificationLayout: NotificationLayout.Default,
+        icon: 'resource://drawable/ic_launcher',
+      ),
     );
   }
 
@@ -375,13 +384,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     return Scaffold(
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
-        title: const Text(
-          "TableServe",
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              "TableServe",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              '$userName - $tableId',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
+          ],
         ),
         leading: IconButton(
           icon: const Icon(Icons.exit_to_app),

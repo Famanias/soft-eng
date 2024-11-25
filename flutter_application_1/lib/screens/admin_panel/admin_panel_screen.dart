@@ -4,6 +4,8 @@ import 'admin_message.dart';
 import 'admin_notification.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -28,6 +30,46 @@ class AdminPanelState extends State<AdminPanel> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    _listenForNotifications();
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      _showLocalNotification(message.data);
+    });
+  }
+
+   void _listenForNotifications() {
+    FirebaseFirestore.instance
+        .collection('adminNotifications')
+        .snapshots()
+        .listen((QuerySnapshot snapshot) {
+      for (var change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.added) {
+          var data = change.doc.data() as Map<String, dynamic>;
+          _showLocalNotification(data);
+        }
+      }
+    });
+  }
+
+  void _showLocalNotification(Map<String, dynamic> data) {
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'high_importance_channel',
+        title: data['type'] == 'newMessage'
+            ? '${data['message']}'
+            : 'Request',
+        body: data['type'] == 'newMessage'
+            ? data['message']
+            : '${data['message']}',
+        notificationLayout: NotificationLayout.Default,
+        icon: 'resource://drawable/ic_launcher',
+      ),
+    );
+  }
+
   Future<void> _confirmLogout(BuildContext context) async {
     bool? shouldLogout = await showDialog(
       context: context,
@@ -43,7 +85,8 @@ class AdminPanelState extends State<AdminPanel> {
             TextButton(
               onPressed: () => Navigator.of(context).pop(true),
               child: Text("Logout",
-                  style: TextStyle(color: Colors.red)), // Set the text color to red
+                  style: TextStyle(
+                      color: Colors.red)), // Set the text color to red
             ),
           ],
         );
@@ -71,7 +114,7 @@ class AdminPanelState extends State<AdminPanel> {
               fontSize: 32,
               fontFamily: "RubikOne",
             )),
-            centerTitle: true,
+        centerTitle: true,
         automaticallyImplyLeading: false,
         actions: [
           StreamBuilder(
@@ -139,7 +182,6 @@ class AdminPanelState extends State<AdminPanel> {
                 _confirmLogout(context), // Call the logout function
           ),
         ],
-        
         toolbarHeight: 80,
         flexibleSpace: Column(
           mainAxisAlignment: MainAxisAlignment.end,
@@ -190,32 +232,32 @@ class AdminPanelState extends State<AdminPanel> {
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return const Center(child: Text("No active tables"));
         }
-        
+
         return Column(
           children: [
             Text(
-                'Tables',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF316175),
-                  fontSize: 32,
-                  fontFamily: 'RubikOne',
-                ),
+              'Tables',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF316175),
+                fontSize: 32,
+                fontFamily: 'RubikOne',
+              ),
             ),
             Expanded(
               child: ListView(
-                  children: snapshot.data!.docs.map((doc) {
+                children: snapshot.data!.docs.map((doc) {
                   String tableId = doc.id;
                   return ListTile(
-
                     title: Text(
                       {
-                        "table_1": "Table 1",
-                        "table_2": "Table 2",
-                        "table_3": "Table 3",
-                        "table_4": "Table 4",
-                        "table_5": "Table 5",
-                      }[tableId] ?? tableId, // Default to tableId if not found in the map
+                            "table_1": "Table 1",
+                            "table_2": "Table 2",
+                            "table_3": "Table 3",
+                            "table_4": "Table 4",
+                            "table_5": "Table 5",
+                          }[tableId] ??
+                          tableId, // Default to tableId if not found in the map
                     ),
                     // title: Text("$tableId"), // Display the tableId as the title
                     trailing: StreamBuilder(
@@ -224,8 +266,8 @@ class AdminPanelState extends State<AdminPanel> {
                           .where('tableId', isEqualTo: tableId)
                           .where('status', isEqualTo: 'pending')
                           .snapshots(),
-                      builder:
-                          (context, AsyncSnapshot<QuerySnapshot> requestSnapshot) {
+                      builder: (context,
+                          AsyncSnapshot<QuerySnapshot> requestSnapshot) {
                         if (requestSnapshot.connectionState ==
                             ConnectionState.waiting) {
                           return const SizedBox(
@@ -234,7 +276,8 @@ class AdminPanelState extends State<AdminPanel> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           );
                         }
-                        int pendingCount = requestSnapshot.data?.docs.length ?? 0;
+                        int pendingCount =
+                            requestSnapshot.data?.docs.length ?? 0;
                         return Stack(
                           children: [
                             const Icon(Icons.table_restaurant, size: 30),
@@ -277,7 +320,6 @@ class AdminPanelState extends State<AdminPanel> {
                     },
                   );
                 }).toList(),
-
               ),
             )
           ],
@@ -311,8 +353,10 @@ class AdminPanelState extends State<AdminPanel> {
             aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
           }
 
-          aggregatedData[tableId]!['requestCount'] = (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
-          aggregatedData[tableId]!['usersCount'] = (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
+          aggregatedData[tableId]!['requestCount'] =
+              (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+          aggregatedData[tableId]!['usersCount'] =
+              (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
         }
 
         List<_ChartData> requestData = aggregatedData.entries.map((entry) {
@@ -558,25 +602,12 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           .doc(requestId)
           .get();
 
-      // String currentStatus = requestDoc['status'];
       String tableId = requestDoc['tableId'];
-      // String userName = requestDoc['userName'];
       String requestType = requestDoc['requestType'];
       String userName = requestDoc['userName'];
 
-      // Only notify the user if the request is not already accepted
-      // Update the status to 'done'
-      await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(requestId)
-          .update({'status': 'done'});
-
-      // Add a notification document
-
-      await FirebaseFirestore.instance
-          .collection('notifications')
-          .doc('Status of $requestId for $userName')
-          .set({
+      // Add a new notification document
+      await FirebaseFirestore.instance.collection('notifications').add({
         'tableId': tableId,
         'requestId': requestId,
         'requestType': requestType,
@@ -607,14 +638,13 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                  "Type 'CLEAR' to confirm clearing of all requests."),
+              const Text("Type 'CLEAR' to confirm clearing of all requests."),
               const SizedBox(height: 10),
               TextField(
                 controller: confirmationController,
                 decoration: const InputDecoration(
                   labelText: 'Confirmation',
-                  hintText: 'CLEAR' ,
+                  hintText: 'CLEAR',
                 ),
               ),
             ],
@@ -677,7 +707,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         return ListView(
           children: snapshot.data!.docs.map((doc) {
             var data = doc.data() as Map<String, dynamic>;
-            
+
             var requestType = doc['requestType'];
             String requestTypeText;
             if (requestType is List) {
@@ -690,7 +720,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
 
             return ListTile(
               title: Text("Request: $requestTypeText"),
-              subtitle: Text("Status: ${doc['status']}\nName: $userName\nStaff: ${data['updatedBy'] ?? 'Unassigned'}"),
+              subtitle: Text(
+                  "Status: ${doc['status']}\nName: $userName\nStaff: ${data['updatedBy'] ?? 'Unassigned'}"),
               trailing: _buildTrailingButtons(status, doc.id),
             );
           }).toList(),
@@ -743,7 +774,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text("Confirm Deletion"),
-                    content: const Text("Are you sure you want to delete this request?"),
+                    content: const Text(
+                        "Are you sure you want to delete this request?"),
                     actions: [
                       TextButton(
                         onPressed: () {
@@ -754,9 +786,11 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                       TextButton(
                         onPressed: () {
                           Navigator.of(context).pop(); // Close the dialog
-                          _deleteRequest(requestId); // Perform the delete action
+                          _deleteRequest(
+                              requestId); // Perform the delete action
                         },
-                        child: const Text("Delete", style: TextStyle(color: Colors.red)),
+                        child: const Text("Delete",
+                            style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   );
@@ -788,127 +822,126 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
   }
 
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    appBar: AppBar(
-      title: Row(
-        children: [
-                  Text(
-                    {
-                      "table_1": "Table 1",
-                      "table_2": "Table 2",
-                      "table_3": "Table 3",
-                      "table_4": "Table 4",
-                      "table_5": "Table 5",
-                    }[widget.tableId] ?? widget.tableId, // Default to tableId if not found in the map
-                  ),
-                  TextButton(
-                    onPressed: _showDeleteConfirmationDialog,
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.grey, backgroundColor: Colors.transparent, // Set icon color to grey
-                    ),
-                    child: const Text("CLEAR"),
-                  ),
-        ],
-      ),
-      bottom: TabBar(
-        controller: _tabController,
-        tabs: const [
-          Tab(text: "Pending"),
-          Tab(text: "Accepted"),
-          Tab(text: "Rejected"),
-          Tab(text: "Done")
-        ],
-      ),
-      actions: [
-        StreamBuilder(
-          stream: FirebaseFirestore.instance
-              .collection('adminNotifications')
-              .where('viewed', isEqualTo: false)
-              .snapshots(),
-          builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-            if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-              return IconButton(
-                icon: Stack(
-                  children: [
-                    const Icon(Icons.notifications),
-                    Positioned(
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(1),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 12,
-                          minHeight: 12,
-                        ),
-                        child: const Text(
-                          '!',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Text(
+              {
+                    "table_1": "Table 1",
+                    "table_2": "Table 2",
+                    "table_3": "Table 3",
+                    "table_4": "Table 4",
+                    "table_5": "Table 5",
+                  }[widget.tableId] ??
+                  widget.tableId, // Default to tableId if not found in the map
+            ),
+            TextButton(
+              onPressed: _showDeleteConfirmationDialog,
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey,
+                backgroundColor: Colors.transparent, // Set icon color to grey
+              ),
+              child: const Text("CLEAR"),
+            ),
+          ],
+        ),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: "Pending"),
+            Tab(text: "Accepted"),
+            Tab(text: "Rejected"),
+            Tab(text: "Done")
+          ],
+        ),
+        actions: [
+          StreamBuilder(
+            stream: FirebaseFirestore.instance
+                .collection('adminNotifications')
+                .where('viewed', isEqualTo: false)
+                .snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                return IconButton(
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.notifications),
+                      Positioned(
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(1),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
                           ),
-                          textAlign: TextAlign.center,
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: const Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminNotificationScreen(),
-                    ),
-                  );
-                },
-              );
-            } else {
-              return IconButton(
-                icon: const Icon(Icons.notifications),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => AdminNotificationScreen(),
-                    ),
-                  );
-                },
-              );
-            }
-          },
+                    ],
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              } else {
+                return IconButton(
+                  icon: const Icon(Icons.notifications),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AdminNotificationScreen(),
+                      ),
+                    );
+                  },
+                );
+              }
+            },
+          ),
+          // IconButton(
+          //   icon: const Icon(Icons.delete),
+          //   onPressed: _showDeleteConfirmationDialog,
+          // ),
+        ],
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildRequestList('pending'),
+          _buildRequestList('accepted'),
+          _buildRequestList('rejected'),
+          _buildRequestList('done'),
+        ],
+      ),
+      floatingActionButton: Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.all(30.0), // Adjust the padding as needed
+          child: FloatingActionButton(
+            onPressed: () => _showMessagesScreen(userName),
+            backgroundColor: Colors.white,
+            child: const Icon(Icons.message),
+          ),
         ),
-        // IconButton(
-        //   icon: const Icon(Icons.delete),
-        //   onPressed: _showDeleteConfirmationDialog,
-        // ),
-      ],
-    ),
-    body: TabBarView(
-      controller: _tabController,
-      children: [
-        _buildRequestList('pending'),
-        _buildRequestList('accepted'),
-        _buildRequestList('rejected'),
-        _buildRequestList('done'),
-      ],
-    ),
-    floatingActionButton: Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        SizedBox(height: 20),
-        FloatingActionButton(
-          onPressed: () => _showMessagesScreen(userName),
-          backgroundColor: Colors.white,
-          child: const Icon(Icons.message),
-        ),
-      ],
-    ),
-
-  );
-}
-
+      ),
+    );
+  }
 }
