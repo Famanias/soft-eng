@@ -55,7 +55,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('notifications')
-        .where('tableId', isEqualTo: tableId)
         .where('userName', isEqualTo: userName)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
@@ -256,12 +255,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         }, SetOptions(merge: true));
 
         // notify the admin
-        await FirebaseFirestore.instance.collection('adminNotifications').add({
+        await FirebaseFirestore.instance.collection('notifications').add({
           'type': 'newRequest',
           'message':
               'New request "$requestType" from user "$userName" at table "$tableId"',
           'timestamp': FieldValue.serverTimestamp(),
           'viewed': false,
+          'userName': userName
         });
       }
 
@@ -444,7 +444,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('notifications')
-                .where('tableId', isEqualTo: tableId)
                 .where('userName', isEqualTo: userName)
                 .where('viewed',
                     isEqualTo: false) // Only show unviewed notifications

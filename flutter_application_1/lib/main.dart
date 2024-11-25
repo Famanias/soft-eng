@@ -52,7 +52,6 @@ void main() async {
 
   runApp(const MyApp());
 
-  _setupGlobalNotificationListener();
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -61,36 +60,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 
-void _setupGlobalNotificationListener() {
-  FirebaseFirestore.instance
-      .collection('notifications')
-      .snapshots()
-      .listen((QuerySnapshot snapshot) {
-    for (var change in snapshot.docChanges) {
-      if (change.type == DocumentChangeType.added) {
-        var data = change.doc.data() as Map<String, dynamic>;
-        _showLocalNotification(data);
-      }
-    }
-  });
-}
-
-void _showLocalNotification(Map<String, dynamic> data) {
-  AwesomeNotifications().createNotification(
-    content: NotificationContent(
-      id: 10,
-      channelKey: 'high_importance_channel',
-      title: data['type'] == 'newMessage'
-          ? 'Message from Admin'
-          : 'Request: ${data['requestType']}',
-      body: data['type'] == 'newMessage'
-          ? data['message']
-          : 'Status: ${data['status']}',
-      notificationLayout: NotificationLayout.Default,
-      icon: 'resource://drawable/ic_launcher',
-    ),
-  );
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
