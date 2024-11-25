@@ -23,9 +23,6 @@ class ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-  void _showAdminPanel() {
-    Navigator.pushNamed(context, '/login');
-  }
 
   void _toggleCamera() {
     if (isCameraActive) {
@@ -71,10 +68,6 @@ class ScanScreenState extends State<ScanScreen> {
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: _showInfoDialog,
-          ),
-          IconButton(
-            icon: const Icon(Icons.admin_panel_settings),
-            onPressed: _showAdminPanel,
           ),
         ],
         backgroundColor: Color(0xFFE4CB9D),
