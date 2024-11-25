@@ -534,6 +534,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         'viewed': false,
         'timestamp': FieldValue.serverTimestamp(),
         'userName': userName,
+        'role': 'user',
         'updatedBy': staffName, // Also use staffName for the notification
       });
 
@@ -615,6 +616,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         'viewed': false,
         'timestamp': FieldValue.serverTimestamp(),
         'userName': userName,
+        'role': 'user',
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
