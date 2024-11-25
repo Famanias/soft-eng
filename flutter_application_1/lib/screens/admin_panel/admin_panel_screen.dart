@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -108,6 +109,7 @@ class AdminPanelState extends State<AdminPanel> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         title: const Text("TableServe",
             style: TextStyle(
               color: Color(0xffD4C4AB),
@@ -115,7 +117,15 @@ class AdminPanelState extends State<AdminPanel> {
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading:
+          IconButton(
+              icon: Transform.rotate(
+                angle: 3.14, // 180 degrees in radians
+                child: Icon(Icons.logout),
+              ),
+              onPressed: () =>
+                  _confirmLogout(context), // Call the logout function
+            ),
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
@@ -168,11 +178,7 @@ class AdminPanelState extends State<AdminPanel> {
               }
             },
           ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () =>
-                _confirmLogout(context), // Call the logout function
-          ),
+
         ],
         toolbarHeight: 80,
         flexibleSpace: Column(
@@ -746,24 +752,29 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Time: ${data['timestamp']}",
+                  "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
                   style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text(
+                      "Request by: $userName",
+                      style: const TextStyle(fontSize: 14),
+                    ),  
+                    const SizedBox(width: 50),    
+                    Text(
+                      "Status: ${doc['status']}",
+                      style: const TextStyle(fontSize: 14),
+                    ),             
+
+                  ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  "Request by: $userName",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Status: ${doc['status']}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Staff: $staffName",
-                  style: const TextStyle(fontSize: 14),
-                ),
+                  Text(
+                    "Staff: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
