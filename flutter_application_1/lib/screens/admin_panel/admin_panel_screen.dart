@@ -140,14 +140,6 @@ class AdminPanelState extends State<AdminPanel> {
                             minWidth: 12,
                             minHeight: 12,
                           ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
                         ),
                       ),
                     ],
@@ -1000,14 +992,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                           constraints: const BoxConstraints(
                             minWidth: 12,
                             minHeight: 12,
-                          ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
