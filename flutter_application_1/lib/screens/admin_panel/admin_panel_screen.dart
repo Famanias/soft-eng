@@ -22,7 +22,7 @@ class AdminPanelState extends State<AdminPanel> {
     try {
       await _auth.signOut();
       Navigator.pushReplacementNamed(
-          context, '/qrCode'); // Redirect to login screen
+          context, '/login'); // Redirect to login screen
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: ${e.toString()}")),
