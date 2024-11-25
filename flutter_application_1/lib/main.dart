@@ -64,6 +64,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void _setupGlobalNotificationListener() {
   FirebaseFirestore.instance
       .collection('notifications')
+      .where('sendTo', isEqualTo: 'admin')
+      .where('userName')
       .snapshots()
       .listen((QuerySnapshot snapshot) {
     for (var change in snapshot.docChanges) {
