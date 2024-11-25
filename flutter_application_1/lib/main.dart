@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/adminPanel',
+      initialRoute: '/login',
       routes: {
         '/login': (context) => LoginScreen(),
         '/adminPanel': (context) => AdminPanel(),
