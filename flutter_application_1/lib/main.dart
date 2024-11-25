@@ -3,10 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_application_1/screens/login/login.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'screens/guest_request/guest_request_screen.dart';
-import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
-import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 
@@ -106,12 +103,8 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/qrCode',
+      initialRoute: '/adminPanel',
       routes: {
-        '/qrCode': (context) => const ScanScreen(),
-        '/guestRequest': (context) => const GuestRequestScreen(),
-        '/customRequest': (context) =>
-            const CustomRequestScreen(tableId: '', userName: ''),
         '/login': (context) => LoginScreen(),
         '/adminPanel': (context) => AdminPanel(),
       },
