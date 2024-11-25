@@ -606,6 +606,14 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       String requestType = requestDoc['requestType'];
       String userName = requestDoc['userName'];
 
+      // add the guest request to the done collection
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .update({
+            'status': 'done',
+          });
+
       // Add a new notification document
       await FirebaseFirestore.instance.collection('notifications').add({
         'tableId': tableId,
@@ -704,28 +712,78 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           return const Center(child: Text("No requests for this table"));
         }
 
-        return ListView(
-          children: snapshot.data!.docs.map((doc) {
-            var data = doc.data() as Map<String, dynamic>;
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: snapshot.data!.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
 
-            var requestType = doc['requestType'];
-            String requestTypeText;
-            if (requestType is List) {
-              requestTypeText = requestType.join(', ');
-            } else {
-              requestTypeText = requestType.toString();
-            }
+          var requestType = doc['requestType'];
+          String requestTypeText;
+          if (requestType is List) {
+            requestTypeText = requestType.join(', ');
+          } else {
+            requestTypeText = requestType.toString();
+          }
 
-            String userName = data['userName'] ?? "Guest";
+          String userName = data['userName'] ?? "Guest";
+          String staffName = data['updatedBy'] ?? "Unassigned";
 
-            return ListTile(
-              title: Text("Request: $requestTypeText"),
-              subtitle: Text(
-                  "Status: ${doc['status']}\nName: $userName\nStaff: ${data['updatedBy'] ?? 'Unassigned'}"),
-              trailing: _buildTrailingButtons(status, doc.id),
-            );
-          }).toList(),
-        );
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  requestTypeText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "Time: ${data['timestamp']}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Request by: $userName",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Status: ${doc['status']}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Staff: $staffName",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _buildTrailingButtons(status, doc.id) ?? Container(),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
       },
     );
   }
@@ -735,18 +793,33 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.green),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'accepted');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.red),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'rejected');
-            },
-          ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle reject button
+                        _updateRequestStatus(requestId, 'rejected');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                      ),
+                      child: const Text(
+                        "Reject",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle accept button
+                        _updateRequestStatus(requestId, 'accepted');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text(
+                        "Accept",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
         ],
       );
     } else if (status == 'accepted') {
@@ -759,48 +832,96 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     } else if (status == 'rejected') {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.green),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'accepted');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text("Confirm Deletion"),
-                    content: const Text(
-                        "Are you sure you want to delete this request?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                        },
-                        child: const Text("Cancel"),
+        children: [                    
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("Confirm Deletion"),
+                              content: const Text(
+                                  "Are you sure you want to delete this request?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                  },
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                    _deleteRequest(
+                                        requestId); // Perform the delete action
+                                  },
+                                  child: const Text("Delete",
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle accept button
+                        _updateRequestStatus(requestId, 'accepted');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                          _deleteRequest(
-                              requestId); // Perform the delete action
-                        },
-                        child: const Text("Delete",
-                            style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        "Accept",
+                        style: TextStyle(color: Colors.white),
                       ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
+                    ),
+
         ],
       );
-    } else {
+    } else if (status == 'done') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [                    
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("Confirm Deletion"),
+                              content: const Text(
+                                  "Are you sure you want to delete this request?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                  },
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                    _deleteRequest(
+                                        requestId); // Perform the delete action
+                                  },
+                                  child: const Text("Delete",
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+        ],
+      );
+    } 
+    else {
       return null;
     }
   }
@@ -916,10 +1037,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
               }
             },
           ),
-          // IconButton(
-          //   icon: const Icon(Icons.delete),
-          //   onPressed: _showDeleteConfirmationDialog,
-          // ),
         ],
       ),
       body: TabBarView(
