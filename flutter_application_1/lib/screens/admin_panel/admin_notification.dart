@@ -85,12 +85,37 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
             }).toList(),
           ),
           IconButton(
-            icon: const Icon(Icons.mark_email_read),
-            onPressed: _markAllAsRead,
-          ),
-          IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: _clearNotifications,
+            onPressed: () async {
+              final bool? confirmDelete = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Clear Notifications'),
+                    content: const Text('Are you sure you want to clear all notifications?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(false); // Cancel deletion
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(true); // Confirm deletion
+                        },
+                        child: const Text('Delete',
+                        style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (confirmDelete == true) {
+                _clearNotifications(context);
+              }
+            },
           ),
         ],
       ),
@@ -154,13 +179,23 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
     await batch.commit();
   }
 
-  void _clearNotifications() async {
-    var snapshots =
-        await FirebaseFirestore.instance.collection('adminNotifications').get();
+  void _clearNotifications(BuildContext context) async {
+    var snapshots = await FirebaseFirestore.instance
+        .collection('adminNotifications')
+        .get();
     WriteBatch batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshots.docs) {
       batch.delete(doc.reference);
     }
     await batch.commit();
+
+    // Show confirmation message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('All notifications have been cleared'),
+        duration: Duration(seconds: 2),
+      ),
+    );
   }
+
 }
