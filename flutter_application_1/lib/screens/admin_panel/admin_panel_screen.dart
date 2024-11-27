@@ -332,154 +332,201 @@ class AdminPanelState extends State<AdminPanel> {
         Expanded(
           child: StreamBuilder(
             stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(
-                  child: CircularProgressIndicator(),
-                );
+            builder: (context, AsyncSnapshot<QuerySnapshot> analyticsSnapshot) {
+              if (analyticsSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
               }
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              if (!analyticsSnapshot.hasData || analyticsSnapshot.data!.docs.isEmpty) {
                 return const Center(child: Text("No analytics data"));
               }
 
-              // Aggregate data for individual tables
-              Map<String, Map<String, int>> aggregatedData = {};
-              int totalUsersCount = 0;
-              int totalRequestsCount = 0;
+              return StreamBuilder(
+                stream: FirebaseFirestore.instance.collection('globalAnalytics').snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
+                  if (globalAnalyticsSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!globalAnalyticsSnapshot.hasData || globalAnalyticsSnapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text("No global analytics data"));
+                  }
 
-              for (var doc in snapshot.data!.docs) {
-                var data = doc.data() as Map<String, dynamic>;
+                  // Aggregate data for analytics collection
+                  Map<String, Map<String, int>> aggregatedData = {};
+                  int totalUsersCount = 0;
+                  int totalRequestsCount = 0;
 
-                // Ensure tableId, requestCount, and usersCount are valid
-                String tableId = data['tableId'] ?? 'Unknown'; // default to 'Unknown' if missing
-                int requestCount = data['requestCount'] ?? 0;  // default to 0 if missing
-                int usersCount = data['usersCount'] ?? 0;  // default to 0 if missing
+                  for (var doc in analyticsSnapshot.data!.docs) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String tableId = data['tableId'] ?? 'Unknown';
+                    int requestCount = data['requestCount'] ?? 0;
+                    int usersCount = data['usersCount'] ?? 0;
 
-                if (!aggregatedData.containsKey(tableId)) {
-                  aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
-                }
+                    if (!aggregatedData.containsKey(tableId)) {
+                      aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
+                    }
 
-                // Aggregate the request count and user count per table
-                aggregatedData[tableId]!['requestCount'] =
-                    (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
-                aggregatedData[tableId]!['usersCount'] =
-                    (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
+                    aggregatedData[tableId]!['requestCount'] =
+                        (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+                    aggregatedData[tableId]!['usersCount'] =
+                        (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
 
-                // Add to the total counts
-                totalRequestsCount += requestCount;
-                totalUsersCount += usersCount;
-              }
+                    totalRequestsCount += requestCount;
+                    totalUsersCount += usersCount;
+                  }
 
-              List<_ChartData> requestData = aggregatedData.entries.map((entry) {
-                return _ChartData(entry.key, entry.value['requestCount']!);
-              }).toList();
+                  List<_ChartData> requestData = aggregatedData.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value['requestCount']!);
+                  }).toList();
 
-              List<_ChartData> userData = aggregatedData.entries.map((entry) {
-                return _ChartData(entry.key, entry.value['usersCount']!);
-              }).toList();
+                  List<_ChartData> userData = aggregatedData.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value['usersCount']!);
+                  }).toList();
 
-              return SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    // Display Total Counts
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  // Aggregate data for globalAnalytics collection
+                  List<_ChartData> requestTypeData = [];
+                  for (var doc in globalAnalyticsSnapshot.data!.docs) {
+                    var data = doc.data() as Map<String, dynamic>;
+                      // Iterate over each field in the document
+                    data.forEach((key, value) {
+                      if (value is int) { // Ensure the value is an integer
+                        requestTypeData.add(_ChartData(key, value));
+                      }
+                    });
+                  }
+
+                  return SingleChildScrollView(
+                    child: Column(
                       children: [
-                        // Container for Total Requests
-                        Container(
-                          width: 200,
-                          padding: const EdgeInsets.all(8),
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.blue),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "$totalRequestsCount",
-                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue),
+                        const SizedBox(height: 10),
+                        // Display Total Counts
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Total Requests
+                            Container(
+                              width: 200,
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.blue),
                               ),
-                              Text(
-                                "Total Requests",
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$totalRequestsCount",
+                                    style: const TextStyle(
+                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  ),
+                                  const Text(
+                                    "Total Requests",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Total Users
+                            Container(
+                              width: 200,
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.green),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$totalUsersCount",
+                                    style: const TextStyle(
+                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
+                                  ),
+                                  const Text(
+                                    "Total Users",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Request Count by Table",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 300,
+                          child: SfCartesianChart(
+                            primaryXAxis: CategoryAxis(),
+                            series: <ChartSeries>[
+                              ColumnSeries<_ChartData, String>(
+                                dataSource: requestData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                color: Colors.blue,
                               ),
                             ],
                           ),
                         ),
-                        // const SizedBox(width: 25),
-                        // Container for Total Users
-                        Container(
-                          width: 200,
-                          padding: const EdgeInsets.all(8),
-                          margin: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.green[50],
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.green),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                "$totalUsersCount",
-                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "User Count by Table",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 300,
+                          child: SfCartesianChart(
+                            primaryXAxis: CategoryAxis(),
+                            series: <ChartSeries>[
+                              ColumnSeries<_ChartData, String>(
+                                dataSource: userData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                color: Colors.green,
                               ),
-                              Text(
-                                "Total Users",
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Request Type Frequency",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 400,
+                          child: SfCircularChart(
+                            legend: Legend(
+                              isVisible: true,
+                              alignment: ChartAlignment.center, // Aligns the legend to the center
+                              position: LegendPosition.bottom, // Places the legend below the chart
+                              orientation: LegendItemOrientation.vertical,
+                              overflowMode: LegendItemOverflowMode.wrap, // Allows wrapping for long legends
+                              itemPadding: 10,
+                              
+                            ),
+                            series: <CircularSeries>[
+                              PieSeries<_ChartData, String>(
+                                dataSource: requestTypeData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                dataLabelSettings: const DataLabelSettings(isVisible: true),
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Request Count by Table",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      height: 300,
-                      child: SfCartesianChart(
-                        primaryXAxis: CategoryAxis(),
-                        series: <ChartSeries>[
-                          ColumnSeries<_ChartData, String>(
-                            dataSource: requestData,
-                            xValueMapper: (_ChartData data, _) => data.tableId,
-                            yValueMapper: (_ChartData data, _) => data.count,
-                            color: Colors.blue,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "User Count by Table",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 5),
-                    SizedBox(
-                      height: 300,
-                      child: SfCartesianChart(
-                        primaryXAxis: CategoryAxis(),
-                        series: <ChartSeries>[
-                          ColumnSeries<_ChartData, String>(
-                            dataSource: userData,
-                            xValueMapper: (_ChartData data, _) => data.tableId,
-                            yValueMapper: (_ChartData data, _) => data.count,
-                            color: Colors.green,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
+                  );
+                },
               );
             },
           ),
@@ -487,6 +534,7 @@ class AdminPanelState extends State<AdminPanel> {
       ],
     );
   }
+
 
 }
 
