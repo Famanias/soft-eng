@@ -104,7 +104,7 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                         onPressed: () {
                           Navigator.of(context).pop(true); // Confirm deletion
                         },
-                        child: const Text('Delete',
+                        child: const Text('Clear',
                         style: TextStyle(color: Colors.red)),
                       ),
                     ],

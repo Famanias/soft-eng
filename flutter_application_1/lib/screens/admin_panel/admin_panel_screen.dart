@@ -410,7 +410,7 @@ class AdminPanelState extends State<AdminPanel> {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 25),
+                        // const SizedBox(width: 25),
                         // Container for Total Users
                         Container(
                           width: 200,
@@ -443,7 +443,7 @@ class AdminPanelState extends State<AdminPanel> {
                       "Request Count by Table",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 5),
                     SizedBox(
                       height: 300,
                       child: SfCartesianChart(
@@ -458,12 +458,12 @@ class AdminPanelState extends State<AdminPanel> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 10),
                     const Text(
                       "User Count by Table",
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 5),
                     SizedBox(
                       height: 300,
                       child: SfCartesianChart(

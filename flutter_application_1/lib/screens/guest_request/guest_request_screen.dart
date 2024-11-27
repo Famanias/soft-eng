@@ -153,27 +153,22 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     }
   }
 
-  // Placeholder list of request types (replace "Lorem Ipsum Request" with actual request types)
+  // Rearranged list of request types for better UX/UI flow
   List<String> requestTypes = [
-    "Frequently Asked Questions",
-    "Housekeeping Request",
-    "Assistance Request",
-    "Checkout Request",
-    "Summon a Staff",
+    "Food & Beverage Request",  // Immediate need: Food & drinks
+    "Request a Staff",  // Immediate need: Staff for assistance
+    "Kitchenware Request",  // Special request: Kitchen items
+    "Cottage Cleaning Request",  // Service request: Cleaning
+    "Checkout Request",  // End of stay: Checkout
   ];
 
+  // Updated request information map
   final Map<String, String> requestInformation = {
-    'Frequently Asked Questions':
-        'Request for information on common questions and answers',
-    'Housekeeping Request':
-        'Request for cottage cleaning or other housekeeping services',
-    'Assistance Request':
-        'Ask for help or support from the staff for various needs.',
-    "Checkout Request":
-        "Notify the staff that you will be checking out and require assistance with the process.",
-    "Summon a Staff":
-        "Request a staff member to come to your location for immediate assistance.",
-    // Add more request types and their information here
+    'Food & Beverage Request': 'Request food and drinks to be delivered to your location.',
+    'Request a Staff': 'Request a staff member to come to your location for immediate assistance.',
+    'Kitchenware Request': 'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
+    'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
+    'Checkout Request': "Notify the staff that you will be checking out and require assistance with the process.",
   };
 
   // Function to get information based on request type
