@@ -265,6 +265,7 @@ class ScanScreenState extends State<ScanScreen> {
           DocumentReference analyticsDoc =
               analyticsRef.doc("$tableId + userCount");
 
+          // increment the user count for specific table
           await analyticsDoc.set({
             'tableId': tableId,
             'usersCount': FieldValue.increment(1),
