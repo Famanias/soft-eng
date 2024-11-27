@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -109,6 +110,7 @@ class AdminPanelState extends State<AdminPanel> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         title: const Text("TableServe",
             style: TextStyle(
               color: Color(0xffD4C4AB),
@@ -116,7 +118,15 @@ class AdminPanelState extends State<AdminPanel> {
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading:
+          IconButton(
+              icon: Transform.rotate(
+                angle: 3.14, // 180 degrees in radians
+                child: Icon(Icons.logout),
+              ),
+              onPressed: () =>
+                  _confirmLogout(context), // Call the logout function
+            ),
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
@@ -169,11 +179,7 @@ class AdminPanelState extends State<AdminPanel> {
               }
             },
           ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () =>
-                _confirmLogout(context), // Call the logout function
-          ),
+
         ],
         toolbarHeight: 80,
         flexibleSpace: Column(
@@ -322,93 +328,167 @@ class AdminPanelState extends State<AdminPanel> {
   }
 
   Widget _buildAnalytics() {
-    return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
-      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No analytics data"));
-        }
+    return Column(
+      children: [
+        Expanded(
+          child: StreamBuilder(
+            stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(child: Text("No analytics data"));
+              }
 
-        // Aggregate data
-        Map<String, Map<String, int>> aggregatedData = {};
-        for (var doc in snapshot.data!.docs) {
-          var data = doc.data() as Map<String, dynamic>;
-          String tableId = data['tableId'];
-          int requestCount = data['requestCount'] ?? 0;
-          int usersCount = data['usersCount'] ?? 0;
+              // Aggregate data for individual tables
+              Map<String, Map<String, int>> aggregatedData = {};
+              int totalUsersCount = 0;
+              int totalRequestsCount = 0;
 
-          if (!aggregatedData.containsKey(tableId)) {
-            aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
-          }
+              for (var doc in snapshot.data!.docs) {
+                var data = doc.data() as Map<String, dynamic>;
 
-          aggregatedData[tableId]!['requestCount'] =
-              (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
-          aggregatedData[tableId]!['usersCount'] =
-              (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
-        }
+                // Ensure tableId, requestCount, and usersCount are valid
+                String tableId = data['tableId'] ?? 'Unknown'; // default to 'Unknown' if missing
+                int requestCount = data['requestCount'] ?? 0;  // default to 0 if missing
+                int usersCount = data['usersCount'] ?? 0;  // default to 0 if missing
 
-        List<_ChartData> requestData = aggregatedData.entries.map((entry) {
-          return _ChartData(entry.key, entry.value['requestCount']!);
-        }).toList();
+                if (!aggregatedData.containsKey(tableId)) {
+                  aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
+                }
 
-        List<_ChartData> userData = aggregatedData.entries.map((entry) {
-          return _ChartData(entry.key, entry.value['usersCount']!);
-        }).toList();
+                // Aggregate the request count and user count per table
+                aggregatedData[tableId]!['requestCount'] =
+                    (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+                aggregatedData[tableId]!['usersCount'] =
+                    (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                "Request Count",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 300,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  series: <ChartSeries>[
-                    ColumnSeries<_ChartData, String>(
-                      dataSource: requestData,
-                      xValueMapper: (_ChartData data, _) => data.tableId,
-                      yValueMapper: (_ChartData data, _) => data.count,
-                      color: Colors.blue,
+                // Add to the total counts
+                totalRequestsCount += requestCount;
+                totalUsersCount += usersCount;
+              }
+
+              List<_ChartData> requestData = aggregatedData.entries.map((entry) {
+                return _ChartData(entry.key, entry.value['requestCount']!);
+              }).toList();
+
+              List<_ChartData> userData = aggregatedData.entries.map((entry) {
+                return _ChartData(entry.key, entry.value['usersCount']!);
+              }).toList();
+
+              return SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // Display Total Counts
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Container for Total Requests
+                        Container(
+                          width: 200,
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.blue),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "$totalRequestsCount",
+                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue),
+                              ),
+                              Text(
+                                "Total Requests",
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // const SizedBox(width: 25),
+                        // Container for Total Users
+                        Container(
+                          width: 200,
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.green[50],
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.green),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                "$totalUsersCount",
+                                style: const TextStyle(fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
+                              ),
+                              Text(
+                                "Total Users",
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+                    const Text(
+                      "Request Count by Table",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: 300,
+                      child: SfCartesianChart(
+                        primaryXAxis: CategoryAxis(),
+                        series: <ChartSeries>[
+                          ColumnSeries<_ChartData, String>(
+                            dataSource: requestData,
+                            xValueMapper: (_ChartData data, _) => data.tableId,
+                            yValueMapper: (_ChartData data, _) => data.count,
+                            color: Colors.blue,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text(
+                      "User Count by Table",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 5),
+                    SizedBox(
+                      height: 300,
+                      child: SfCartesianChart(
+                        primaryXAxis: CategoryAxis(),
+                        series: <ChartSeries>[
+                          ColumnSeries<_ChartData, String>(
+                            dataSource: userData,
+                            xValueMapper: (_ChartData data, _) => data.tableId,
+                            yValueMapper: (_ChartData data, _) => data.count,
+                            color: Colors.green,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "User Count",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 300,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  series: <ChartSeries>[
-                    ColumnSeries<_ChartData, String>(
-                      dataSource: userData,
-                      xValueMapper: (_ChartData data, _) => data.tableId,
-                      yValueMapper: (_ChartData data, _) => data.count,
-                      color: Colors.green,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
+
 }
 
 class _ChartData {
@@ -757,24 +837,41 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Time: ${data['timestamp']}",
+                  "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
                   style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Text(
+                      "Requested by: $userName",
+                      style: const TextStyle(fontSize: 14),
+                    ),  
+                    const SizedBox(width: 50),
+
+                    Text(
+                      "Status: ${doc['status']}",
+                      style: const TextStyle(fontSize: 14),
+                    ),             
+
+                  ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  "Request by: $userName",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Status: ${doc['status']}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Staff: $staffName",
-                  style: const TextStyle(fontSize: 14),
-                ),
+                if (doc['status'] == 'rejected')
+                  Text(
+                    "Rejected by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                if (doc['status'] == 'accepted')
+                  Text(
+                    "Accepted by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                if (doc['status'] == 'done')
+                  Text(
+                    "Done by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
                 const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
