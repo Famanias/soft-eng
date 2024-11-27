@@ -155,7 +155,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
   // Rearranged list of request types for better UX/UI flow
   List<String> requestTypes = [
-    "Food & Beverage Request",  // Immediate need: Food & drinks
+    "Food and Beverage Request",  // Immediate need: Food & drinks
     "Request a Staff",  // Immediate need: Staff for assistance
     "Kitchenware Request",  // Special request: Kitchen items
     "Cottage Cleaning Request",  // Service request: Cleaning
@@ -164,7 +164,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
   // Updated request information map
   final Map<String, String> requestInformation = {
-    'Food & Beverage Request': 'Request food and drinks to be delivered to your location.',
+    'Food and Beverage Request': 'Request food and drinks to be delivered to your location.',
     'Request a Staff': 'Request a staff member to come to your location for immediate assistance.',
     'Kitchenware Request': 'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
     'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
@@ -248,6 +248,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         await analyticsDoc.set({
           'tableId': tableId,
           'requestCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+
+                
+        CollectionReference globalAnalyticsRef =
+            FirebaseFirestore.instance.collection('globalAnalytics');
+        DocumentReference globalAnalyticsDoc =
+            globalAnalyticsRef.doc(requestType);
+
+        await globalAnalyticsDoc.set({
+          requestType: FieldValue.increment(1),
         }, SetOptions(merge: true));
 
         // notify the admin
