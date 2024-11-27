@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,7 @@ import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +54,6 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const MyApp());
-
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -59,10 +61,34 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
 
-
-
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  bool _isConnected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
+      setState(() {
+        _isConnected = result != ConnectivityResult.none;
+      });
+    } as void Function(List<ConnectivityResult> event)?) as StreamSubscription<ConnectivityResult>;
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +105,28 @@ class MyApp extends StatelessWidget {
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) =>
             const CustomRequestScreen(tableId: '', userName: ''),
+      },
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!,
+            if (!_isConnected)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  color: Colors.red,
+                  padding: const EdgeInsets.all(8.0),
+                  child: const Text(
+                    'No internet connection. Retrying...',
+                    style: TextStyle(color: Colors.white),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        );
       },
     );
   }
