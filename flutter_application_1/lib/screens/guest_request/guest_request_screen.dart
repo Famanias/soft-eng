@@ -452,9 +452,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              IconButton(
-                icon: const Icon(Icons.help),
-                  onPressed: () {
+              TextButton(
+                onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -462,7 +461,26 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                       ),
                     );
                   },
-                ),
+                child:
+                  const Text(
+                    "FAQs",
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 49, 49, 49),
+                      fontSize: 12,
+                    ),
+                  ),
+              ),
+              // IconButton(
+              //   icon: const Icon(Icons.help),
+              //     onPressed: () {
+              //       Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (context) => faqScreen(),
+              //         ),
+              //       );
+              //     },
+              //   ),
               StreamBuilder(
                 stream: FirebaseFirestore.instance
                     .collection('notifications')
