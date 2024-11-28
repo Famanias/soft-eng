@@ -9,6 +9,7 @@ import 'screens/admin_panel/admin_panel_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'screens/guest_request/faq_screen.dart'; // Import the FAQ screen file
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +115,7 @@ class MyApp extends StatelessWidget {
             const CustomRequestScreen(tableId: '', userName: ''),
         '/login': (context) => LoginScreen(),
         '/adminPanel': (context) => AdminPanel(),
+        '/faq': (context) => faqScreen(),
       },
     );
   }
