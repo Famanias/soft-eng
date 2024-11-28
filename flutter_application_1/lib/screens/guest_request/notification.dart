@@ -29,8 +29,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
   void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('notifications')
-        .where('tableId', isEqualTo: widget.tableId)
         .where('userName', isEqualTo: widget.userName)
+         .where('viewed', isEqualTo: false) 
         .snapshots()
         .listen((QuerySnapshot snapshot) {
       for (var change in snapshot.docChanges) {

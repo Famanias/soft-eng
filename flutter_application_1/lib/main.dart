@@ -1,15 +1,17 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_application_1/screens/login/login.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_application_1/screens/guest_request/faq_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
-import 'screens/admin_panel/admin_panel_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'screens/guest_request/faq_screen.dart'; // Import the FAQ screen file
+import 'package:connectivity_plus/connectivity_plus.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,8 +56,6 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const MyApp());
-
-  _setupGlobalNotificationListener();
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -63,40 +63,36 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
 
-
-void _setupGlobalNotificationListener() {
-  FirebaseFirestore.instance
-      .collection('notifications')
-      .snapshots()
-      .listen((QuerySnapshot snapshot) {
-    for (var change in snapshot.docChanges) {
-      if (change.type == DocumentChangeType.added) {
-        var data = change.doc.data() as Map<String, dynamic>;
-        _showLocalNotification(data);
-      }
-    }
-  });
-}
-
-void _showLocalNotification(Map<String, dynamic> data) {
-  AwesomeNotifications().createNotification(
-    content: NotificationContent(
-      id: 10,
-      channelKey: 'high_importance_channel',
-      title: data['type'] == 'newMessage'
-          ? 'Message from Admin'
-          : 'Request: ${data['requestType']}',
-      body: data['type'] == 'newMessage'
-          ? data['message']
-          : 'Status: ${data['status']}',
-      notificationLayout: NotificationLayout.Default,
-      icon: 'resource://drawable/ic_launcher',
-    ),
-  );
-}
-
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  MyAppState createState() => MyAppState();
+}
+
+class MyAppState extends State<MyApp> {
+  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  bool _isConnected = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Listen for connectivity changes.
+    _connectivitySubscription = Connectivity()
+        .onConnectivityChanged
+        .listen((ConnectivityResult result) {
+          // Update the connection status.
+          setState(() {
+            _isConnected = result != ConnectivityResult.none;
+          });
+        } as void Function(ConnectivityResult event)?);
+  }
+
+  @override
+  void dispose() {
+    _connectivitySubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -113,9 +109,56 @@ class MyApp extends StatelessWidget {
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) =>
             const CustomRequestScreen(tableId: '', userName: ''),
-        '/login': (context) => LoginScreen(),
-        '/adminPanel': (context) => AdminPanel(),
         '/faq': (context) => faqScreen(),
+      },
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!,
+            if (!_isConnected)
+              Container(
+                color: Colors.black54, // Semi-transparent background
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                      const SizedBox(height: 20),
+                      const Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          'No internet connection. Retrying...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          // Exit the app
+                          SystemNavigator.pop();
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Exit',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        );
       },
     );
   }
