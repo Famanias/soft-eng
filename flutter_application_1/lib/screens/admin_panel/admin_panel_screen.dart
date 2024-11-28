@@ -404,7 +404,7 @@ class AdminPanelState extends State<AdminPanel> {
                           children: [
                             // Total Requests
                             Container(
-                              width: 200,
+                              // width: 200,
                               padding: const EdgeInsets.all(8),
                               margin: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
@@ -429,7 +429,7 @@ class AdminPanelState extends State<AdminPanel> {
                             ),
                             // Total Users
                             Container(
-                              width: 200,
+                              // width: 200,
                               padding: const EdgeInsets.all(8),
                               margin: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
