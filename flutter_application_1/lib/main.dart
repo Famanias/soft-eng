@@ -3,17 +3,15 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_application_1/screens/guest_request/faq_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/guest_request/guest_request_screen.dart';
 import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-<<<<<<< HEAD
 import 'package:connectivity_plus/connectivity_plus.dart';
-=======
-import 'screens/guest_request/faq_screen.dart'; // Import the FAQ screen file
->>>>>>> upstream/lynard-branch
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,23 +67,25 @@ class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  _MyAppState createState() => _MyAppState();
+  MyAppState createState() => MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class MyAppState extends State<MyApp> {
   late StreamSubscription<ConnectivityResult> _connectivitySubscription;
   bool _isConnected = true;
 
   @override
   void initState() {
     super.initState();
+    // Listen for connectivity changes.
     _connectivitySubscription = Connectivity()
         .onConnectivityChanged
         .listen((ConnectivityResult result) {
-      setState(() {
-        _isConnected = result != ConnectivityResult.none;
-      });
-    } as void Function(List<ConnectivityResult> event)?) as StreamSubscription<ConnectivityResult>;
+          // Update the connection status.
+          setState(() {
+            _isConnected = result != ConnectivityResult.none;
+          });
+        } as void Function(ConnectivityResult event)?);
   }
 
   @override
@@ -109,34 +109,56 @@ class _MyAppState extends State<MyApp> {
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) =>
             const CustomRequestScreen(tableId: '', userName: ''),
-<<<<<<< HEAD
+        '/faq': (context) => faqScreen(),
       },
       builder: (context, child) {
         return Stack(
           children: [
             child!,
             if (!_isConnected)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Container(
-                  color: Colors.red,
-                  padding: const EdgeInsets.all(8.0),
-                  child: const Text(
-                    'No internet connection. Retrying...',
-                    style: TextStyle(color: Colors.white),
-                    textAlign: TextAlign.center,
+              Container(
+                color: Colors.black54, // Semi-transparent background
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                      const SizedBox(height: 20),
+                      const Material(
+                        color: Colors.transparent,
+                        child: Text(
+                          'No internet connection. Retrying...',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          // Exit the app
+                          SystemNavigator.pop();
+                        },
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 24),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
+                        ),
+                        child: const Text(
+                          'Exit',
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
           ],
         );
-=======
-        '/login': (context) => LoginScreen(),
-        '/adminPanel': (context) => AdminPanel(),
-        '/faq': (context) => faqScreen(),
->>>>>>> upstream/lynard-branch
       },
     );
   }
