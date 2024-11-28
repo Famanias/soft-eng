@@ -10,6 +10,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'faq_screen.dart'; // Import the FAQ screen file
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen({super.key});
@@ -390,27 +391,28 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            const Text(
-              "TableServe",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text("TableServe",
+                style: TextStyle(
+                  color: Color(0xffffffff),
+                  fontFamily: "RubikOne",
+                )
               ),
-            ),
-            Text(
-              '$userName - $tableId',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white,
+              Text(
+                '$userName - $tableId',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
               ),
-            ),
-          ],
+            ],
         ),
         leading: IconButton(
-          icon: const Icon(Icons.exit_to_app),
+          icon: Transform.rotate(
+            angle: 3.14, // 180 degrees in radians
+            child: const Icon(Icons.logout),
+          ),
           onPressed: () async {
             bool? confirmExit = await showDialog<bool>(
               context: context,
@@ -433,7 +435,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                     ),
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(true),
-                      child: const Text("Exit"),
+                      child: const Text("Exit",
+                          style: TextStyle(color: Colors.red)),
                     ),
                   ],
                 );
@@ -446,88 +449,123 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           },
         ),
         actions: [
-          StreamBuilder(
-            stream: FirebaseFirestore.instance
-                .collection('notifications')
-                .where('userName', isEqualTo: userName)
-                .where('viewed',
-                    isEqualTo: false) // Only show unviewed notifications
-                .snapshots(),
-            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-              if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                return IconButton(
-                  icon: Stack(
-                    children: [
-                      const Icon(Icons.notifications),
-                      Positioned(
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(1),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 12,
-                            minHeight: 12,
-                          ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => faqScreen(),
                       ),
-                    ],
+                    );
+                  },
+                child:
+                  const Text(
+                    "FAQs",
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 49, 49, 49),
+                      fontSize: 12,
+                    ),
                   ),
-                  onPressed: () async {
-                    if (tableId.isNotEmpty) {
-                      // Update the status of the notifications to 'viewed'
-                      var batch = FirebaseFirestore.instance.batch();
-                      for (var doc in snapshot.data!.docs) {
-                        batch.update(doc.reference, {'viewed': true});
-                      }
-                      await batch.commit();
+              ),
+              // IconButton(
+              //   icon: const Icon(Icons.help),
+              //     onPressed: () {
+              //       Navigator.push(
+              //         context,
+              //         MaterialPageRoute(
+              //           builder: (context) => faqScreen(),
+              //         ),
+              //       );
+              //     },
+              //   ),
+              StreamBuilder(
+                stream: FirebaseFirestore.instance
+                    .collection('notifications')
+                    .where('tableId', isEqualTo: tableId)
+                    .where('userName', isEqualTo: userName)
+                    .where('viewed',
+                        isEqualTo: false) // Only show unviewed notifications
+                    .snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+                    return IconButton(
+                      icon: Stack(
+                        children: [
+                          const Icon(Icons.notifications),
+                          Positioned(
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(1),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 12,
+                                minHeight: 12,
+                              ),
+                              child: const Text(
+                                '!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      onPressed: () async {
+                        if (tableId.isNotEmpty) {
+                          // Update the status of the notifications to 'viewed'
+                          var batch = FirebaseFirestore.instance.batch();
+                          for (var doc in snapshot.data!.docs) {
+                            batch.update(doc.reference, {'viewed': true});
+                          }
+                          await batch.commit();
 
-                      Navigator.push(
-                        // ignore: use_build_context_synchronously
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NotificationScreen(
-                              tableId: tableId, userName: userName),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("No table ID available")),
-                      );
-                    }
-                  },
-                );
-              } else {
-                return IconButton(
-                  icon: const Icon(Icons.notifications),
-                  onPressed: () {
-                    if (tableId.isNotEmpty) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => NotificationScreen(
-                              tableId: tableId, userName: userName),
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("No table ID available")),
-                      );
-                    }
-                  },
-                );
-              }
-            },
+                          Navigator.push(
+                            // ignore: use_build_context_synchronously
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationScreen(
+                                  tableId: tableId, userName: userName),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("No table ID available")),
+                          );
+                        }
+                      },
+                    );
+                  } else {
+                    return IconButton(
+                      icon: const Icon(Icons.notifications),
+                      onPressed: () {
+                        if (tableId.isNotEmpty) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => NotificationScreen(
+                                  tableId: tableId, userName: userName),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("No table ID available")),
+                          );
+                        }
+                      },
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ],
         centerTitle: true,

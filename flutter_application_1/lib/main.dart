@@ -9,7 +9,11 @@ import 'screens/guest_request/custom_request_screen.dart';
 import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+<<<<<<< HEAD
 import 'package:connectivity_plus/connectivity_plus.dart';
+=======
+import 'screens/guest_request/faq_screen.dart'; // Import the FAQ screen file
+>>>>>>> upstream/lynard-branch
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -105,6 +109,7 @@ class _MyAppState extends State<MyApp> {
         '/guestRequest': (context) => const GuestRequestScreen(),
         '/customRequest': (context) =>
             const CustomRequestScreen(tableId: '', userName: ''),
+<<<<<<< HEAD
       },
       builder: (context, child) {
         return Stack(
@@ -127,6 +132,11 @@ class _MyAppState extends State<MyApp> {
               ),
           ],
         );
+=======
+        '/login': (context) => LoginScreen(),
+        '/adminPanel': (context) => AdminPanel(),
+        '/faq': (context) => faqScreen(),
+>>>>>>> upstream/lynard-branch
       },
     );
   }
