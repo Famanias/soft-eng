@@ -348,18 +348,30 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         String docName =
           '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(docName)
-            .set({
-          'tableId': tableId,
-          'requestType': requestType,
-          'items': items,
-          'status': 'pending',
-          'timestamp': Timestamp.now(),
-          'userName': userName,
-        });
-
+        if(requestType == "Kitchenware Request"){
+          await FirebaseFirestore.instance
+              .collection('guestRequests')
+              .doc(docName)
+              .set({
+            'tableId': tableId,
+            'requestType': requestType,
+            'items': items,
+            'status': 'pending',
+            'timestamp': Timestamp.now(),
+            'userName': userName,
+          });
+        } else{
+          await FirebaseFirestore.instance
+              .collection('guestRequests')
+              .doc(docName)
+              .set({
+            'tableId': tableId,
+            'requestType': requestType,
+            'status': 'pending',
+            'timestamp': Timestamp.now(),
+            'userName': userName,
+          });
+        }
         // Analytics and notifications...
       }
 
