@@ -236,18 +236,52 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                   ),
                 ],
               ),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Done'),
-                  onPressed: () {
-                    // Update selectedKitchenwareItems based on tempSelectedKitchenware
-                    selectedHydrationDrinkItems = [];
-                    if (tempSelectedHydrationDrink[0]) selectedHydrationDrinkItems.add("Tap Water");
-                    if (tempSelectedHydrationDrink[1]) selectedHydrationDrinkItems.add("Bottled Water");
-                    if (tempSelectedHydrationDrink[2]) selectedHydrationDrinkItems.add("Ice Cubes");
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    tempSelectedHydrationDrink.every((selected) => selected)
+                        ? TextButton(
+                            child: Text(
+                              "Deselect All",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 49, 49, 49),
+                                fontSize: 12,
+                              ),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                tempSelectedHydrationDrink = List.filled(7, false);
+                              });
+                            },
+                          )
+                        : TextButton(
+                            child: Text(
+                              "Select All",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 49, 49, 49),
+                                fontSize: 12,
+                              ),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                tempSelectedHydrationDrink = List.filled(7, true);
+                              });
+                            },
+                          ),
+                    TextButton(
+                      child: Text('Done'),
+                      onPressed: () {
+                        // Update selectedKitchenwareItems based on tempSelectedKitchenware
+                        selectedHydrationDrinkItems = [];
+                        if (tempSelectedHydrationDrink[0]) selectedHydrationDrinkItems.add("Tap Water");
+                        if (tempSelectedHydrationDrink[1]) selectedHydrationDrinkItems.add("Bottled Water");
+                        if (tempSelectedHydrationDrink[2]) selectedHydrationDrinkItems.add("Ice Cubes");
 
-                    Navigator.of(context).pop(selectedHydrationDrinkItems);
-                  },
+                        Navigator.of(context).pop(selectedHydrationDrinkItems);
+                      },
+                    ),
+                  ],
                 ),
               ],
             );
@@ -260,7 +294,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
 
   Future<List<String>?> _showKitchenwareDialog() async {
     // Create a local copy of the kitchenware selection state
-    List<bool> tempSelectedKitchenware = List.filled(5, false);
+    List<bool> tempSelectedKitchenware = List.filled(7, false);
 
     // Populate the initial state based on selectedKitchenwareItems
     for (String item in selectedKitchenwareItems) {
@@ -274,11 +308,17 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         case "Knife":
           tempSelectedKitchenware[2] = true;
           break;
-        case "BBQ Sticks":
+        case "Cups":
           tempSelectedKitchenware[3] = true;
           break;
-        case "Tongs":
+        case "Plates":
           tempSelectedKitchenware[4] = true;
+          break;
+        case "Grill Set":
+          tempSelectedKitchenware[5] = true;
+          break;
+        case "Tong":
+          tempSelectedKitchenware[6] = true;
           break;
       }
     }
@@ -321,7 +361,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                     },
                   ),
                   CheckboxListTile(
-                    title: Text("BBQ sticks"),
+                    title: Text("Cups"),
                     value: tempSelectedKitchenware[3],
                     onChanged: (bool? value) {
                       setDialogState(() {
@@ -330,7 +370,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                     },
                   ),
                   CheckboxListTile(
-                    title: Text("Tongs"),
+                    title: Text("Plates"),
                     value: tempSelectedKitchenware[4],
                     onChanged: (bool? value) {
                       setDialogState(() {
@@ -338,22 +378,76 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                       });
                     },
                   ),
+                  CheckboxListTile(
+                    title: Text("Grill Set"),
+                    value: tempSelectedKitchenware[5],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[5] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Tong"),
+                    value: tempSelectedKitchenware[6],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[6] = value!;
+                      });
+                    },
+                  ),
                 ],
               ),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Done'),
-                  onPressed: () {
-                    // Update selectedKitchenwareItems based on tempSelectedKitchenware
-                    selectedKitchenwareItems = [];
-                    if (tempSelectedKitchenware[0]) selectedKitchenwareItems.add("Fork");
-                    if (tempSelectedKitchenware[1]) selectedKitchenwareItems.add("Spoon");
-                    if (tempSelectedKitchenware[2]) selectedKitchenwareItems.add("Knife");
-                    if (tempSelectedKitchenware[3]) selectedKitchenwareItems.add("BBQ Sticks");
-                    if (tempSelectedKitchenware[4]) selectedKitchenwareItems.add("Tongs");
-
-                    Navigator.of(context).pop(selectedKitchenwareItems);
-                  },
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    tempSelectedKitchenware.every((selected) => selected)
+                        ? TextButton(
+                            child: Text(
+                              "Deselect All",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 49, 49, 49),
+                                fontSize: 12,
+                              ),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                tempSelectedKitchenware = List.filled(7, false);
+                              });
+                            },
+                          )
+                        : TextButton(
+                            child: Text(
+                              "Select All",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 49, 49, 49),
+                                fontSize: 12,
+                              ),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                tempSelectedKitchenware = List.filled(7, true);
+                              });
+                            },
+                          ),
+                    TextButton(
+                      child: Text('Done'),
+                      onPressed: () {
+                        // Update selectedKitchenwareItems based on tempSelectedKitchenware
+                        selectedKitchenwareItems = [];
+                        if (tempSelectedKitchenware[0]) selectedKitchenwareItems.add("Fork");
+                        if (tempSelectedKitchenware[1]) selectedKitchenwareItems.add("Spoon");
+                        if (tempSelectedKitchenware[2]) selectedKitchenwareItems.add("Knife");
+                        if (tempSelectedKitchenware[3]) selectedKitchenwareItems.add("Cups");
+                        if (tempSelectedKitchenware[4]) selectedKitchenwareItems.add("Plates");
+                        if (tempSelectedKitchenware[5]) selectedKitchenwareItems.add("Grill Set");
+                        if (tempSelectedKitchenware[6]) selectedKitchenwareItems.add("Tong");
+                        Navigator.of(context).pop(selectedKitchenwareItems);
+                      },
+                    ),
+                  ],
+                  
                 ),
               ],
             );
