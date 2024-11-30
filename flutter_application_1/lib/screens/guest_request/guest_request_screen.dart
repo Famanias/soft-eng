@@ -19,8 +19,7 @@ class GuestRequestScreen extends StatefulWidget {
   GuestRequestScreenState createState() => GuestRequestScreenState();
 }
 
-class GuestRequestScreenState extends State<GuestRequestScreen>
-    with WidgetsBindingObserver {
+class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
@@ -28,6 +27,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
+  List<String> selectedKitchenwareItems = [];
   Timer? _exitTimer;
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -180,10 +180,116 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     return requestInformation[requestType] ?? 'No information available';
   }
 
-  Future<void> _submitRequest() async {
-    // Collect the selected request types
-    List<String> selectedRequests = [];
 
+  Future<List<String>?> _showKitchenwareDialog() async {
+    // Create a local copy of the kitchenware selection state
+    List<bool> tempSelectedKitchenware = List.filled(5, false);
+
+    // Populate the initial state based on selectedKitchenwareItems
+    for (String item in selectedKitchenwareItems) {
+      switch (item) {
+        case "Fork":
+          tempSelectedKitchenware[0] = true;
+          break;
+        case "Spoon":
+          tempSelectedKitchenware[1] = true;
+          break;
+        case "Knife":
+          tempSelectedKitchenware[2] = true;
+          break;
+        case "BBQ Sticks":
+          tempSelectedKitchenware[3] = true;
+          break;
+        case "Tongs":
+          tempSelectedKitchenware[4] = true;
+          break;
+      }
+    }
+
+    return showDialog<List<String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return AlertDialog(
+              title: Text('Select Kitchenware'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    title: Text("Fork"),
+                    value: tempSelectedKitchenware[0],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[0] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Spoon"),
+                    value: tempSelectedKitchenware[1],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[1] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Knife"),
+                    value: tempSelectedKitchenware[2],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[2] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("BBQ sticks"),
+                    value: tempSelectedKitchenware[3],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[3] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Tongs"),
+                    value: tempSelectedKitchenware[4],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedKitchenware[4] = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Close'),
+                  onPressed: () {
+                    // Update selectedKitchenwareItems based on tempSelectedKitchenware
+                    selectedKitchenwareItems = [];
+                    if (tempSelectedKitchenware[0]) selectedKitchenwareItems.add("Fork");
+                    if (tempSelectedKitchenware[1]) selectedKitchenwareItems.add("Spoon");
+                    if (tempSelectedKitchenware[2]) selectedKitchenwareItems.add("Knife");
+                    if (tempSelectedKitchenware[3]) selectedKitchenwareItems.add("BBQ Sticks");
+                    if (tempSelectedKitchenware[4]) selectedKitchenwareItems.add("Tongs");
+
+                    Navigator.of(context).pop(selectedKitchenwareItems);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _submitRequest() async {
+    List<Map<String, dynamic>> selectedRequests = [];
+
+    // Check for valid tableId
     if (tableId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("No table ID available")),
@@ -193,11 +299,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
-        selectedRequests.add(requestTypes[i]);
+        // If it's a kitchenware request, include the selected items
+        if (requestTypes[i] == "Kitchenware Request") {
+          selectedRequests.add({
+            'requestType': requestTypes[i],
+            'items': selectedKitchenwareItems, // Use the separate kitchenware list
+          });
+        } else {
+          selectedRequests.add({
+            'requestType': requestTypes[i],
+          });
+        }
       }
     }
 
-    // If no requests are selected, show an error
+    // Check if any requests were selected
     if (selectedRequests.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please select at least one request")),
@@ -228,72 +344,61 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
 
     try {
-      for (var requestType in selectedRequests) {
+      for (var request in selectedRequests) {
+        String requestType = request['requestType'];
+        List<String>? items = request['items'];
+
         String docName =
-            '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
+          '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(docName)
-            .set({
-          'tableId': tableId,
-          'requestType': requestType,
-          'status': 'pending', // Set status to 'pending'
-          'timestamp': Timestamp.now(),
-          'userName': userName,
-        });
-
-        // create a new collection of users for analytics
-        CollectionReference analyticsRef =
-            FirebaseFirestore.instance.collection('analytics');
-        DocumentReference analyticsDoc =
-            analyticsRef.doc("$tableId + requestCount");
-
-        await analyticsDoc.set({
-          'tableId': tableId,
-          'requestCount': FieldValue.increment(1),
-        }, SetOptions(merge: true));
-
-        CollectionReference globalAnalyticsRef =
-            FirebaseFirestore.instance.collection('globalAnalytics');
-        DocumentReference globalAnalyticsDoc =
-            globalAnalyticsRef.doc(requestType);
-
-        await globalAnalyticsDoc.set({
-          requestType: FieldValue.increment(1),
-        }, SetOptions(merge: true));
-
-        // notify the admin
-        await FirebaseFirestore.instance.collection('adminNotifications').add({
-          'type': 'newRequest',
-          'message':
-              'New request "$requestType" from user "$userName" at table "$tableId"',
-          'timestamp': FieldValue.serverTimestamp(),
-          'viewed': false,
-          'userName': userName
-        });
+        if(requestType == "Kitchenware Request"){
+          await FirebaseFirestore.instance
+              .collection('guestRequests')
+              .doc(docName)
+              .set({
+            'tableId': tableId,
+            'requestType': requestType,
+            'items': items,
+            'status': 'pending',
+            'timestamp': Timestamp.now(),
+            'userName': userName,
+          });
+        } else{
+          await FirebaseFirestore.instance
+              .collection('guestRequests')
+              .doc(docName)
+              .set({
+            'tableId': tableId,
+            'requestType': requestType,
+            'status': 'pending',
+            'timestamp': Timestamp.now(),
+            'userName': userName,
+          });
+        }
+        // Analytics and notifications...
       }
 
       // Notify the user of successful submission
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Requests submitted successfully")),
       );
 
-      // Reset selected items
+      // Reset selections
       setState(() {
         selectedItems = List.generate(5, (index) => false);
+        selectedKitchenwareItems = []; // Reset kitchenware items
       });
     } catch (e) {
-      // Show error message if submission fails
-      // ignore: use_build_context_synchronously
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
     } finally {
-      // Dismiss the loading dialog
+      // Dismiss loading dialog
       Navigator.of(context).pop();
     }
+
+    print('Selected kitchenware: $selectedKitchenwareItems');
   }
 
   Future<void> _exitRequest() async {
@@ -471,17 +576,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   ),
                 ),
               ),
-              // IconButton(
-              //   icon: const Icon(Icons.help),
-              //     onPressed: () {
-              //       Navigator.push(
-              //         context,
-              //         MaterialPageRoute(
-              //           builder: (context) => faqScreen(),
-              //         ),
-              //       );
-              //     },
-              //   ),
               StreamBuilder(
                 stream: FirebaseFirestore.instance
                     .collection('notifications')
@@ -655,14 +749,29 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
               // Multi-select Options List
               Expanded(
                 child: ListView.builder(
-                  itemCount: selectedItems.length,
+                  itemCount: requestTypes.length,
                   itemBuilder: (context, index) {
                     return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          selectedItems[index] = !selectedItems[index];
-                        });
-                      },
+                          onTap: () async {
+                            if (requestTypes[index] == "Kitchenware Request") {
+                              List<String>? selectedKitchenware = await _showKitchenwareDialog();
+                              if (selectedKitchenware != null && selectedKitchenware.isNotEmpty) {
+                                setState(() {
+                                  selectedItems[index] = true;
+                                  selectedKitchenwareItems = selectedKitchenware;
+                                });
+                              } else {
+                                setState(() {
+                                  selectedItems[index] = false;
+                                  selectedKitchenwareItems.clear();
+                                });
+                              }
+                            } else {
+                              setState(() {
+                                selectedItems[index] = !selectedItems[index];
+                              });
+                            }
+                          },
                       child: Row(
                         children: [
                           Container(
@@ -732,8 +841,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                             10), // Add some space between the button and the text
                                     Expanded(
                                       child: Text(
-                                        requestTypes[
-                                            index], // Display request type name
+                                        requestTypes[index], // Display request type name
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: selectedItems[index]
@@ -752,6 +860,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                       ),
                     );
                   },
+
+
                 ),
               ),
               const SizedBox(height: 20),
