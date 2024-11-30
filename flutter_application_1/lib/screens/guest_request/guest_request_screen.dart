@@ -552,29 +552,59 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             'userName': userName,
           });
         }
+
         // Analytics and notifications...
+        CollectionReference analyticsRef =
+            FirebaseFirestore.instance.collection('analytics');
+        DocumentReference analyticsDoc =
+            analyticsRef.doc("$tableId + requestCount");
+
+        await analyticsDoc.set({
+          'tableId': tableId,
+          'requestCount': FieldValue.increment(1),
+        }, SetOptions(merge: true));
+
+        CollectionReference globalAnalyticsRef =
+            FirebaseFirestore.instance.collection('globalAnalytics');
+        DocumentReference globalAnalyticsDoc =
+            globalAnalyticsRef.doc(requestType);
+
+        await globalAnalyticsDoc.set({
+          requestType: FieldValue.increment(1),
+        }, SetOptions(merge: true));
+        
+        await FirebaseFirestore.instance.collection('adminNotifications').add({
+            'type': 'newRequest',
+            'message':
+                'New request "$requestType" from user "$userName" at table "$tableId"',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
+        // Notify the user of successful submission
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Requests submitted successfully")),
+        );
+
       }
+      setState(() {
+        selectedItems = List.generate(5, (index) => false);
+      });
 
       // Notify the user of successful submission
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Requests submitted successfully")),
       );
-
-      // Reset selections
-      setState(() {
-        selectedItems = List.generate(5, (index) => false);
-        selectedKitchenwareItems = []; // Reset kitchenware items
-        selectedHydrationDrinkItems = []; // Reset kitchenware items
-      });
     } catch (e) {
-      // Show error message
+      // Show error message if submission fails
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
     } finally {
-      // Dismiss loading dialog
+      // Dismiss the loading dialog
       Navigator.of(context).pop();
     }
+
   }
 
   Future<void> _exitRequest() async {
