@@ -23,11 +23,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
-  String tableId = ""; // This will store the scanned table ID
+  String tableId = "";
   String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
   List<String> selectedKitchenwareItems = [];
+  List<String> selectedHydrationDrinkItems = [];
+
   Timer? _exitTimer;
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -156,7 +158,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
 
   // Rearranged list of request types for better UX/UI flow
   List<String> requestTypes = [
-    "Food and Beverage Request",  // Immediate need: Food & drinks
+    "Hydration Drink Request",  // Immediate need: Food & drinks
     "Request a Staff",  // Immediate need: Staff for assistance
     "Kitchenware Request",  // Special request: Kitchen items
     "Cottage Cleaning Request",  // Service request: Cleaning
@@ -165,7 +167,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
 
   // Updated request information map
   final Map<String, String> requestInformation = {
-    'Food and Beverage Request': 'Request food and drinks to be delivered to your location.',
+    'Hydration Drink Request': 'Request drinks to be delivered to your location.',
     'Request a Staff': 'Request a staff member to come to your location for immediate assistance.',
     'Kitchenware Request': 'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
     'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
@@ -177,6 +179,84 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
     return requestInformation[requestType] ?? 'No information available';
   }
 
+  Future<List<String>?> _showHydrationDrinkDialog() async {
+    List<bool> tempSelectedHydrationDrink = List.filled(3, false);
+
+        // Populate the initial state based on selectedKitchenwareItems
+    for (String item in selectedHydrationDrinkItems) {
+      switch (item) {
+        case "Tap Water":
+          tempSelectedHydrationDrink[0] = true;
+          break;
+        case "Bottled Water":
+          tempSelectedHydrationDrink[1] = true;
+          break;
+        case "Ice Cubes":
+          tempSelectedHydrationDrink[2] = true;
+          break;
+      }
+    }
+
+    return showDialog<List<String>>(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setDialogState) {
+            return AlertDialog(
+              title: Text('Select Hydration Drink'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CheckboxListTile(
+                    title: Text("Tap Water"),
+                    value: tempSelectedHydrationDrink[0],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedHydrationDrink[0] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Bottled Water"),
+                    value: tempSelectedHydrationDrink[1],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedHydrationDrink[1] = value!;
+                      });
+                    },
+                  ),
+                  CheckboxListTile(
+                    title: Text("Ice Cubes"),
+                    value: tempSelectedHydrationDrink[2],
+                    onChanged: (bool? value) {
+                      setDialogState(() {
+                        tempSelectedHydrationDrink[2] = value!;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  child: Text('Done'),
+                  onPressed: () {
+                    // Update selectedKitchenwareItems based on tempSelectedKitchenware
+                    selectedHydrationDrinkItems = [];
+                    if (tempSelectedHydrationDrink[0]) selectedHydrationDrinkItems.add("Tap Water");
+                    if (tempSelectedHydrationDrink[1]) selectedHydrationDrinkItems.add("Bottled Water");
+                    if (tempSelectedHydrationDrink[2]) selectedHydrationDrinkItems.add("Ice Cubes");
+
+                    Navigator.of(context).pop(selectedHydrationDrinkItems);
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+  }
 
   Future<List<String>?> _showKitchenwareDialog() async {
     // Create a local copy of the kitchenware selection state
@@ -262,7 +342,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
               ),
               actions: <Widget>[
                 TextButton(
-                  child: Text('Close'),
+                  child: Text('Done'),
                   onPressed: () {
                     // Update selectedKitchenwareItems based on tempSelectedKitchenware
                     selectedKitchenwareItems = [];
@@ -300,7 +380,12 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         if (requestTypes[i] == "Kitchenware Request") {
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items': selectedKitchenwareItems, // Use the separate kitchenware list
+            'items': selectedKitchenwareItems,
+          });
+        } else if (requestTypes[i] == "Hydration Drink Request"){
+          selectedRequests.add({
+            'requestType': requestTypes[i],
+            'items': selectedHydrationDrinkItems,
           });
         } else {
           selectedRequests.add({
@@ -348,7 +433,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         String docName =
           '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        if(requestType == "Kitchenware Request"){
+        if(requestType == "Kitchenware Request" || requestType == "Hydration Drink Request"){
           await FirebaseFirestore.instance
               .collection('guestRequests')
               .doc(docName)
@@ -360,7 +445,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             'timestamp': Timestamp.now(),
             'userName': userName,
           });
-        } else{
+        }
+        else{
           await FirebaseFirestore.instance
               .collection('guestRequests')
               .doc(docName)
@@ -384,6 +470,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       setState(() {
         selectedItems = List.generate(5, (index) => false);
         selectedKitchenwareItems = []; // Reset kitchenware items
+        selectedHydrationDrinkItems = []; // Reset kitchenware items
       });
     } catch (e) {
       // Show error message
@@ -394,8 +481,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       // Dismiss loading dialog
       Navigator.of(context).pop();
     }
-
-    print('Selected kitchenware: $selectedKitchenwareItems');
   }
 
   Future<void> _exitRequest() async {
@@ -761,6 +846,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                                 setState(() {
                                   selectedItems[index] = false;
                                   selectedKitchenwareItems.clear();
+                                });
+                              }
+                            } else if (requestTypes[index] == "Hydration Drink Request") {
+                              List<String>? selectedHydrationDrink = await _showHydrationDrinkDialog();
+                              if (selectedHydrationDrink != null && selectedHydrationDrink.isNotEmpty) {
+                                setState(() {
+                                  selectedItems[index] = true;
+                                  selectedHydrationDrinkItems = selectedHydrationDrink;
+                                });
+                              } else {
+                                setState(() {
+                                  selectedItems[index] = false;
+                                  selectedHydrationDrinkItems.clear();
                                 });
                               }
                             } else {
