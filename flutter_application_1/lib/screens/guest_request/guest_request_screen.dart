@@ -36,7 +36,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   void initState() {
     super.initState();
     _initializeLocalNotifications();
-     _listenForNotifications();
+    _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message.data);
     });
@@ -155,20 +155,24 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
   // Rearranged list of request types for better UX/UI flow
   List<String> requestTypes = [
-    "Food and Beverage Request",  // Immediate need: Food & drinks
-    "Request a Staff",  // Immediate need: Staff for assistance
-    "Kitchenware Request",  // Special request: Kitchen items
-    "Cottage Cleaning Request",  // Service request: Cleaning
-    "Checkout Request",  // End of stay: Checkout
+    "Food and Beverage Request", // Immediate need: Food & drinks
+    "Request a Staff", // Immediate need: Staff for assistance
+    "Kitchenware Request", // Special request: Kitchen items
+    "Cottage Cleaning Request", // Service request: Cleaning
+    "Checkout Request", // End of stay: Checkout
   ];
 
   // Updated request information map
   final Map<String, String> requestInformation = {
-    'Food and Beverage Request': 'Request food and drinks to be delivered to your location.',
-    'Request a Staff': 'Request a staff member to come to your location for immediate assistance.',
-    'Kitchenware Request': 'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
+    'Food and Beverage Request':
+        'Request food and drinks to be delivered to your location.',
+    'Request a Staff':
+        'Request a staff member to come to your location for immediate assistance.',
+    'Kitchenware Request':
+        'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
     'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
-    'Checkout Request': "Notify the staff that you will be checking out and require assistance with the process.",
+    'Checkout Request':
+        "Notify the staff that you will be checking out and require assistance with the process.",
   };
 
   // Function to get information based on request type
@@ -250,7 +254,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           'requestCount': FieldValue.increment(1),
         }, SetOptions(merge: true));
 
-                
         CollectionReference globalAnalyticsRef =
             FirebaseFirestore.instance.collection('globalAnalytics');
         DocumentReference globalAnalyticsDoc =
@@ -391,22 +394,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
         title: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text("TableServe",
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text("TableServe",
                 style: TextStyle(
                   color: Color(0xffffffff),
                   fontFamily: "RubikOne",
-                )
+                )),
+            Text(
+              '$userName - $tableId',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
               ),
-              Text(
-                '$userName - $tableId',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+            ),
+          ],
         ),
         leading: IconButton(
           icon: Transform.rotate(
@@ -454,21 +456,20 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
             children: [
               TextButton(
                 onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => faqScreen(),
-                      ),
-                    );
-                  },
-                child:
-                  const Text(
-                    "FAQs",
-                    style: TextStyle(
-                      color: Color.fromARGB(255, 49, 49, 49),
-                      fontSize: 12,
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => faqScreen(),
                     ),
+                  );
+                },
+                child: const Text(
+                  "FAQs",
+                  style: TextStyle(
+                    color: Color.fromARGB(255, 49, 49, 49),
+                    fontSize: 12,
                   ),
+                ),
               ),
               // IconButton(
               //   icon: const Icon(Icons.help),
@@ -538,7 +539,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No table ID available")),
+                            const SnackBar(
+                                content: Text("No table ID available")),
                           );
                         }
                       },
@@ -557,7 +559,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No table ID available")),
+                            const SnackBar(
+                                content: Text("No table ID available")),
                           );
                         }
                       },

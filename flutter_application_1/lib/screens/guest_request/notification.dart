@@ -43,7 +43,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _showLocalNotification(Map<String, dynamic> data) {
-  
+   if (
+        data['requestType'] == null ||
+        data['status'] == null) {
+      return; // Do not create a notification if any required field is null
+    }
+
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: 10,
