@@ -251,7 +251,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                             ),
                             onPressed: () {
                               setDialogState(() {
-                                tempSelectedHydrationDrink = List.filled(7, false);
+                                tempSelectedHydrationDrink = List.filled(3, false);
                               });
                             },
                           )
