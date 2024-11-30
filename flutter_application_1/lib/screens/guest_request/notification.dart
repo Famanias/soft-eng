@@ -30,7 +30,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
     FirebaseFirestore.instance
         .collection('notifications')
         .where('userName', isEqualTo: widget.userName)
-         .where('viewed', isEqualTo: false) 
+        .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
       for (var change in snapshot.docChanges) {
@@ -43,6 +43,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _showLocalNotification(Map<String, dynamic> data) {
+  
     AwesomeNotifications().createNotification(
       content: NotificationContent(
         id: 10,
