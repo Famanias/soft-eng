@@ -264,7 +264,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         }, SetOptions(merge: true));
 
         // notify the admin
-        await FirebaseFirestore.instance.collection('notifications').add({
+        await FirebaseFirestore.instance.collection('adminNotifications').add({
           'type': 'newRequest',
           'message':
               'New request "$requestType" from user "$userName" at table "$tableId"',
