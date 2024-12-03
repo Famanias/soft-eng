@@ -29,6 +29,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   List<Map<String, dynamic>> requestHistory = [];
   List<String> selectedKitchenwareItems = [];
   List<String> selectedHydrationDrinkItems = [];
+  List<String> requestTypes = [];
+  Map<String, String> requestInformation = {};
 
   Timer? _exitTimer;
 
@@ -37,6 +39,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   @override
   void initState() {
     super.initState();
+    fetchRequestData();
     _initializeLocalNotifications();
      _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -156,46 +159,45 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
     }
   }
 
-  // Rearranged list of request types for better UX/UI flow
-  List<String> requestTypes = [
-    "Hydration Drink Request",  // Immediate need: Food & drinks
-    "Request a Staff",  // Immediate need: Staff for assistance
-    "Kitchenware Request",  // Special request: Kitchen items
-    "Cottage Cleaning Request",  // Service request: Cleaning
-    "Checkout Request",  // End of stay: Checkout
-  ];
+  void fetchRequestData() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    // Reference to the collection
+    CollectionReference requestListRef = firestore.collection('requestList');
 
-  // Updated request information map
-  final Map<String, String> requestInformation = {
-    'Hydration Drink Request': 'Request drinks to be delivered to your location.',
-    'Request a Staff': 'Request a staff member to come to your location for immediate assistance.',
-    'Kitchenware Request': 'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
-    'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
-    'Checkout Request': "Notify the staff that you will be checking out and require assistance with the process.",
-  };
+    try {
+      QuerySnapshot snapshot = await requestListRef.get();
+      // Fetch the data
+      List<String> fetchedRequestTypes = [];
+      Map<String, String> fetchedRequestInformation  = {};
 
+      for (var doc in snapshot.docs) {
+        String requestType = doc['type'];
+        String information = doc['information'];
+
+        fetchedRequestTypes.add(requestType);
+        fetchedRequestInformation[requestType] = information;
+      }
+      setState(() {
+        requestTypes = fetchedRequestTypes;
+        requestInformation = fetchedRequestInformation;
+      });
+
+    } catch (e) {
+      print('Error fetching request data: $e');
+    }
+  }
+  
   // Function to get information based on request type
   String getRequestInformation(String requestType) {
     return requestInformation[requestType] ?? 'No information available';
   }
+  
+  Future<List<String>?> _showRequestDialog(String requestType) async {
+    // Fetch items from Firestore
+    List<String> items = await _fetchItemsFromFirestore(requestType);
 
-  Future<List<String>?> _showHydrationDrinkDialog() async {
-    List<bool> tempSelectedHydrationDrink = List.filled(3, false);
-
-        // Populate the initial state based on selectedKitchenwareItems
-    for (String item in selectedHydrationDrinkItems) {
-      switch (item) {
-        case "Tap Water":
-          tempSelectedHydrationDrink[0] = true;
-          break;
-        case "Bottled Water":
-          tempSelectedHydrationDrink[1] = true;
-          break;
-        case "Ice Cubes":
-          tempSelectedHydrationDrink[2] = true;
-          break;
-      }
-    }
+    // Initialize the selection state
+    List<bool> selectedItems = List.filled(items.length, false);
 
     return showDialog<List<String>>(
       context: context,
@@ -203,82 +205,59 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
             return AlertDialog(
-              title: Text('Select Hydration Drink'),
+              title: Text('Select Items for $requestType'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  CheckboxListTile(
-                    title: Text("Tap Water"),
-                    value: tempSelectedHydrationDrink[0],
+                children: items.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String item = entry.value;
+                  return CheckboxListTile(
+                    title: Text(item),
+                    value: selectedItems[index],
                     onChanged: (bool? value) {
                       setDialogState(() {
-                        tempSelectedHydrationDrink[0] = value!;
+                        selectedItems[index] = value!;
                       });
                     },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Bottled Water"),
-                    value: tempSelectedHydrationDrink[1],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedHydrationDrink[1] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Ice Cubes"),
-                    value: tempSelectedHydrationDrink[2],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedHydrationDrink[2] = value!;
-                      });
-                    },
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
               actions: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    tempSelectedHydrationDrink.every((selected) => selected)
+                    selectedItems.every((selected) => selected)
                         ? TextButton(
                             child: Text(
                               "Deselect All",
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 49, 49, 49),
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(fontSize: 12),
                             ),
                             onPressed: () {
                               setDialogState(() {
-                                tempSelectedHydrationDrink = List.filled(3, false);
+                                selectedItems = List.filled(items.length, false);
                               });
                             },
                           )
                         : TextButton(
                             child: Text(
                               "Select All",
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 49, 49, 49),
-                                fontSize: 12,
-                              ),
+                              style: TextStyle(fontSize: 12),
                             ),
                             onPressed: () {
                               setDialogState(() {
-                                tempSelectedHydrationDrink = List.filled(7, true);
+                                selectedItems = List.filled(items.length, true);
                               });
                             },
                           ),
                     TextButton(
-                      child: Text('Done'),
+                      child: Text('Done'),  
                       onPressed: () {
-                        // Update selectedKitchenwareItems based on tempSelectedKitchenware
-                        selectedHydrationDrinkItems = [];
-                        if (tempSelectedHydrationDrink[0]) selectedHydrationDrinkItems.add("Tap Water");
-                        if (tempSelectedHydrationDrink[1]) selectedHydrationDrinkItems.add("Bottled Water");
-                        if (tempSelectedHydrationDrink[2]) selectedHydrationDrinkItems.add("Ice Cubes");
-
-                        Navigator.of(context).pop(selectedHydrationDrinkItems);
+                        // Collect selected items
+                        List<String> selected = [];
+                        for (int i = 0; i < items.length; i++) {
+                          if (selectedItems[i]) selected.add(items[i]);
+                        }
+                        Navigator.of(context).pop(selected);
                       },
                     ),
                   ],
@@ -289,172 +268,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         );
       },
     );
-
   }
 
-  Future<List<String>?> _showKitchenwareDialog() async {
-    // Create a local copy of the kitchenware selection state
-    List<bool> tempSelectedKitchenware = List.filled(7, false);
+  Future<List<String>> _fetchItemsFromFirestore(String requestType) async {
+    try {
+      var snapshot = await FirebaseFirestore.instance
+          .collection('requestList')
+          .doc(requestType)
+          .get();
 
-    // Populate the initial state based on selectedKitchenwareItems
-    for (String item in selectedKitchenwareItems) {
-      switch (item) {
-        case "Fork":
-          tempSelectedKitchenware[0] = true;
-          break;
-        case "Spoon":
-          tempSelectedKitchenware[1] = true;
-          break;
-        case "Knife":
-          tempSelectedKitchenware[2] = true;
-          break;
-        case "Cups":
-          tempSelectedKitchenware[3] = true;
-          break;
-        case "Plates":
-          tempSelectedKitchenware[4] = true;
-          break;
-        case "Grill Set":
-          tempSelectedKitchenware[5] = true;
-          break;
-        case "Tong":
-          tempSelectedKitchenware[6] = true;
-          break;
-      }
+      List<String> items = List<String>.from(snapshot.data()?['items'] ?? []);
+      return items;
+    } catch (e) {
+      print("Error fetching items: $e");
+      return [];
     }
-
-    return showDialog<List<String>>(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setDialogState) {
-            return AlertDialog(
-              title: Text('Select Kitchenware'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CheckboxListTile(
-                    title: Text("Fork"),
-                    value: tempSelectedKitchenware[0],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[0] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Spoon"),
-                    value: tempSelectedKitchenware[1],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[1] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Knife"),
-                    value: tempSelectedKitchenware[2],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[2] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Cups"),
-                    value: tempSelectedKitchenware[3],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[3] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Plates"),
-                    value: tempSelectedKitchenware[4],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[4] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Grill Set"),
-                    value: tempSelectedKitchenware[5],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[5] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Tong"),
-                    value: tempSelectedKitchenware[6],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[6] = value!;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              actions: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    tempSelectedKitchenware.every((selected) => selected)
-                        ? TextButton(
-                            child: Text(
-                              "Deselect All",
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 49, 49, 49),
-                                fontSize: 12,
-                              ),
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                tempSelectedKitchenware = List.filled(7, false);
-                              });
-                            },
-                          )
-                        : TextButton(
-                            child: Text(
-                              "Select All",
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 49, 49, 49),
-                                fontSize: 12,
-                              ),
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                tempSelectedKitchenware = List.filled(7, true);
-                              });
-                            },
-                          ),
-                    TextButton(
-                      child: Text('Done'),
-                      onPressed: () {
-                        // Update selectedKitchenwareItems based on tempSelectedKitchenware
-                        selectedKitchenwareItems = [];
-                        if (tempSelectedKitchenware[0]) selectedKitchenwareItems.add("Fork");
-                        if (tempSelectedKitchenware[1]) selectedKitchenwareItems.add("Spoon");
-                        if (tempSelectedKitchenware[2]) selectedKitchenwareItems.add("Knife");
-                        if (tempSelectedKitchenware[3]) selectedKitchenwareItems.add("Cups");
-                        if (tempSelectedKitchenware[4]) selectedKitchenwareItems.add("Plates");
-                        if (tempSelectedKitchenware[5]) selectedKitchenwareItems.add("Grill Set");
-                        if (tempSelectedKitchenware[6]) selectedKitchenwareItems.add("Tong");
-                        Navigator.of(context).pop(selectedKitchenwareItems);
-                      },
-                    ),
-                  ],
-                  
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   Future<void> _submitRequest() async {
@@ -527,7 +355,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         String docName =
           '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        if(requestType == "Kitchenware Request" || requestType == "Hydration Drink Request"){
           await FirebaseFirestore.instance
               .collection('guestRequests')
               .doc(docName)
@@ -539,19 +366,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             'timestamp': Timestamp.now(),
             'userName': userName,
           });
-        }
-        else{
-          await FirebaseFirestore.instance
-              .collection('guestRequests')
-              .doc(docName)
-              .set({
-            'tableId': tableId,
-            'requestType': requestType,
-            'status': 'pending',
-            'timestamp': Timestamp.now(),
-            'userName': userName,
-          });
-        }
+        
 
         // Analytics and notifications...
         CollectionReference analyticsRef =
@@ -580,11 +395,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             'timestamp': FieldValue.serverTimestamp(),
             'viewed': false,
           });
-        // Notify the user of successful submission
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Requests submitted successfully")),
-        );
-
       }
       setState(() {
         selectedItems = List.generate(5, (index) => false);
@@ -959,35 +769,30 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                   itemBuilder: (context, index) {
                     return GestureDetector(
                           onTap: () async {
-                            if (requestTypes[index] == "Kitchenware Request") {
-                              List<String>? selectedKitchenware = await _showKitchenwareDialog();
-                              if (selectedKitchenware != null && selectedKitchenware.isNotEmpty) {
+                            if (requestTypes[index] == "Kitchenware Request" || requestTypes[index] == "Hydration Drink Request") {
+                              List<String>? selectedItems  = await _showRequestDialog(requestTypes[index]);
+                              if (selectedItems != null && selectedItems.isNotEmpty) {
                                 setState(() {
-                                  selectedItems[index] = true;
-                                  selectedKitchenwareItems = selectedKitchenware;
+                                  this.selectedItems[index] = true;
+                                  if(requestTypes[index] == "Kitchenware Request") {
+                                    selectedKitchenwareItems = selectedItems;
+                                  } else if (requestTypes[index] == "Hydration Drink Request") {
+                                    selectedHydrationDrinkItems = selectedItems;
+                                  }
                                 });
                               } else {
                                 setState(() {
-                                  selectedItems[index] = false;
-                                  selectedKitchenwareItems.clear();
-                                });
-                              }
-                            } else if (requestTypes[index] == "Hydration Drink Request") {
-                              List<String>? selectedHydrationDrink = await _showHydrationDrinkDialog();
-                              if (selectedHydrationDrink != null && selectedHydrationDrink.isNotEmpty) {
-                                setState(() {
-                                  selectedItems[index] = true;
-                                  selectedHydrationDrinkItems = selectedHydrationDrink;
-                                });
-                              } else {
-                                setState(() {
-                                  selectedItems[index] = false;
-                                  selectedHydrationDrinkItems.clear();
+                                  this.selectedItems[index] = false;
+                                  if (requestTypes[index] == "Kitchenware Request") {
+                                    selectedKitchenwareItems.clear();
+                                  } else if (requestTypes[index] == "Hydration Drink Request") {
+                                    selectedHydrationDrinkItems.clear();
+                                  }
                                 });
                               }
                             } else {
                               setState(() {
-                                selectedItems[index] = !selectedItems[index];
+                                this.selectedItems[index] = !this.selectedItems[index];
                               });
                             }
                           },

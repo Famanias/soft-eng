@@ -199,12 +199,16 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0 ? _buildActiveTables() : _buildAnalytics(),
+      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequests() : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.table_chart),
             label: 'Tables',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.room_service_rounded),
+            label: 'Requests',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
@@ -324,6 +328,11 @@ class AdminPanelState extends State<AdminPanel> {
         );
       },
     );
+  }
+
+  Widget _buildRequests() {
+    return Container(); // Add a return statement
+
   }
 
   Widget _buildAnalytics() {
