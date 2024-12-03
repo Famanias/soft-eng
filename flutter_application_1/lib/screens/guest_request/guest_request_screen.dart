@@ -27,10 +27,10 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
-  List<String> selectedKitchenwareItems = [];
-  List<String> selectedHydrationDrinkItems = [];
   List<String> requestTypes = [];
   Map<String, String> requestInformation = {};
+  List<String> selectedRequestItems = [];
+
 
   Timer? _exitTimer;
 
@@ -298,22 +298,12 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
 
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
-        // If it's a kitchenware request, include the selected items
-        if (requestTypes[i] == "Kitchenware Request") {
+
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items': selectedKitchenwareItems,
+            'items': selectedRequestItems,
           });
-        } else if (requestTypes[i] == "Hydration Drink Request"){
-          selectedRequests.add({
-            'requestType': requestTypes[i],
-            'items': selectedHydrationDrinkItems,
-          });
-        } else {
-          selectedRequests.add({
-            'requestType': requestTypes[i],
-          });
-        }
+        
       }
     }
 
@@ -774,20 +764,12 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                               if (selectedItems != null && selectedItems.isNotEmpty) {
                                 setState(() {
                                   this.selectedItems[index] = true;
-                                  if(requestTypes[index] == "Kitchenware Request") {
-                                    selectedKitchenwareItems = selectedItems;
-                                  } else if (requestTypes[index] == "Hydration Drink Request") {
-                                    selectedHydrationDrinkItems = selectedItems;
-                                  }
+                                    selectedRequestItems = selectedItems;
                                 });
                               } else {
                                 setState(() {
                                   this.selectedItems[index] = false;
-                                  if (requestTypes[index] == "Kitchenware Request") {
-                                    selectedKitchenwareItems.clear();
-                                  } else if (requestTypes[index] == "Hydration Drink Request") {
-                                    selectedHydrationDrinkItems.clear();
-                                  }
+                                    selectedRequestItems.clear();
                                 });
                               }
                             } else {
