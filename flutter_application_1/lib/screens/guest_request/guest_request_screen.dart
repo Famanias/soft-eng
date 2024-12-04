@@ -8,7 +8,6 @@ import 'message.dart';
 import 'dart:developer';
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'faq_screen.dart'; // Import the FAQ screen file
 
@@ -31,8 +30,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   List<String> selectedKitchenwareItems = [];
   Timer? _exitTimer;
 
-  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-      FlutterLocalNotificationsPlugin();
   @override
   void initState() {
     super.initState();
@@ -47,10 +44,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   void _initializeLocalNotifications() {
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
     AwesomeNotifications().initialize(
       'resource://drawable/ic_launcher',
       [
@@ -156,13 +149,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
           .where('tableId', isEqualTo: tableId)
+          .where('userName', isEqualTo: userName)
           .orderBy('timestamp', descending: true)
           .get();
 
       setState(() {
-        requestHistory = snapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        requestHistory = snapshot.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          data['docId'] = doc.id; // Include the document ID
+          return data;
+        }).toList();
       });
     }
   }
@@ -309,6 +305,342 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
   }
 
+  void _showRequestHistoryDialog() async {
+    await _fetchRequestHistory(); // Fetch the latest request history
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Request History',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF316175),
+            ),
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return requestHistory.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No Request Found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: requestHistory.length,
+                        itemBuilder: (context, index) {
+                          var request = requestHistory[index];
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 8.0),
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              title: Text(
+                                request['requestType'],
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF316175),
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Status: ${request['status']}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (request['status'] != 'done' &&
+                                      request['status'] != 'accepted' &&
+                                      request['status'] != 'rejected')
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        _updateRequest(request);
+                                      },
+                                    ),
+                                  if (request['status'] != 'done' &&
+                                      request['status'] != 'accepted')
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () async {
+                                        bool? confirmDelete =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title:
+                                                  const Text("Confirm Delete"),
+                                              content: const Text(
+                                                  "Are you sure you want to delete this request?"),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
+                                                  child: const Text("Cancel"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
+                                                  child: const Text("Delete",
+                                                      style: TextStyle(
+                                                          color: Colors.red)),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+
+                                        if (confirmDelete == true) {
+                                          // Check if the document exists before deleting
+                                          DocumentSnapshot docSnapshot =
+                                              await FirebaseFirestore.instance
+                                                  .collection('guestRequests')
+                                                  .doc(request['docId'])
+                                                  .get();
+
+                                          if (docSnapshot.exists) {
+                                            await FirebaseFirestore.instance
+                                                .collection('guestRequests')
+                                                .doc(request['docId'])
+                                                .delete();
+                                            await _fetchRequestHistory(); // Refresh the request history
+                                            setState(
+                                                () {}); // Update the state to reflect the changes
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Request deleted successfully")),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Request not found")),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF316175),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateRequest(Map<String, dynamic> request) async {
+    String selectedRequestType = request['requestType'];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Update Request'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: requestTypes.contains(selectedRequestType)
+                    ? selectedRequestType
+                    : null,
+                items: requestTypes.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedRequestType = newValue!;
+                  });
+                },
+                decoration: InputDecoration(labelText: 'Request Type'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showCustomRequestDialog(request);
+                },
+                child: Text('Make Custom Request'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Check if the document exists before updating
+                DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+                    .collection('guestRequests')
+                    .doc(request['docId'])
+                    .get();
+
+                if (docSnapshot.exists) {
+                  await FirebaseFirestore.instance
+                      .collection('guestRequests')
+                      .doc(request['docId'])
+                      .update({'requestType': selectedRequestType});
+                  Navigator.of(context).pop();
+                  _fetchRequestHistory();
+                } else {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Request not found")),
+                  );
+                }
+              },
+              child: Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCustomRequestDialog(Map<String, dynamic> request) {
+    TextEditingController customRequestController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Custom Request'),
+          content: TextField(
+            controller: customRequestController,
+            decoration: InputDecoration(labelText: 'Enter your custom request'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (customRequestController.text.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('guestRequests')
+                      .doc(request['docId'])
+                      .update({'requestType': customRequestController.text});
+                  Navigator.of(context).pop();
+                  _fetchRequestHistory();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text("Custom request updated successfully")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Custom request cannot be empty")),
+                  );
+                }
+              },
+              child: Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteRequest(Map<String, dynamic> request) async {
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm Delete"),
+          content: const Text("Are you sure you want to delete this request?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmDelete == true) {
+      // Check if the document exists before deleting
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(request['docId'])
+          .get();
+
+      if (docSnapshot.exists) {
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(request['docId'])
+            .delete();
+        await _fetchRequestHistory(); // Refresh the request history
+        setState(() {}); // Update the state to reflect the changes
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request deleted successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request not found")),
+        );
+      }
+    }
+  }
+
   Future<void> _submitRequest() async {
     List<Map<String, dynamic>> selectedRequests = [];
 
@@ -372,8 +704,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         String requestType = request['requestType'];
         List<String>? items = request['items'];
 
-        String docName =
-            '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
+        String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}';
 
         if (requestType == "Kitchenware Request") {
           await FirebaseFirestore.instance
@@ -963,11 +1294,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           ),
         ),
       ]),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showMessagesScreen,
-        // ignore: sort_child_properties_last
-        child: const Icon(Icons.message),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      floatingActionButton: Stack(
+        children: [
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              onPressed: _showMessagesScreen,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+              child: const Icon(Icons.message),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: FloatingActionButton(
+              onPressed: _showRequestHistoryDialog,
+              backgroundColor: Color(0xFF316175),
+              child: Icon(Icons.history),
+            ),
+          ),
+        ],
       ),
     );
   }
