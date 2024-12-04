@@ -199,12 +199,16 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0 ? _buildActiveTables() : _buildAnalytics(),
+      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequests() : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.table_chart),
             label: 'Tables',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.room_service_rounded),
+            label: 'Requests',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
@@ -324,6 +328,11 @@ class AdminPanelState extends State<AdminPanel> {
         );
       },
     );
+  }
+
+  Widget _buildRequests() {
+    return Container(); // Add a return statement
+
   }
 
   Widget _buildAnalytics() {
@@ -847,7 +856,12 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
 
           String userName = data['userName'] ?? "Guest";
           String staffName = data['updatedBy'] ?? "Unassigned";
-
+          String itemName;
+          if(data['items']is List) {
+            itemName = data['items'].join(', ');
+          } else {
+            itemName = data['items'].toString();
+          }
           return Container(
             margin: const EdgeInsets.only(bottom: 16),
             padding: const EdgeInsets.all(16),
@@ -873,18 +887,26 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   ),
                 ),
                 const SizedBox(height: 8),
+
+                if(itemName != "null")
+                  Text(
+                    "Items: $itemName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+
+                const SizedBox(height: 8),
                 Text(
                   "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
                   style: const TextStyle(fontSize: 14),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(
                       "Requested by: $userName",
                       style: const TextStyle(fontSize: 14),
                     ),  
-                    const SizedBox(width: 50),
+                    const SizedBox(width: 10),
 
                     Text(
                       "Status: ${doc['status']}",
