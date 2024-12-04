@@ -11,10 +11,10 @@ class NotificationScreen extends StatefulWidget {
       {required this.tableId, required this.userName, super.key});
 
   @override
-  _NotificationScreenState createState() => _NotificationScreenState();
+  NotificationScreenState createState() => NotificationScreenState();
 }
 
-class _NotificationScreenState extends State<NotificationScreen> {
+class NotificationScreenState extends State<NotificationScreen> {
   String _selectedStatus = 'all';
 
   @override

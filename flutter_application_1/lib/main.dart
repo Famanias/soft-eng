@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -18,8 +17,6 @@ void main() async {
 
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
-
-  // await Future.delayed(const Duration(milliseconds: 100));
 
   // Initialize firebase
   await Firebase.initializeApp(
@@ -56,11 +53,55 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const MyApp());
+
+  _setupGlobalNotificationListener();
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   AwesomeNotifications().createNotificationFromJsonData(message.data);
+}
+
+void _setupGlobalNotificationListener() {
+  FirebaseFirestore.instance
+      .collection('notifications')
+      .where('viewed', isEqualTo: false)
+      .snapshots()
+      .listen((QuerySnapshot snapshot) {
+    for (var change in snapshot.docChanges) {
+      if (change.type == DocumentChangeType.added) {
+        var data = change.doc.data() as Map<String, dynamic>;
+        _showLocalNotification(data);
+
+        // Mark the notification as viewed
+        FirebaseFirestore.instance
+            .collection('notifications')
+            .doc(change.doc.id)
+            .update({'viewed': true});
+      }
+    }
+  });
+}
+
+void _showLocalNotification(Map<String, dynamic> data) {
+  if (data['type'] == null || data['requestType'] == null || data['status'] == null) {
+    return; // Do not create a notification if any required field is null
+  }
+
+  AwesomeNotifications().createNotification(
+    content: NotificationContent(
+      id: 10,
+      channelKey: 'high_importance_channel',
+      title: data['type'] == 'newMessage'
+          ? 'Message from Admin'
+          : 'Request: ${data['requestType']}',
+      body: data['type'] == 'newMessage'
+          ? data['message']
+          : 'Status: ${data['status']}',
+      notificationLayout: NotificationLayout.Default,
+      icon: 'resource://drawable/ic_launcher',
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -85,7 +126,7 @@ class MyAppState extends State<MyApp> {
           setState(() {
             _isConnected = result != ConnectivityResult.none;
           });
-        } as void Function(ConnectivityResult event)?);
+        });
   }
 
   @override
