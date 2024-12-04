@@ -8,6 +8,7 @@ import 'message.dart';
 import 'dart:developer';
 import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'faq_screen.dart'; // Import the FAQ screen file
 
@@ -18,23 +19,30 @@ class GuestRequestScreen extends StatefulWidget {
   GuestRequestScreenState createState() => GuestRequestScreenState();
 }
 
-class GuestRequestScreenState extends State<GuestRequestScreen>
-    with WidgetsBindingObserver {
+class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
-  String tableId = ""; // This will store the scanned table ID
+  String tableId = "";
   String userName = "Guest";
   List<bool> selectedItems = List.generate(5, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
-  List<String> selectedKitchenwareItems = [];
+  List<String> requestTypes = [];
+  Map<String, String> requestInformation = {};
+  List<String> selectedRequestItems = [];
+  Map<String, List<String>> selectedRequestItemsMap = {};
+
+
   Timer? _exitTimer;
 
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
   @override
   void initState() {
     super.initState();
+    fetchRequestData();
     _initializeLocalNotifications();
-    _listenForNotifications();
+     _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message.data);
     });
@@ -44,25 +52,17 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   void _initializeLocalNotifications() {
-    AwesomeNotifications().initialize(
-      'resource://drawable/ic_launcher',
-      [
-        NotificationChannel(
-          channelKey: 'high_importance_channel',
-          channelName: 'High Importance Notifications',
-          channelDescription:
-              'This channel is used for important notifications.',
-          defaultColor: Color(0xFF9D50DD),
-          ledColor: Colors.white,
-          importance: NotificationImportance.High,
-        ),
-      ],
-    );
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    _flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('notifications')
+        .where('tableId', isEqualTo: tableId)
         .where('userName', isEqualTo: userName)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
@@ -149,71 +149,56 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
           .where('tableId', isEqualTo: tableId)
-          .where('userName', isEqualTo: userName)
           .orderBy('timestamp', descending: true)
           .get();
 
       setState(() {
-        requestHistory = snapshot.docs.map((doc) {
-          var data = doc.data() as Map<String, dynamic>;
-          data['docId'] = doc.id; // Include the document ID
-          return data;
-        }).toList();
+        requestHistory = snapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
       });
     }
   }
 
-  // Rearranged list of request types for better UX/UI flow
-  List<String> requestTypes = [
-    "Food and Beverage Request", // Immediate need: Food & drinks
-    "Request a Staff", // Immediate need: Staff for assistance
-    "Kitchenware Request", // Special request: Kitchen items
-    "Cottage Cleaning Request", // Service request: Cleaning
-    "Checkout Request", // End of stay: Checkout
-  ];
+  void fetchRequestData() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    // Reference to the collection
+    CollectionReference requestListRef = firestore.collection('requestList');
 
-  // Updated request information map
-  final Map<String, String> requestInformation = {
-    'Food and Beverage Request':
-        'Request food and drinks to be delivered to your location.',
-    'Request a Staff':
-        'Request a staff member to come to your location for immediate assistance.',
-    'Kitchenware Request':
-        'Request additional kitchenware items, such as plates, glasses, utensils, or cooking equipment for your cottage or room.',
-    'Cottage Cleaning Request': 'Request for a staff to clean your cottage.',
-    'Checkout Request':
-        "Notify the staff that you will be checking out and require assistance with the process.",
-  };
+    try {
+      QuerySnapshot snapshot = await requestListRef.get();
+      // Fetch the data
+      List<String> fetchedRequestTypes = [];
+      Map<String, String> fetchedRequestInformation  = {};
 
+      for (var doc in snapshot.docs) {
+        String requestType = doc['type'];
+        String information = doc['information'];
+
+        fetchedRequestTypes.add(requestType);
+        fetchedRequestInformation[requestType] = information;
+      }
+      setState(() {
+        requestTypes = fetchedRequestTypes;
+        requestInformation = fetchedRequestInformation;
+      });
+
+    } catch (e) {
+      print('Error fetching request data: $e');
+    }
+  }
+  
   // Function to get information based on request type
   String getRequestInformation(String requestType) {
     return requestInformation[requestType] ?? 'No information available';
   }
+  
+  Future<List<String>?> _showRequestDialog(String requestType, {required List<String> items, required List<String> initialSelectedItems}) async {
+    // Fetch items from Firestore
+    List<String> items = await _fetchItemsFromFirestore(requestType);
 
-  Future<List<String>?> _showKitchenwareDialog() async {
-    // Create a local copy of the kitchenware selection state
-    List<bool> tempSelectedKitchenware = List.filled(5, false);
-
-    // Populate the initial state based on selectedKitchenwareItems
-    for (String item in selectedKitchenwareItems) {
-      switch (item) {
-        case "Fork":
-          tempSelectedKitchenware[0] = true;
-          break;
-        case "Spoon":
-          tempSelectedKitchenware[1] = true;
-          break;
-        case "Knife":
-          tempSelectedKitchenware[2] = true;
-          break;
-        case "BBQ Sticks":
-          tempSelectedKitchenware[3] = true;
-          break;
-        case "Tongs":
-          tempSelectedKitchenware[4] = true;
-          break;
-      }
-    }
+    // Initialize the selection state
+    List<bool> selectedItems = List.filled(items.length, false);
 
     return showDialog<List<String>>(
       context: context,
@@ -221,81 +206,62 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setDialogState) {
             return AlertDialog(
-              title: Text('Select Kitchenware'),
+              title: Text('Select Items for $requestType'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: [
-                  CheckboxListTile(
-                    title: Text("Fork"),
-                    value: tempSelectedKitchenware[0],
+                children: items.asMap().entries.map((entry) {
+                  int index = entry.key;
+                  String item = entry.value;
+                  return CheckboxListTile(
+                    title: Text(item),
+                    value: selectedItems[index],
                     onChanged: (bool? value) {
                       setDialogState(() {
-                        tempSelectedKitchenware[0] = value!;
+                        selectedItems[index] = value!;
                       });
                     },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Spoon"),
-                    value: tempSelectedKitchenware[1],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[1] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Knife"),
-                    value: tempSelectedKitchenware[2],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[2] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("BBQ sticks"),
-                    value: tempSelectedKitchenware[3],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[3] = value!;
-                      });
-                    },
-                  ),
-                  CheckboxListTile(
-                    title: Text("Tongs"),
-                    value: tempSelectedKitchenware[4],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        tempSelectedKitchenware[4] = value!;
-                      });
-                    },
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
-              actions: <Widget>[
-                TextButton(
-                  child: Text('Close'),
-                  onPressed: () {
-                    // Update selectedKitchenwareItems based on tempSelectedKitchenware
-                    selectedKitchenwareItems = [];
-                    if (tempSelectedKitchenware[0]) {
-                      selectedKitchenwareItems.add("Fork");
-                    }
-                    if (tempSelectedKitchenware[1]) {
-                      selectedKitchenwareItems.add("Spoon");
-                    }
-                    if (tempSelectedKitchenware[2]) {
-                      selectedKitchenwareItems.add("Knife");
-                    }
-                    if (tempSelectedKitchenware[3]) {
-                      selectedKitchenwareItems.add("BBQ Sticks");
-                    }
-                    if (tempSelectedKitchenware[4]) {
-                      selectedKitchenwareItems.add("Tongs");
-                    }
-
-                    Navigator.of(context).pop(selectedKitchenwareItems);
-                  },
+              actions: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    selectedItems.every((selected) => selected)
+                        ? TextButton(
+                            child: Text(
+                              "Deselect All",
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedItems = List.filled(items.length, false);
+                              });
+                            },
+                          )
+                        : TextButton(
+                            child: Text(
+                              "Select All",
+                              style: TextStyle(fontSize: 12),
+                            ),
+                            onPressed: () {
+                              setDialogState(() {
+                                selectedItems = List.filled(items.length, true);
+                              });
+                            },
+                          ),
+                    TextButton(
+                      child: Text('Done'),  
+                      onPressed: () {
+                        // Collect selected items
+                        List<String> selected = [];
+                        for (int i = 0; i < items.length; i++) {
+                          if (selectedItems[i]) selected.add(items[i]);
+                        }
+                        Navigator.of(context).pop(selected);
+                      },
+                    ),
+                  ],
                 ),
               ],
             );
@@ -305,339 +271,18 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
   }
 
-  void _showRequestHistoryDialog() async {
-    await _fetchRequestHistory(); // Fetch the latest request history
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text(
-            'Request History',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF316175),
-            ),
-          ),
-          content: Container(
-            width: double.maxFinite,
-            child: StatefulBuilder(
-              builder: (BuildContext context, StateSetter setState) {
-                return requestHistory.isEmpty
-                    ? Center(
-                        child: Text(
-                          'No Request Found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: requestHistory.length,
-                        itemBuilder: (context, index) {
-                          var request = requestHistory[index];
-                          return Card(
-                            margin: EdgeInsets.symmetric(vertical: 8.0),
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ListTile(
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 10.0,
-                                horizontal: 16.0,
-                              ),
-                              title: Text(
-                                request['requestType'],
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF316175),
-                                ),
-                              ),
-                              subtitle: Text(
-                                'Status: ${request['status']}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (request['status'] != 'done' &&
-                                      request['status'] != 'accepted' &&
-                                      request['status'] != 'rejected')
-                                    IconButton(
-                                      icon:
-                                          Icon(Icons.edit, color: Colors.blue),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        _updateRequest(request);
-                                      },
-                                    ),
-                                  if (request['status'] != 'done' &&
-                                      request['status'] != 'accepted')
-                                    IconButton(
-                                      icon:
-                                          Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () async {
-                                        bool? confirmDelete =
-                                            await showDialog<bool>(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return AlertDialog(
-                                              title:
-                                                  const Text("Confirm Delete"),
-                                              content: const Text(
-                                                  "Are you sure you want to delete this request?"),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.of(context)
-                                                          .pop(false),
-                                                  child: const Text("Cancel"),
-                                                ),
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.of(context)
-                                                          .pop(true),
-                                                  child: const Text("Delete",
-                                                      style: TextStyle(
-                                                          color: Colors.red)),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        );
-
-                                        if (confirmDelete == true) {
-                                          // Check if the document exists before deleting
-                                          DocumentSnapshot docSnapshot =
-                                              await FirebaseFirestore.instance
-                                                  .collection('guestRequests')
-                                                  .doc(request['docId'])
-                                                  .get();
-
-                                          if (docSnapshot.exists) {
-                                            await FirebaseFirestore.instance
-                                                .collection('guestRequests')
-                                                .doc(request['docId'])
-                                                .delete();
-                                            await _fetchRequestHistory(); // Refresh the request history
-                                            setState(
-                                                () {}); // Update the state to reflect the changes
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      "Request deleted successfully")),
-                                            );
-                                          } else {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      "Request not found")),
-                                            );
-                                          }
-                                        }
-                                      },
-                                    ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      );
-              },
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text(
-                'Close',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF316175),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _updateRequest(Map<String, dynamic> request) async {
-    String selectedRequestType = request['requestType'];
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Update Request'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: requestTypes.contains(selectedRequestType)
-                    ? selectedRequestType
-                    : null,
-                items: requestTypes.map((String type) {
-                  return DropdownMenuItem<String>(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedRequestType = newValue!;
-                  });
-                },
-                decoration: InputDecoration(labelText: 'Request Type'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _showCustomRequestDialog(request);
-                },
-                child: Text('Make Custom Request'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Check if the document exists before updating
-                DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-                    .collection('guestRequests')
-                    .doc(request['docId'])
-                    .get();
-
-                if (docSnapshot.exists) {
-                  await FirebaseFirestore.instance
-                      .collection('guestRequests')
-                      .doc(request['docId'])
-                      .update({'requestType': selectedRequestType});
-                  Navigator.of(context).pop();
-                  _fetchRequestHistory();
-                } else {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Request not found")),
-                  );
-                }
-              },
-              child: Text('Update'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showCustomRequestDialog(Map<String, dynamic> request) {
-    TextEditingController customRequestController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Custom Request'),
-          content: TextField(
-            controller: customRequestController,
-            decoration: InputDecoration(labelText: 'Enter your custom request'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (customRequestController.text.isNotEmpty) {
-                  await FirebaseFirestore.instance
-                      .collection('guestRequests')
-                      .doc(request['docId'])
-                      .update({'requestType': customRequestController.text});
-                  Navigator.of(context).pop();
-                  _fetchRequestHistory();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text("Custom request updated successfully")),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Custom request cannot be empty")),
-                  );
-                }
-              },
-              child: Text('Submit'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> _deleteRequest(Map<String, dynamic> request) async {
-    bool? confirmDelete = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Confirm Delete"),
-          content: const Text("Are you sure you want to delete this request?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("Delete", style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmDelete == true) {
-      // Check if the document exists before deleting
-      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(request['docId'])
+  Future<List<String>> _fetchItemsFromFirestore(String requestType) async {
+    try {
+      var snapshot = await FirebaseFirestore.instance
+          .collection('requestList')
+          .doc(requestType)
           .get();
 
-      if (docSnapshot.exists) {
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(request['docId'])
-            .delete();
-        await _fetchRequestHistory(); // Refresh the request history
-        setState(() {}); // Update the state to reflect the changes
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request deleted successfully")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request not found")),
-        );
-      }
+      List<String> items = List<String>.from(snapshot.data()?['items'] ?? []);
+      return items;
+    } catch (e) {
+      print("Error fetching items: $e");
+      return [];
     }
   }
 
@@ -654,16 +299,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
-        // If it's a kitchenware request, include the selected items
-        if (requestTypes[i] == "Kitchenware Request") {
+        List<String> items = selectedRequestItemsMap[requestTypes[i]] ?? [];
+        if (items.isEmpty) {
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items':
-                selectedKitchenwareItems, // Use the separate kitchenware list
+            'items': null,
           });
-        } else {
+      } else{
           selectedRequests.add({
             'requestType': requestTypes[i],
+            'items': items,
           });
         }
       }
@@ -704,9 +349,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         String requestType = request['requestType'];
         List<String>? items = request['items'];
 
-        String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}';
+        String docName =
+          '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
 
-        if (requestType == "Kitchenware Request") {
           await FirebaseFirestore.instance
               .collection('guestRequests')
               .doc(docName)
@@ -718,20 +363,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
             'timestamp': Timestamp.now(),
             'userName': userName,
           });
-        } else {
-          await FirebaseFirestore.instance
-              .collection('guestRequests')
-              .doc(docName)
-              .set({
-            'tableId': tableId,
-            'requestType': requestType,
-            'status': 'pending',
-            'timestamp': Timestamp.now(),
-            'userName': userName,
-          });
-        }
-        // Analytics and notifications...
+        
 
+        // Analytics and notifications...
         CollectionReference analyticsRef =
             FirebaseFirestore.instance.collection('analytics');
         DocumentReference analyticsDoc =
@@ -750,39 +384,34 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         await globalAnalyticsDoc.set({
           requestType: FieldValue.increment(1),
         }, SetOptions(merge: true));
-
-        // notify the admin
+        
         await FirebaseFirestore.instance.collection('adminNotifications').add({
-          'type': 'newRequest',
-          'message':
-              'New request "$requestType" from user "$userName" at table "$tableId"',
-          'timestamp': FieldValue.serverTimestamp(),
-          'viewed': false,
-          'userName': userName
-        });
+            'type': 'newRequest',
+            'message':
+                'New request "$requestType" from user "$userName" at table "$tableId"',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
       }
+      setState(() {
+        selectedItems = List.generate(5, (index) => false);
+      });
 
       // Notify the user of successful submission
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Requests submitted successfully")),
       );
-
-      // Reset selections
-      setState(() {
-        selectedItems = List.generate(5, (index) => false);
-        selectedKitchenwareItems = []; // Reset kitchenware items
-      });
     } catch (e) {
-      // Show error message
+      // Show error message if submission fails
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
     } finally {
-      // Dismiss loading dialog
+      // Dismiss the loading dialog
       Navigator.of(context).pop();
     }
 
-    print('Selected kitchenware: $selectedKitchenwareItems');
   }
 
   Future<void> _exitRequest() async {
@@ -883,21 +512,22 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
         title: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text("TableServe",
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text("TableServe",
                 style: TextStyle(
                   color: Color(0xffffffff),
                   fontFamily: "RubikOne",
-                )),
-            Text(
-              '$userName - $tableId',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white,
+                )
               ),
-            ),
-          ],
+              Text(
+                '$userName - $tableId',
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                ),
+              ),
+            ],
         ),
         leading: IconButton(
           icon: Transform.rotate(
@@ -945,20 +575,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
             children: [
               TextButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => faqScreen(),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => faqScreen(),
+                      ),
+                    );
+                  },
+                child:
+                  const Text(
+                    "FAQs",
+                    style: TextStyle(
+                      color: Color.fromARGB(255, 49, 49, 49),
+                      fontSize: 12,
                     ),
-                  );
-                },
-                child: const Text(
-                  "FAQs",
-                  style: TextStyle(
-                    color: Color.fromARGB(255, 49, 49, 49),
-                    fontSize: 12,
                   ),
-                ),
               ),
               StreamBuilder(
                 stream: FirebaseFirestore.instance
@@ -1017,8 +648,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("No table ID available")),
+                            const SnackBar(content: Text("No table ID available")),
                           );
                         }
                       },
@@ -1037,8 +667,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("No table ID available")),
+                            const SnackBar(content: Text("No table ID available")),
                           );
                         }
                       },
@@ -1136,28 +765,32 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   itemCount: requestTypes.length,
                   itemBuilder: (context, index) {
                     return GestureDetector(
-                      onTap: () async {
-                        if (requestTypes[index] == "Kitchenware Request") {
-                          List<String>? selectedKitchenware =
-                              await _showKitchenwareDialog();
-                          if (selectedKitchenware != null &&
-                              selectedKitchenware.isNotEmpty) {
-                            setState(() {
-                              selectedItems[index] = true;
-                              selectedKitchenwareItems = selectedKitchenware;
-                            });
-                          } else {
-                            setState(() {
-                              selectedItems[index] = false;
-                              selectedKitchenwareItems.clear();
-                            });
-                          }
-                        } else {
-                          setState(() {
-                            selectedItems[index] = !selectedItems[index];
-                          });
-                        }
-                      },
+                          onTap: () async {
+                            List<String> items = await _fetchItemsFromFirestore(requestTypes[index]); // Assuming this returns List<String>
+                            if (items.isEmpty || items == "null") {
+                              setState(() {
+                                this.selectedItems[index] = !this.selectedItems[index];
+                              });
+                            } else {
+                              List<String> initialSelectedItems = selectedRequestItemsMap[requestTypes[index]] ?? [];
+                                  List<String>? selectedItems = await _showRequestDialog(
+                                    requestTypes[index],
+                                    items: items,
+                                    initialSelectedItems: initialSelectedItems,
+                                  );
+                              if (selectedItems != null && selectedItems.isNotEmpty) {
+                                setState(() {
+                                  this.selectedItems[index] = true;
+                                    selectedRequestItemsMap[requestTypes[index]] = selectedItems;
+                                });
+                              } else {
+                                setState(() {
+                                  this.selectedItems[index] = false;
+                                    selectedRequestItemsMap[requestTypes[index]] = [];
+                                });
+                              }
+                            }
+                          },
                       child: Row(
                         children: [
                           Container(
@@ -1227,8 +860,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                             10), // Add some space between the button and the text
                                     Expanded(
                                       child: Text(
-                                        requestTypes[
-                                            index], // Display request type name
+                                        requestTypes[index], // Display request type name
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: selectedItems[index]
@@ -1247,6 +879,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                       ),
                     );
                   },
+
+
                 ),
               ),
               const SizedBox(height: 20),
@@ -1294,25 +928,11 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           ),
         ),
       ]),
-      floatingActionButton: Stack(
-        children: [
-          Align(
-            alignment: Alignment.bottomRight,
-            child: FloatingActionButton(
-              onPressed: _showMessagesScreen,
-              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-              child: const Icon(Icons.message),
-            ),
-          ),
-          Align(
-            alignment: Alignment.bottomLeft,
-            child: FloatingActionButton(
-              onPressed: _showRequestHistoryDialog,
-              backgroundColor: Color(0xFF316175),
-              child: Icon(Icons.history),
-            ),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showMessagesScreen,
+        // ignore: sort_child_properties_last
+        child: const Icon(Icons.message),
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
       ),
     );
   }
