@@ -398,7 +398,7 @@ class AdminPanelState extends State<AdminPanel> {
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.orange),
                             onPressed: () {
-                              // _showEditRequestDialog(context, doc);
+                              _showEditRequestDialog(context, doc.data() as Map<String, dynamic>);
                             },
                           ),
                           // Delete icon
@@ -519,6 +519,7 @@ class AdminPanelState extends State<AdminPanel> {
                 ),
               ],
             ),
+            
           ),
           actions: [
             TextButton(
@@ -566,6 +567,126 @@ class AdminPanelState extends State<AdminPanel> {
                 }
               },
               child: Text("Add"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditRequestDialog(BuildContext context, Map<String, dynamic> doc) {
+    final _typeController = TextEditingController(text: doc['type']);
+    final _infoController = TextEditingController(text: doc['information']);
+    final _itemsController = TextEditingController(text: doc['items'].join(', '));
+
+    final _formKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Edit Request'),
+          content: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _typeController,
+                    decoration: InputDecoration(labelText: 'Request Type'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a request type';
+                      }
+                      return null;
+                    },
+                  ),
+                  TextFormField(
+                    controller: _infoController,
+                    decoration: InputDecoration(labelText: 'Information'),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter information';
+                      }
+                      return null;
+                    },
+                  ),
+                  TextFormField(
+                    controller: _itemsController,
+                    decoration: InputDecoration(labelText: 'Items (comma separated)'),
+                  ),
+                ],
+              ),
+            ),
+
+          ),
+          
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (_formKey.currentState?.validate() ?? false) {
+                  // Logic to save the updated request type, information, and items
+                  final updatedRequestType = _typeController.text;
+                  final updatedInformation = _infoController.text;
+                  final updatedItems = _itemsController.text.split(',').map((item) => item.trim()).toList();
+
+                  await FirebaseFirestore.instance
+                  .collection('requestList')
+                  .doc(doc['type']) // Delete the old document
+                  .delete();
+                  
+                  var oldDoc = await FirebaseFirestore.instance
+                    .collection('globalAnalytics')
+                    .doc(doc['type'])
+                    .get();
+
+                  if (oldDoc.exists) {
+                    var requestTypeValue = oldDoc.data()?[doc['type']];
+
+                    // Now delete the old document
+                    await FirebaseFirestore.instance
+                        .collection('globalAnalytics')
+                        .doc(doc['type'])
+                        .delete();
+                    
+                    // Create a new document with the updated ID and the current counter value
+                    await FirebaseFirestore.instance
+                        .collection('globalAnalytics')
+                        .doc(updatedRequestType)
+                        .set({
+                      updatedRequestType: requestTypeValue,  // Set the counter value before deleting
+                    });
+
+
+                  }
+
+                  // Create a new document with the updated ID
+                  await FirebaseFirestore.instance
+                      .collection('requestList')
+                      .doc(updatedRequestType) // Use the updated type as the new ID
+                      .set({
+                    'type': updatedRequestType,
+                    'information': updatedInformation,
+                    'items': updatedItems,
+                  });
+
+ 
+
+                  // Show the updated values via SnackBar (or you can use this data to save to your database)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Request updated successfully')),
+                  );
+
+                  Navigator.of(context).pop();
+                }
+              },
+              child: Text('Save'),
             ),
           ],
         );
