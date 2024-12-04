@@ -373,7 +373,8 @@ class AdminPanelState extends State<AdminPanel> {
                   // Extracting the request details
                   String requestType = doc['type'] ?? 'Unknown';
                   String information = doc['information'] ?? 'No information provided';
-                  List<String> items = List<String>.from(doc['items'] ?? []);
+                  List<String> items = List<String>.from(doc['items']);
+                  String itemsJoined = items.join(',');
 
                   return Card(
                     margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
@@ -384,7 +385,7 @@ class AdminPanelState extends State<AdminPanel> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text("Information: $information"),
-                          if (items.isNotEmpty) ...[
+                          if (itemsJoined != "") ...[
                             const SizedBox(height: 8),
                             Text("Items: ${items.join(', ')}"),
                           ],
@@ -467,6 +468,11 @@ class AdminPanelState extends State<AdminPanel> {
                   }).catchError((error) {
                       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete request')));
                     });
+                  FirebaseFirestore.instance.collection('globalAnalytics').doc(docId).delete().then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request From Analytics Successfully')));
+                  }).catchError((error) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete request from Analytics')));
+                    });
                   Navigator.of(context).pop();  // Close the dialog after deletion
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -527,8 +533,8 @@ class AdminPanelState extends State<AdminPanel> {
                 String information = _informationController.text;
                 List<String> items = _itemsController.text.split(',').map((e) => e.trim()).toList();
 
-                if (type.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type cannot be empty")));
+                if (type.isEmpty || information.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type and information cannot be empty")));
                   return;
                 }
 
@@ -541,12 +547,21 @@ class AdminPanelState extends State<AdminPanel> {
                   FirebaseFirestore.instance.collection('requestList').doc(type).set({
                     'type': type,
                     'information': information,
-                    'items': items,
+                    'items': items.isEmpty ? null : items,
                   }).then((_) {
                     Navigator.of(context).pop();
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
                   }).catchError((error) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
+                  });
+                  // add request to the analytics
+                  FirebaseFirestore.instance.collection('globalAnalytics').doc(type).set({
+                    type: 0,
+                  }).then((_) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added to Analytics')));
+                  }).catchError((error) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request to Analytics')));
                   });
                 }
               },
