@@ -200,7 +200,7 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequests() : _buildAnalytics(),
+      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequestList() : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -331,10 +331,234 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
-  Widget _buildRequests() {
-    return Container(); // Add a return statement
+  Widget _buildRequestList() {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance.collection('requestList').snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text("No requests"));
+        }
 
+        return Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'Request List',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF316175),
+                    fontSize: 32,
+                    fontFamily: 'RubikOne',
+                  ),
+                ),
+                // const SizedBox(width: 5),
+                IconButton(
+                  icon: Icon(Icons.add, color: Colors.blue),
+                  onPressed: () {
+                    _showAddRequestDialog(context);
+                  },
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListView(
+                children: snapshot.data!.docs.map((doc) {
+                  // Extracting the request details
+                  String requestType = doc['type'] ?? 'Unknown';
+                  String information = doc['information'] ?? 'No information provided';
+                  List<String> items = List<String>.from(doc['items'] ?? []);
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    elevation: 4,
+                    child: ListTile(
+                      title: Text(requestType, style: TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Information: $information"),
+                          if (items.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text("Items: ${items.join(', ')}"),
+                          ],
+                        ],
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Edit icon
+                          IconButton(
+                            icon: Icon(Icons.edit, color: Colors.orange),
+                            onPressed: () {
+                              // _showEditRequestDialog(context, doc);
+                            },
+                          ),
+                          // Delete icon
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              _showDeleteRequestConfirmationDialog(context, doc.id);
+                            },
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        // Add navigation or actions on tap if necessary
+                        // Example:
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //     builder: (context) => RequestDetailsScreen(requestType: requestType),
+                        //   ),
+                        // );
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
+
+  void _showDeleteRequestConfirmationDialog(BuildContext context, String docId) {
+    TextEditingController confirmationController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Delete Request"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Type 'DELETE' to confirm deleting this request."),
+              const SizedBox(height: 10),
+              TextField(
+                controller: confirmationController,
+                decoration: const InputDecoration(
+                  labelText: 'Confirmation',
+                  hintText: 'DELETE',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (confirmationController.text == 'DELETE') {
+                  FirebaseFirestore.instance.collection('requestList').doc(docId).delete().then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request deleted successfully')));
+                  }).catchError((error) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete request')));
+                    });
+                  Navigator.of(context).pop();  // Close the dialog after deletion
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Incorrect confirmation text")),
+                  );
+                }
+              },
+              style: ButtonStyle(
+                backgroundColor: MaterialStateProperty.all(Colors.red),
+              ),
+              child: const Text("DELETE", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
+  void _showAddRequestDialog(BuildContext context) {
+    final _typeController = TextEditingController();
+    final _informationController = TextEditingController();
+    final _itemsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Add New Request"),
+          content: SingleChildScrollView(
+            child: Column(
+              children: [
+                TextField(
+                  controller: _typeController,
+                  decoration: InputDecoration(labelText: "Request Type"),
+                ),
+                TextField(
+                  controller: _informationController,
+                  decoration: InputDecoration(labelText: "Information"),
+                ),
+                TextField(
+                  controller: _itemsController,
+                  decoration: InputDecoration(labelText: "Items (comma separated)"),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+              },
+              child: Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () async {
+                String type = _typeController.text;
+                String information = _informationController.text;
+                List<String> items = _itemsController.text.split(',').map((e) => e.trim()).toList();
+
+                if (type.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type cannot be empty")));
+                  return;
+                }
+
+                var existingDoc = await FirebaseFirestore.instance.collection('requestList').doc(type).get();
+
+                if (existingDoc.exists) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A request with this type already exists")));
+                } else {
+                  // Add request with 'type' as document ID
+                  FirebaseFirestore.instance.collection('requestList').doc(type).set({
+                    'type': type,
+                    'information': information,
+                    'items': items,
+                  }).then((_) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
+                  }).catchError((error) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
+                  });
+                }
+              },
+              child: Text("Add"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
 
   Widget _buildAnalytics() {
     return Column(
