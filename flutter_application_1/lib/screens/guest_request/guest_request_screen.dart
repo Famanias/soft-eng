@@ -30,6 +30,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   List<String> requestTypes = [];
   Map<String, String> requestInformation = {};
   List<String> selectedRequestItems = [];
+  Map<String, List<String>> selectedRequestItemsMap = {};
 
 
   Timer? _exitTimer;
@@ -192,7 +193,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
     return requestInformation[requestType] ?? 'No information available';
   }
   
-  Future<List<String>?> _showRequestDialog(String requestType) async {
+  Future<List<String>?> _showRequestDialog(String requestType, {required List<String> items, required List<String> initialSelectedItems}) async {
     // Fetch items from Firestore
     List<String> items = await _fetchItemsFromFirestore(requestType);
 
@@ -298,12 +299,18 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
 
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
-
+        List<String> items = selectedRequestItemsMap[requestTypes[i]] ?? [];
+        if (items.isEmpty) {
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items': selectedRequestItems,
+            'items': null,
           });
-        
+      } else{
+          selectedRequests.add({
+            'requestType': requestTypes[i],
+            'items': items,
+          });
+        }
       }
     }
 
@@ -759,23 +766,29 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                   itemBuilder: (context, index) {
                     return GestureDetector(
                           onTap: () async {
-                            if (requestTypes[index] == "Kitchenware Request" || requestTypes[index] == "Hydration Drink Request") {
-                              List<String>? selectedItems  = await _showRequestDialog(requestTypes[index]);
+                            List<String> items = await _fetchItemsFromFirestore(requestTypes[index]); // Assuming this returns List<String>
+                            if (items.isEmpty || items == "null") {
+                              setState(() {
+                                this.selectedItems[index] = !this.selectedItems[index];
+                              });
+                            } else {
+                              List<String> initialSelectedItems = selectedRequestItemsMap[requestTypes[index]] ?? [];
+                                  List<String>? selectedItems = await _showRequestDialog(
+                                    requestTypes[index],
+                                    items: items,
+                                    initialSelectedItems: initialSelectedItems,
+                                  );
                               if (selectedItems != null && selectedItems.isNotEmpty) {
                                 setState(() {
                                   this.selectedItems[index] = true;
-                                    selectedRequestItems = selectedItems;
+                                    selectedRequestItemsMap[requestTypes[index]] = selectedItems;
                                 });
                               } else {
                                 setState(() {
                                   this.selectedItems[index] = false;
-                                    selectedRequestItems.clear();
+                                    selectedRequestItemsMap[requestTypes[index]] = [];
                                 });
                               }
-                            } else {
-                              setState(() {
-                                this.selectedItems[index] = !this.selectedItems[index];
-                              });
                             }
                           },
                       child: Row(
