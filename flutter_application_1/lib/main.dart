@@ -9,7 +9,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/admin_panel/admin_panel_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'screens/guest_request/faq_screen.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
 void main() async {
@@ -140,7 +139,6 @@ class MyAppState extends State<MyApp> {
       routes: {
         '/login': (context) => LoginScreen(),
         '/adminPanel': (context) => AdminPanel(),
-        '/faq': (context) => faqScreen(),
       },
       builder: (context, child) {
         return Stack(
