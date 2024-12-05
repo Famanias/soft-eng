@@ -1009,7 +1009,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           .doc(requestId)
           .update({
         'status': status,
-        'updatedBy': staffName, // Use staffName for updatedBy
+        'updatedBy': staffName,
       });
 
       // Add a notification document
@@ -1025,7 +1025,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         'timestamp': FieldValue.serverTimestamp(),
         'userName': userName,
         'sendTo': 'user',
-        'updatedBy': staffName, // Also use staffName for the notification
+        'updatedBy': staffName,
       });
 
       // Notify the user of successful update
