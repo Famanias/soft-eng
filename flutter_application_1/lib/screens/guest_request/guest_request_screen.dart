@@ -26,7 +26,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   bool isScanning = false; // Prevent multiple scans
   String tableId = "";
   String userName = "Guest";
-  List<bool> selectedItems = List.generate(5, (index) => false);
+  List<bool> selectedItems = List.generate(10, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
   List<String> requestTypes = [];
   Map<String, String> requestInformation = {};
@@ -581,52 +581,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
   }
 
-  Future<void> _deleteRequest(Map<String, dynamic> request) async {
-    bool? confirmDelete = await showDialog<bool>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Confirm Delete"),
-          content: const Text("Are you sure you want to delete this request?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text("Delete", style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmDelete == true) {
-      // Check if the document exists before deleting
-      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-          .collection('guestRequests')
-          .doc(request['docId'])
-          .get();
-
-      if (docSnapshot.exists) {
-        await FirebaseFirestore.instance
-            .collection('guestRequests')
-            .doc(request['docId'])
-            .delete();
-        await _fetchRequestHistory(); // Refresh the request history
-        setState(() {}); // Update the state to reflect the changes
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request deleted successfully")),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request not found")),
-        );
-      }
-    }
-  }
-
   Future<void> _submitRequest() async {
     List<Map<String, dynamic>> selectedRequests = [];
 
@@ -733,7 +687,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         });
       }
       setState(() {
-        selectedItems = List.generate(5, (index) => false);
+        selectedItems = List.generate(10, (index) => false);
       });
 
       // Notify the user of successful submission
@@ -819,7 +773,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       // Step 5: Reset state and navigate
       setState(() {
         tableId = "";
-        selectedItems = List.generate(5, (index) => false);
+        selectedItems = List.generate(10, (index) => false);
       });
 
       // ignore: use_build_context_synchronously
@@ -1104,13 +1058,11 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   itemBuilder: (context, index) {
                     return GestureDetector(
                       onTap: () async {
-                        List<String> items = await _fetchItemsFromFirestore(
-                            requestTypes[
-                                index]); // Assuming this returns List<String>
+                        List<String> items =
+                            await _fetchItemsFromFirestore(requestTypes[index]);
                         if (items.isEmpty || items == "null") {
                           setState(() {
-                            this.selectedItems[index] =
-                                !this.selectedItems[index];
+                            selectedItems[index] = !selectedItems[index];
                           });
                         } else {
                           List<String> initialSelectedItems =
@@ -1278,6 +1230,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           Align(
             alignment: Alignment.bottomRight,
             child: FloatingActionButton(
+              heroTag: 'messageButton', // Unique heroTag
               onPressed: _showMessagesScreen,
               backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               child: const Icon(Icons.message),
@@ -1286,6 +1239,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           Align(
             alignment: Alignment.bottomLeft,
             child: FloatingActionButton(
+              heroTag: 'historyButton', // Unique heroTag
               onPressed: _showRequestHistoryDialog,
               backgroundColor: Color(0xFF316175),
               child: Icon(Icons.history),
