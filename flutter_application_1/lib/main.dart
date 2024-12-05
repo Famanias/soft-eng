@@ -45,7 +45,6 @@ void main() async {
   // Request notification permissions
   await AwesomeNotifications().isNotificationAllowed().then((isAllowed) {
     if (!isAllowed) {
-      // This is just an example. You can show a dialog or any other UI element to request permission.
       AwesomeNotifications().requestPermissionToSendNotifications();
     }
   });
@@ -72,12 +71,6 @@ void _setupGlobalNotificationListener() {
       if (change.type == DocumentChangeType.added) {
         var data = change.doc.data() as Map<String, dynamic>;
         _showLocalNotification(data);
-
-        // Mark the notification as viewed
-        FirebaseFirestore.instance
-            .collection('notifications')
-            .doc(change.doc.id)
-            .update({'viewed': true});
       }
     }
   });
@@ -85,7 +78,7 @@ void _setupGlobalNotificationListener() {
 
 void _showLocalNotification(Map<String, dynamic> data) {
   if (data['type'] == null || data['requestType'] == null || data['status'] == null) {
-    return; // Do not create a notification if any required field is null
+    return;
   }
 
   AwesomeNotifications().createNotification(

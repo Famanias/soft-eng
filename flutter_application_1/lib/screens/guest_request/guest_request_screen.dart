@@ -64,6 +64,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         .collection('notifications')
         .where('tableId', isEqualTo: tableId)
         .where('userName', isEqualTo: userName)
+        .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
       for (var change in snapshot.docChanges) {

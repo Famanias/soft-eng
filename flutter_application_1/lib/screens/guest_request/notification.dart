@@ -43,9 +43,7 @@ class NotificationScreenState extends State<NotificationScreen> {
   }
 
   void _showLocalNotification(Map<String, dynamic> data) {
-   if (
-        data['requestType'] == null ||
-        data['status'] == null) {
+    if (data['requestType'] == null || data['status'] == null) {
       return; // Do not create a notification if any required field is null
     }
 
@@ -130,8 +128,12 @@ class NotificationScreenState extends State<NotificationScreen> {
                 subtitle: Text(data['type'] == 'newMessage'
                     ? data['message']
                     : "Status: ${data['status']}"),
-                onTap: () {
-                  print("Notification pressed: $data");
+                onTap: () async {
+                  // Mark the notification as viewed
+                  await FirebaseFirestore.instance
+                      .collection('notifications')
+                      .doc(doc.id)
+                      .update({'viewed': true});
                 },
               );
             },
