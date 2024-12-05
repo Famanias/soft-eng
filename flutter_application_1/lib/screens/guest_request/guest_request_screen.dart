@@ -19,7 +19,8 @@ class GuestRequestScreen extends StatefulWidget {
   GuestRequestScreenState createState() => GuestRequestScreenState();
 }
 
-class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBindingObserver {
+class GuestRequestScreenState extends State<GuestRequestScreen>
+    with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? qrController;
   bool isScanning = false; // Prevent multiple scans
@@ -32,7 +33,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
   List<String> selectedRequestItems = [];
   Map<String, List<String>> selectedRequestItemsMap = {};
 
-
   Timer? _exitTimer;
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
@@ -42,7 +42,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
     super.initState();
     fetchRequestData();
     _initializeLocalNotifications();
-     _listenForNotifications();
+    _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message.data);
     });
@@ -149,13 +149,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
           .where('tableId', isEqualTo: tableId)
+          .where('userName', isEqualTo: userName)
           .orderBy('timestamp', descending: true)
           .get();
 
       setState(() {
-        requestHistory = snapshot.docs
-            .map((doc) => doc.data() as Map<String, dynamic>)
-            .toList();
+        requestHistory = snapshot.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
+          data['docId'] = doc.id; // Include the document ID
+          return data;
+        }).toList();
       });
     }
   }
@@ -169,7 +172,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       QuerySnapshot snapshot = await requestListRef.get();
       // Fetch the data
       List<String> fetchedRequestTypes = [];
-      Map<String, String> fetchedRequestInformation  = {};
+      Map<String, String> fetchedRequestInformation = {};
 
       for (var doc in snapshot.docs) {
         String requestType = doc['type'];
@@ -182,18 +185,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         requestTypes = fetchedRequestTypes;
         requestInformation = fetchedRequestInformation;
       });
-
     } catch (e) {
       print('Error fetching request data: $e');
     }
   }
-  
+
   // Function to get information based on request type
   String getRequestInformation(String requestType) {
     return requestInformation[requestType] ?? 'No information available';
   }
-  
-  Future<List<String>?> _showRequestDialog(String requestType, {required List<String> items, required List<String> initialSelectedItems}) async {
+
+  Future<List<String>?> _showRequestDialog(String requestType,
+      {required List<String> items,
+      required List<String> initialSelectedItems}) async {
     // Fetch items from Firestore
     List<String> items = await _fetchItemsFromFirestore(requestType);
 
@@ -235,7 +239,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                             ),
                             onPressed: () {
                               setDialogState(() {
-                                selectedItems = List.filled(items.length, false);
+                                selectedItems =
+                                    List.filled(items.length, false);
                               });
                             },
                           )
@@ -251,7 +256,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                             },
                           ),
                     TextButton(
-                      child: Text('Done'),  
+                      child: Text('Done'),
                       onPressed: () {
                         // Collect selected items
                         List<String> selected = [];
@@ -286,6 +291,342 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
     }
   }
 
+  void _showRequestHistoryDialog() async {
+    await _fetchRequestHistory(); // Fetch the latest request history
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(
+            'Request History',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF316175),
+            ),
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return requestHistory.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No Request Found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: requestHistory.length,
+                        itemBuilder: (context, index) {
+                          var request = requestHistory[index];
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 8.0),
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              title: Text(
+                                request['requestType'],
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF316175),
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Status: ${request['status']}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (request['status'] != 'done' &&
+                                      request['status'] != 'accepted' &&
+                                      request['status'] != 'rejected')
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () {
+                                        Navigator.of(context).pop();
+                                        _updateRequest(request);
+                                      },
+                                    ),
+                                  if (request['status'] != 'done' &&
+                                      request['status'] != 'accepted')
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () async {
+                                        bool? confirmDelete =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title:
+                                                  const Text("Confirm Delete"),
+                                              content: const Text(
+                                                  "Are you sure you want to delete this request?"),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
+                                                  child: const Text("Cancel"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
+                                                  child: const Text("Delete",
+                                                      style: TextStyle(
+                                                          color: Colors.red)),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
+
+                                        if (confirmDelete == true) {
+                                          // Check if the document exists before deleting
+                                          DocumentSnapshot docSnapshot =
+                                              await FirebaseFirestore.instance
+                                                  .collection('guestRequests')
+                                                  .doc(request['docId'])
+                                                  .get();
+
+                                          if (docSnapshot.exists) {
+                                            await FirebaseFirestore.instance
+                                                .collection('guestRequests')
+                                                .doc(request['docId'])
+                                                .delete();
+                                            await _fetchRequestHistory(); // Refresh the request history
+                                            setState(
+                                                () {}); // Update the state to reflect the changes
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Request deleted successfully")),
+                                            );
+                                          } else {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              const SnackBar(
+                                                  content: Text(
+                                                      "Request not found")),
+                                            );
+                                          }
+                                        }
+                                      },
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF316175),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _updateRequest(Map<String, dynamic> request) async {
+    String selectedRequestType = request['requestType'];
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Update Request'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                value: requestTypes.contains(selectedRequestType)
+                    ? selectedRequestType
+                    : null,
+                items: requestTypes.map((String type) {
+                  return DropdownMenuItem<String>(
+                    value: type,
+                    child: Text(type),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    selectedRequestType = newValue!;
+                  });
+                },
+                decoration: InputDecoration(labelText: 'Request'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _showCustomRequestDialog(request);
+                },
+                child: Text('Make Custom Request'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Check if the document exists before updating
+                DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+                    .collection('guestRequests')
+                    .doc(request['docId'])
+                    .get();
+
+                if (docSnapshot.exists) {
+                  await FirebaseFirestore.instance
+                      .collection('guestRequests')
+                      .doc(request['docId'])
+                      .update({'requestType': selectedRequestType});
+                  Navigator.of(context).pop();
+                  _fetchRequestHistory();
+                } else {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Request not found")),
+                  );
+                }
+              },
+              child: Text('Update'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showCustomRequestDialog(Map<String, dynamic> request) {
+    TextEditingController customRequestController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Custom Request'),
+          content: TextField(
+            controller: customRequestController,
+            decoration: InputDecoration(labelText: 'Enter your custom request'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (customRequestController.text.isNotEmpty) {
+                  await FirebaseFirestore.instance
+                      .collection('guestRequests')
+                      .doc(request['docId'])
+                      .update({'requestType': customRequestController.text});
+                  Navigator.of(context).pop();
+                  _fetchRequestHistory();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text("Custom request updated successfully")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Custom request cannot be empty")),
+                  );
+                }
+              },
+              child: Text('Submit'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteRequest(Map<String, dynamic> request) async {
+    bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Confirm Delete"),
+          content: const Text("Are you sure you want to delete this request?"),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text("Delete", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmDelete == true) {
+      // Check if the document exists before deleting
+      DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(request['docId'])
+          .get();
+
+      if (docSnapshot.exists) {
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(request['docId'])
+            .delete();
+        await _fetchRequestHistory(); // Refresh the request history
+        setState(() {}); // Update the state to reflect the changes
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request deleted successfully")),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request not found")),
+        );
+      }
+    }
+  }
+
   Future<void> _submitRequest() async {
     List<Map<String, dynamic>> selectedRequests = [];
 
@@ -305,7 +646,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             'requestType': requestTypes[i],
             'items': null,
           });
-      } else{
+        } else {
           selectedRequests.add({
             'requestType': requestTypes[i],
             'items': items,
@@ -349,21 +690,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         String requestType = request['requestType'];
         List<String>? items = request['items'];
 
-        String docName =
-          '$tableId-${DateTime.now().millisecondsSinceEpoch}-$requestType';
+        String docName = '$tableId-${DateTime.now().millisecondsSinceEpoch}';
 
-          await FirebaseFirestore.instance
-              .collection('guestRequests')
-              .doc(docName)
-              .set({
-            'tableId': tableId,
-            'requestType': requestType,
-            'items': items,
-            'status': 'pending',
-            'timestamp': Timestamp.now(),
-            'userName': userName,
-          });
-        
+        await FirebaseFirestore.instance
+            .collection('guestRequests')
+            .doc(docName)
+            .set({
+          'tableId': tableId,
+          'requestType': requestType,
+          'items': items,
+          'status': 'pending',
+          'timestamp': Timestamp.now(),
+          'userName': userName,
+        });
 
         // Analytics and notifications...
         CollectionReference analyticsRef =
@@ -384,14 +723,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
         await globalAnalyticsDoc.set({
           requestType: FieldValue.increment(1),
         }, SetOptions(merge: true));
-        
+
         await FirebaseFirestore.instance.collection('adminNotifications').add({
-            'type': 'newRequest',
-            'message':
-                'New request "$requestType" from user "$userName" at table "$tableId"',
-            'timestamp': FieldValue.serverTimestamp(),
-            'viewed': false,
-          });
+          'type': 'newRequest',
+          'message':
+              'New request "$requestType" from user "$userName" at table "$tableId"',
+          'timestamp': FieldValue.serverTimestamp(),
+          'viewed': false,
+        });
       }
       setState(() {
         selectedItems = List.generate(5, (index) => false);
@@ -411,7 +750,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       // Dismiss the loading dialog
       Navigator.of(context).pop();
     }
-
   }
 
   Future<void> _exitRequest() async {
@@ -512,22 +850,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
       backgroundColor: const Color(0xFFE4CB9D),
       appBar: AppBar(
         title: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text("TableServe",
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text("TableServe",
                 style: TextStyle(
                   color: Color(0xffffffff),
                   fontFamily: "RubikOne",
-                )
+                )),
+            Text(
+              '$userName - $tableId',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
               ),
-              Text(
-                '$userName - $tableId',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+            ),
+          ],
         ),
         leading: IconButton(
           icon: Transform.rotate(
@@ -575,21 +912,20 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
             children: [
               TextButton(
                 onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => faqScreen(),
-                      ),
-                    );
-                  },
-                child:
-                  const Text(
-                    "FAQs",
-                    style: TextStyle(
-                      color: Color.fromARGB(255, 49, 49, 49),
-                      fontSize: 12,
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => faqScreen(),
                     ),
+                  );
+                },
+                child: const Text(
+                  "FAQs",
+                  style: TextStyle(
+                    color: Color.fromARGB(255, 49, 49, 49),
+                    fontSize: 12,
                   ),
+                ),
               ),
               StreamBuilder(
                 stream: FirebaseFirestore.instance
@@ -648,7 +984,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No table ID available")),
+                            const SnackBar(
+                                content: Text("No table ID available")),
                           );
                         }
                       },
@@ -667,7 +1004,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                           );
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("No table ID available")),
+                            const SnackBar(
+                                content: Text("No table ID available")),
                           );
                         }
                       },
@@ -765,32 +1103,40 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                   itemCount: requestTypes.length,
                   itemBuilder: (context, index) {
                     return GestureDetector(
-                          onTap: () async {
-                            List<String> items = await _fetchItemsFromFirestore(requestTypes[index]); // Assuming this returns List<String>
-                            if (items.isEmpty || items == "null") {
-                              setState(() {
-                                this.selectedItems[index] = !this.selectedItems[index];
-                              });
-                            } else {
-                              List<String> initialSelectedItems = selectedRequestItemsMap[requestTypes[index]] ?? [];
-                                  List<String>? selectedItems = await _showRequestDialog(
-                                    requestTypes[index],
-                                    items: items,
-                                    initialSelectedItems: initialSelectedItems,
-                                  );
-                              if (selectedItems != null && selectedItems.isNotEmpty) {
-                                setState(() {
-                                  this.selectedItems[index] = true;
-                                    selectedRequestItemsMap[requestTypes[index]] = selectedItems;
-                                });
-                              } else {
-                                setState(() {
-                                  this.selectedItems[index] = false;
-                                    selectedRequestItemsMap[requestTypes[index]] = [];
-                                });
-                              }
-                            }
-                          },
+                      onTap: () async {
+                        List<String> items = await _fetchItemsFromFirestore(
+                            requestTypes[
+                                index]); // Assuming this returns List<String>
+                        if (items.isEmpty || items == "null") {
+                          setState(() {
+                            this.selectedItems[index] =
+                                !this.selectedItems[index];
+                          });
+                        } else {
+                          List<String> initialSelectedItems =
+                              selectedRequestItemsMap[requestTypes[index]] ??
+                                  [];
+                          List<String>? selectedItems =
+                              await _showRequestDialog(
+                            requestTypes[index],
+                            items: items,
+                            initialSelectedItems: initialSelectedItems,
+                          );
+                          if (selectedItems != null &&
+                              selectedItems.isNotEmpty) {
+                            setState(() {
+                              this.selectedItems[index] = true;
+                              selectedRequestItemsMap[requestTypes[index]] =
+                                  selectedItems;
+                            });
+                          } else {
+                            setState(() {
+                              this.selectedItems[index] = false;
+                              selectedRequestItemsMap[requestTypes[index]] = [];
+                            });
+                          }
+                        }
+                      },
                       child: Row(
                         children: [
                           Container(
@@ -860,7 +1206,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                                             10), // Add some space between the button and the text
                                     Expanded(
                                       child: Text(
-                                        requestTypes[index], // Display request type name
+                                        requestTypes[
+                                            index], // Display request type name
                                         style: TextStyle(
                                           fontSize: 16,
                                           color: selectedItems[index]
@@ -879,8 +1226,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
                       ),
                     );
                   },
-
-
                 ),
               ),
               const SizedBox(height: 20),
@@ -928,11 +1273,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen> with WidgetsBind
           ),
         ),
       ]),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showMessagesScreen,
-        // ignore: sort_child_properties_last
-        child: const Icon(Icons.message),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      floatingActionButton: Stack(
+        children: [
+          Align(
+            alignment: Alignment.bottomRight,
+            child: FloatingActionButton(
+              onPressed: _showMessagesScreen,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+              child: const Icon(Icons.message),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomLeft,
+            child: FloatingActionButton(
+              onPressed: _showRequestHistoryDialog,
+              backgroundColor: Color(0xFF316175),
+              child: Icon(Icons.history),
+            ),
+          ),
+        ],
       ),
     );
   }
