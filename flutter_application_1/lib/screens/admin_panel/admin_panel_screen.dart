@@ -280,6 +280,12 @@ class _EditRequestDialogState extends State<EditRequestDialog> {
 
             if (oldDoc.exists) {
               var requestTypeValue = oldDoc.data()?[widget.doc['type']];
+              // Now delete the old document
+                    await FirebaseFirestore.instance
+                        .collection('globalAnalytics')
+                        .doc(widget.doc['type'])
+                        .delete();
+
               await FirebaseFirestore.instance
                   .collection('globalAnalytics')
                   .doc(type) // Set the new type in global analytics
@@ -699,14 +705,6 @@ class AdminPanelState extends State<AdminPanel> {
                         ],
                       ),
                       onTap: () {
-                        // Add navigation or actions on tap if necessary
-                        // Example:
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => RequestDetailsScreen(requestType: requestType),
-                        //   ),
-                        // );
                       },
                     ),
                   );
