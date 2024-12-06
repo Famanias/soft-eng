@@ -341,7 +341,30 @@ class AdminPanelState extends State<AdminPanel> {
           );
         }
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No requests"));
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Center(child: Text("No requests")),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      _showAddRequestDialog(context);
+                    },
+                    child: Row(
+                      children: [
+                        Icon(Icons.add, color: Colors.blue),
+                        SizedBox(width: 8), // Optional: Adds space between icon and text
+                        Text('Add Request'),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ],
+          );
         }
 
         return Column(
