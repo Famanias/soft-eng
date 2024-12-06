@@ -280,6 +280,11 @@ class _EditRequestDialogState extends State<EditRequestDialog> {
 
             if (oldDoc.exists) {
               var requestTypeValue = oldDoc.data()?[widget.doc['type']];
+              // Now delete the old document
+                    await FirebaseFirestore.instance
+                        .collection('globalAnalytics')
+                        .doc(widget.doc['type'])
+                        .delete();
               await FirebaseFirestore.instance
                   .collection('globalAnalytics')
                   .doc(type) // Set the new type in global analytics
@@ -618,18 +623,23 @@ class AdminPanelState extends State<AdminPanel> {
             child: CircularProgressIndicator(),
           );
         }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Center(child: Text("No requests")),
+              // const Center(child: Text("No requests")),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   TextButton(
                     onPressed: () {
-                      _showAddRequestDialog(context);
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AddRequestDialog();
+                        },
+                      );
                     },
                     child: Row(
                       children: [
@@ -663,7 +673,12 @@ class AdminPanelState extends State<AdminPanel> {
                 IconButton(
                   icon: Icon(Icons.add, color: Colors.blue),
                   onPressed: () {
-                    _showAddRequestDialog(context);
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AddRequestDialog();
+                      },
+                    );
                   },
                 ),
               ],
@@ -685,7 +700,7 @@ class AdminPanelState extends State<AdminPanel> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Information: $information"),
+                          Text(information),
                           if (itemsJoined != "") ...[
                             const SizedBox(height: 8),
                             Text("Items: ${items.join(', ')}"),
@@ -699,7 +714,12 @@ class AdminPanelState extends State<AdminPanel> {
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.orange),
                             onPressed: () {
-                              _showEditRequestDialog(context, doc.data() as Map<String, dynamic>);
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return EditRequestDialog(doc: doc.data() as Map<String, dynamic>);
+                                },
+                              );
                             },
                           ),
                           // Delete icon
@@ -791,211 +811,6 @@ class AdminPanelState extends State<AdminPanel> {
       },
     );
   }
-
-
-  void _showAddRequestDialog(BuildContext context) {
-    final _typeController = TextEditingController();
-    final _informationController = TextEditingController();
-    final _itemsController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Add New Request"),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: _typeController,
-                  decoration: InputDecoration(labelText: "Request Type"),
-                ),
-                TextField(
-                  controller: _informationController,
-                  decoration: InputDecoration(labelText: "Information"),
-                ),
-                TextField(
-                  controller: _itemsController,
-                  decoration: InputDecoration(labelText: "Items (comma separated)"),
-                ),
-              ],
-            ),
-            
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-              },
-              child: Text("Cancel"),
-            ),
-            TextButton(
-              onPressed: () async {
-                String type = _typeController.text;
-                String information = _informationController.text;
-                List<String> items = _itemsController.text.split(',').map((e) => e.trim()).toList();
-
-                if (type.isEmpty || information.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type and information cannot be empty")));
-                  return;
-                }
-
-                var existingDoc = await FirebaseFirestore.instance.collection('requestList').doc(type).get();
-
-                if (existingDoc.exists) {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A request with this type already exists")));
-                } else {
-                  // Add request with 'type' as document ID
-                  FirebaseFirestore.instance.collection('requestList').doc(type).set({
-                    'type': type,
-                    'information': information,
-                    'items': items.isEmpty ? null : items,
-                  }).then((_) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
-                  });
-                  // add request to the analytics
-                  FirebaseFirestore.instance.collection('globalAnalytics').doc(type).set({
-                    type: 0,
-                  }).then((_) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added to Analytics')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request to Analytics')));
-                  });
-                }
-              },
-              child: Text("Add"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showEditRequestDialog(BuildContext context, Map<String, dynamic> doc) {
-    final _typeController = TextEditingController(text: doc['type']);
-    final _infoController = TextEditingController(text: doc['information']);
-    final _itemsController = TextEditingController(text: doc['items'].join(', '));
-
-    final _formKey = GlobalKey<FormState>();
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Edit Request'),
-          content: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    controller: _typeController,
-                    decoration: InputDecoration(labelText: 'Request Type'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter a request type';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: _infoController,
-                    decoration: InputDecoration(labelText: 'Information'),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Please enter information';
-                      }
-                      return null;
-                    },
-                  ),
-                  TextFormField(
-                    controller: _itemsController,
-                    decoration: InputDecoration(labelText: 'Items (comma separated)'),
-                  ),
-                ],
-              ),
-            ),
-
-          ),
-          
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (_formKey.currentState?.validate() ?? false) {
-                  // Logic to save the updated request type, information, and items
-                  final updatedRequestType = _typeController.text;
-                  final updatedInformation = _infoController.text;
-                  final updatedItems = _itemsController.text.split(',').map((item) => item.trim()).toList();
-
-                  await FirebaseFirestore.instance
-                  .collection('requestList')
-                  .doc(doc['type']) // Delete the old document
-                  .delete();
-                  
-                  var oldDoc = await FirebaseFirestore.instance
-                    .collection('globalAnalytics')
-                    .doc(doc['type'])
-                    .get();
-
-                  if (oldDoc.exists) {
-                    var requestTypeValue = oldDoc.data()?[doc['type']];
-
-                    // Now delete the old document
-                    await FirebaseFirestore.instance
-                        .collection('globalAnalytics')
-                        .doc(doc['type'])
-                        .delete();
-                    
-                    // Create a new document with the updated ID and the current counter value
-                    await FirebaseFirestore.instance
-                        .collection('globalAnalytics')
-                        .doc(updatedRequestType)
-                        .set({
-                      updatedRequestType: requestTypeValue,  // Set the counter value before deleting
-                    });
-
-
-                  }
-
-                  // Create a new document with the updated ID
-                  await FirebaseFirestore.instance
-                      .collection('requestList')
-                      .doc(updatedRequestType) // Use the updated type as the new ID
-                      .set({
-                    'type': updatedRequestType,
-                    'information': updatedInformation,
-                    'items': updatedItems,
-                  });
-
- 
-
-                  // Show the updated values via SnackBar (or you can use this data to save to your database)
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Request updated successfully')),
-                  );
-
-                  Navigator.of(context).pop();
-                }
-              },
-              child: Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-
 
   Widget _buildAnalytics() {
     return Column(
@@ -1182,7 +997,7 @@ class AdminPanelState extends State<AdminPanel> {
                               orientation: LegendItemOrientation.vertical,
                               overflowMode: LegendItemOverflowMode.wrap, // Allows wrapping for long legends
                               itemPadding: 10,
-                              
+
                             ),
                             series: <CircularSeries>[
                               PieSeries<_ChartData, String>(
