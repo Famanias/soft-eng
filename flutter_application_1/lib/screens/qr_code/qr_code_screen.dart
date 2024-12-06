@@ -23,7 +23,6 @@ class ScanScreenState extends State<ScanScreen> {
     super.dispose();
   }
 
-
   void _toggleCamera() {
     if (isCameraActive) {
       controller?.pauseCamera();
@@ -254,42 +253,54 @@ class ScanScreenState extends State<ScanScreen> {
           await prefs.setString('tableId', tableId);
           await prefs.setString('userName', userName);
 
-          // Show confirmation to user
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hello, $userName')),
-          );
-
-          // create a new collection of users for analytics
-          CollectionReference analyticsRef =
-              FirebaseFirestore.instance.collection('analytics');
-          DocumentReference analyticsDoc =
-              analyticsRef.doc("$tableId + userCount");
-
-          // increment the user count for specific table
-          await analyticsDoc.set({
-            'tableId': tableId,
-            'usersCount': FieldValue.increment(1),
-          }, SetOptions(merge: true));
-
-          // notify the admin
-          await FirebaseFirestore.instance
+          // Notify the admin for approval
+          DocumentReference adminNotificationRef = await FirebaseFirestore.instance
               .collection('adminNotifications')
               .add({
             'type': 'newUser',
             'message': 'New user "$userName" added to table "$tableId"',
             'timestamp': FieldValue.serverTimestamp(),
             'viewed': false,
+            'approved': false, // Add an approved field to track admin approval
           });
 
-          // Navigate to GuestRequestScreen and pass the tableId and userName
-          Navigator.pushReplacementNamed(
-            context,
-            '/guestRequest',
-            arguments: {
-              'tableId': tableId,
-              'userName': userName
-            }, // Pass the tableId and userName here
-          );
+          // Listen for admin approval
+          adminNotificationRef.snapshots().listen((snapshot) async {
+            if (snapshot.exists && (snapshot.data() as Map<String, dynamic>)['approved'] == true) {
+              // Admin approved the request
+              // Show confirmation to user
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Hello, $userName')),
+              );
+
+              // Create a new collection of users for analytics
+              CollectionReference analyticsRef =
+                  FirebaseFirestore.instance.collection('analytics');
+              DocumentReference analyticsDoc =
+                  analyticsRef.doc("$tableId + userCount");
+
+              // Increment the user count for specific table
+              await analyticsDoc.set({
+                'tableId': tableId,
+                'usersCount': FieldValue.increment(1),
+              }, SetOptions(merge: true));
+
+              // Navigate to GuestRequestScreen and pass the tableId and userName
+              Navigator.pushReplacementNamed(
+                context,
+                '/guestRequest',
+                arguments: {
+                  'tableId': tableId,
+                  'userName': userName
+                }, // Pass the tableId and userName here
+              );
+            } else if (snapshot.exists && (snapshot.data() as Map<String, dynamic>)['approved'] == false) {
+              // Admin rejected the request
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Your request was rejected by the admin.')),
+              );
+            }
+          });
         } else {
           // Show error if tableId is invalid
           ScaffoldMessenger.of(context).showSnackBar(
