@@ -15,8 +15,6 @@ class CustomRequestScreen extends StatefulWidget {
 class CustomRequestScreenState extends State<CustomRequestScreen> {
   final TextEditingController customRequestController = TextEditingController();
 
-  
-
   Future<void> _submitCustomRequest() async {
     String customRequestDetails = customRequestController.text.trim();
 
@@ -64,24 +62,24 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
       });
 
       // Add a notification document
-      await FirebaseFirestore.instance.collection('notifications').add({
-        'tableId': widget.tableId,
-        'requestId': docName,
-        'requestType': customRequestDetails,
-        'status': 'pending',
-        'viewed': false,
+
+      await FirebaseFirestore.instance.collection('adminNotifications').add({
+        'type': 'newRequest',
+        'message':
+            'New request "$customRequestDetails" from user "${widget.userName}" at table "${widget.tableId}"',
         'timestamp': FieldValue.serverTimestamp(),
+        'viewed': false,
       });
 
       CollectionReference globalAnalyticsRef =
-        FirebaseFirestore.instance.collection('globalAnalytics');
+          FirebaseFirestore.instance.collection('globalAnalytics');
 
       DocumentReference globalAnalyticsDoc =
-        globalAnalyticsRef.doc("Custom Request");
+          globalAnalyticsRef.doc("Custom Request");
 
       await globalAnalyticsDoc.set({
-          "Custom Request": FieldValue.increment(1),
-        }, SetOptions(merge: true));
+        "Custom Request": FieldValue.increment(1),
+      }, SetOptions(merge: true));
 
       // Notify the user of successful submission
       ScaffoldMessenger.of(context).showSnackBar(
