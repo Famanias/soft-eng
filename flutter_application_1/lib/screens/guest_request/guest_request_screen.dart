@@ -300,7 +300,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       builder: (context) {
         return AlertDialog(
           title: Text(
-            'Request History',
+            'Your Request',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -355,17 +355,17 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (request['status'] != 'done' &&
-                                      request['status'] != 'accepted' &&
-                                      request['status'] != 'rejected')
-                                    IconButton(
-                                      icon:
-                                          Icon(Icons.edit, color: Colors.blue),
-                                      onPressed: () {
-                                        Navigator.of(context).pop();
-                                        _updateRequest(request);
-                                      },
-                                    ),
+                                  // if (request['status'] != 'done' &&
+                                  //     request['status'] != 'accepted' &&
+                                  //     request['status'] != 'rejected')
+                                  //   IconButton(
+                                  //     icon:
+                                  //         Icon(Icons.edit, color: Colors.blue),
+                                  //     onPressed: () {
+                                  //       Navigator.of(context).pop();
+                                  //       _updateRequest(request);
+                                  //     },
+                                  //   ),
                                   if (request['status'] != 'done' &&
                                       request['status'] != 'accepted')
                                     IconButton(
@@ -1231,7 +1231,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           Align(
             alignment: Alignment.bottomRight,
             child: FloatingActionButton(
-              heroTag: 'messageButton', // Unique heroTag
+              heroTag: 'messageButton',
               onPressed: _showMessagesScreen,
               backgroundColor: const Color.fromARGB(255, 255, 255, 255),
               child: const Icon(Icons.message),
@@ -1239,11 +1239,15 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           ),
           Align(
             alignment: Alignment.bottomLeft,
-            child: FloatingActionButton(
-              heroTag: 'historyButton', // Unique heroTag
-              onPressed: _showRequestHistoryDialog,
-              backgroundColor: Color(0xFF316175),
-              child: Icon(Icons.history),
+            child: Padding(
+              padding:
+                  const EdgeInsets.only(left: 30.0), // Add margin to the left
+              child: FloatingActionButton(
+                heroTag: 'historyButton',
+                onPressed: _showRequestHistoryDialog,
+                backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+                child: Icon(Icons.history),
+              ),
             ),
           ),
         ],
