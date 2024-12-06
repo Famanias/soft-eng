@@ -15,6 +15,284 @@ class AdminPanel extends StatefulWidget {
   AdminPanelState createState() => AdminPanelState();
 }
 
+class AddRequestDialog extends StatefulWidget {
+  @override
+  _AddRequestDialogState createState() => _AddRequestDialogState();
+}
+
+class _AddRequestDialogState extends State<AddRequestDialog> {
+
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Create New Request",
+            style: TextStyle(
+              color: Color(0xFF316175),
+              fontFamily: "RubikOne",
+            )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+              controller: _itemController,
+              decoration:
+                InputDecoration(
+                  labelText: 'Add Item',
+                  suffixIcon:
+                    IconButton(
+                      icon: Icon(Icons.add),
+                      onPressed: _addItem,
+                    ),
+                ) 
+            ),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+            if (_items.isEmpty) {
+              items = [];
+            }
+
+            if (type.isEmpty || information.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type and information cannot be empty")));
+              return;
+            }
+
+            var existingDoc = await FirebaseFirestore.instance.collection('requestList').doc(type).get();
+
+            if (existingDoc.exists) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A request with this type already exists")));
+            } else {
+              // Add request with 'type' as document ID
+                FirebaseFirestore.instance.collection('requestList').doc(type).set({
+                  'type': type,
+                  'information': information,
+                  'items': items.isEmpty ? [] : items,
+                }).then((_) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
+                  }).catchError((error) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
+                  });
+                  // add request to the analytics
+                  FirebaseFirestore.instance.collection('globalAnalytics').doc(type).set({
+                    type: 0,
+                  }).then((_) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added to Analytics')));
+                  }).catchError((error) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request to Analytics')));
+                  });
+                }
+              },
+              child: Text("Save"),
+            ),
+      ],
+    );
+  }
+}
+
+class EditRequestDialog extends StatefulWidget {
+  final Map<String, dynamic> doc;  // Accept doc as a parameter
+
+  EditRequestDialog({required this.doc});
+
+  @override
+  _EditRequestDialogState createState() => _EditRequestDialogState();
+}
+
+class _EditRequestDialogState extends State<EditRequestDialog> {
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current doc values
+    _typeController.text = widget.doc['type'];
+    _informationController.text = widget.doc['information'];
+    _items = List<String>.from(widget.doc['items'] ?? []);
+  }
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Edit Request",
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+              controller: _itemController,
+              decoration: InputDecoration(
+                labelText: 'Add Item',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: _addItem,
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+
+            if (type.isEmpty || information.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text("Request type and information cannot be empty"))
+              );
+              return;
+            }
+
+            // Logic to update existing document with new data
+            await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(widget.doc['type'])  // Use old type as doc ID
+                .delete(); // Delete old document
+
+            // Add the updated request to Firestore
+            FirebaseFirestore.instance.collection('requestList').doc(type).set({
+              'type': type,
+              'information': information,
+              'items': items.isEmpty ? [] : items,
+            }).then((_) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Request updated successfully'))
+              );
+            }).catchError((error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Failed to update request'))
+              );
+            });
+
+            // Update global analytics
+            var oldDoc = await FirebaseFirestore.instance
+                .collection('globalAnalytics')
+                .doc(widget.doc['type'])
+                .get();
+
+            if (oldDoc.exists) {
+              var requestTypeValue = oldDoc.data()?[widget.doc['type']];
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type) // Set the new type in global analytics
+                  .set({type: requestTypeValue});
+            }
+          },
+          child: Text("Save"),
+        ),
+      ],
+    );
+  }
+}
+
 class AdminPanelState extends State<AdminPanel> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   int _selectedIndex = 0;
@@ -434,6 +712,14 @@ class AdminPanelState extends State<AdminPanel> {
                         ],
                       ),
                       onTap: () {
+                        // Add navigation or actions on tap if necessary
+                        // Example:
+                        // Navigator.push(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //     builder: (context) => RequestDetailsScreen(requestType: requestType),
+                        //   ),
+                        // );
                       },
                     ),
                   );
