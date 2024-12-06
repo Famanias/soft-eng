@@ -367,10 +367,11 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                   //     },
                                   //   ),
                                   if (request['status'] != 'done' &&
-                                      request['status'] != 'accepted')
+                                      request['status'] != 'accepted' &&
+                                      request['status'] != 'canceled')
                                     IconButton(
                                       icon:
-                                          Icon(Icons.delete, color: Colors.red),
+                                          Icon(Icons.cancel, color: Colors.red),
                                       onPressed: () async {
                                         bool? confirmDelete =
                                             await showDialog<bool>(
@@ -378,9 +379,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                           builder: (BuildContext context) {
                                             return AlertDialog(
                                               title:
-                                                  const Text("Confirm Delete"),
+                                                  const Text("Confirm Cancel"),
                                               content: const Text(
-                                                  "Are you sure you want to delete this request?"),
+                                                  "Are you sure you want to cancel this request?"),
                                               actions: [
                                                 TextButton(
                                                   onPressed: () =>
@@ -392,7 +393,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                                   onPressed: () =>
                                                       Navigator.of(context)
                                                           .pop(true),
-                                                  child: const Text("Delete",
+                                                  child: const Text("Cancel",
                                                       style: TextStyle(
                                                           color: Colors.red)),
                                                 ),
