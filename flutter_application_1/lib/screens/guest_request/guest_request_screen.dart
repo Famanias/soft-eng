@@ -410,10 +410,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                                   .get();
 
                                           if (docSnapshot.exists) {
+                                            // Update the status to "canceled"
                                             await FirebaseFirestore.instance
                                                 .collection('guestRequests')
                                                 .doc(request['docId'])
-                                                .delete();
+                                                .update({'status': 'canceled'});
+
+                                            // Notify the admin
+                                            await FirebaseFirestore.instance
+                                                .collection(
+                                                    'adminNotifications')
+                                                .add({
+                                              'type': 'requestCanceled',
+                                              'message':
+                                                  'Request "${request['requestType']}" from user "${request['userName']}" at table "${request['tableId']}" has been canceled.',
+                                              'timestamp':
+                                                  FieldValue.serverTimestamp(),
+                                              'viewed': false,
+                                            });
+
                                             await _fetchRequestHistory(); // Refresh the request history
                                             setState(
                                                 () {}); // Update the state to reflect the changes
@@ -421,7 +436,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                                 .showSnackBar(
                                               const SnackBar(
                                                   content: Text(
-                                                      "Request deleted successfully")),
+                                                      "Request canceled successfully")),
                                             );
                                           } else {
                                             ScaffoldMessenger.of(context)
