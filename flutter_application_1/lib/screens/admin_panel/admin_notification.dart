@@ -175,14 +175,13 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
               var doc = sortedDocs[index];
               var data = doc.data() as Map<String, dynamic>;
               return ListTile(
-                tileColor: data['viewed']
+                tileColor: data['viewed'] == true
                     ? Colors.transparent
-                    : Colors.grey[
-                        300], // Change background color based on viewed status
-                title: Text(
-                  data['message'],
-                ),
-                subtitle: Text(data['timestamp'].toDate().toString()),
+                    : Colors.grey[300],
+                title: Text(data['message'] ?? 'No message'),
+                subtitle: Text(data['timestamp'] != null
+                    ? data['timestamp'].toDate().toString()
+                    : 'No timestamp'),
                 onTap: () async {
                   // Mark notification as viewed using a WriteBatch
                   WriteBatch batch = FirebaseFirestore.instance.batch();
