@@ -11,9 +11,13 @@ import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final tableId = prefs.getString('tableId') ?? "";
+  final userName = prefs.getString('userName') ?? "Guest";
 
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
@@ -51,7 +55,7 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const MyApp());
+  runApp(MyApp(tableId: tableId, userName: userName));
 
   _setupGlobalNotificationListener();
 }
@@ -77,7 +81,9 @@ void _setupGlobalNotificationListener() {
 }
 
 void _showLocalNotification(Map<String, dynamic> data) {
-  if (data['type'] == null || data['requestType'] == null || data['status'] == null) {
+  if (data['type'] == null ||
+      data['requestType'] == null ||
+      data['status'] == null) {
     return;
   }
 
@@ -98,7 +104,10 @@ void _showLocalNotification(Map<String, dynamic> data) {
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final String tableId;
+  final String userName;
+
+  const MyApp({super.key, required this.tableId, required this.userName});
 
   @override
   MyAppState createState() => MyAppState();
@@ -115,11 +124,11 @@ class MyAppState extends State<MyApp> {
     _connectivitySubscription = Connectivity()
         .onConnectivityChanged
         .listen((ConnectivityResult result) {
-          // Update the connection status.
-          setState(() {
-            _isConnected = result != ConnectivityResult.none;
-          });
-        });
+      // Update the connection status.
+      setState(() {
+        _isConnected = result != ConnectivityResult.none;
+      });
+    });
   }
 
   @override
@@ -137,12 +146,14 @@ class MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/qrCode',
+      initialRoute: '/',
       routes: {
+        '/': (context) => widget.tableId.isNotEmpty
+            ? GuestRequestScreen(tableId: widget.tableId, userName: widget.userName)
+            : const ScanScreen(),
         '/qrCode': (context) => const ScanScreen(),
-        '/guestRequest': (context) => const GuestRequestScreen(),
-        '/customRequest': (context) =>
-            const CustomRequestScreen(tableId: '', userName: ''),
+        '/guestRequest': (context) => GuestRequestScreen(tableId: widget.tableId, userName: widget.userName),
+        '/customRequest': (context) => CustomRequestScreen(tableId: widget.tableId, userName: widget.userName),
         '/faq': (context) => faqScreen(),
       },
       builder: (context, child) {

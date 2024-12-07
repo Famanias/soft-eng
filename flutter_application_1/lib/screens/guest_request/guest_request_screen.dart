@@ -13,7 +13,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'faq_screen.dart'; // Import the FAQ screen file
 
 class GuestRequestScreen extends StatefulWidget {
-  const GuestRequestScreen({super.key});
+  const GuestRequestScreen({super.key, required String tableId, required String userName});
 
   @override
   GuestRequestScreenState createState() => GuestRequestScreenState();
@@ -34,6 +34,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   Map<String, List<String>> selectedRequestItemsMap = {};
 
   Timer? _exitTimer;
+  AppLifecycleState? _lastLifecycleState;
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -109,25 +110,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.detached) {
-      // Start a timer for 2 minutes
-      _exitTimer = Timer(const Duration(minutes: 2), () {
-        _exitRequest();
-      });
-    } else if (state == AppLifecycleState.resumed) {
-      // Cancel the timer if the user comes back
-      _exitTimer?.cancel();
-    }
-  }
-
-  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     qrController?.dispose();
-    _exitTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    _lastLifecycleState = state;
+    if (state == AppLifecycleState.paused) {
+      _saveCurrentState();
+    }
+  }
+
+  Future<void> _saveCurrentState() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('tableId', tableId);
+    await prefs.setString('userName', userName);
   }
 
   Future<void> _loadTableId() async {
@@ -724,6 +725,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   Future<void> _exitRequest() async {
+    if (tableId.isEmpty || userName.isEmpty) {
+      return;
+    }
     try {
       // Step 1: Update the activeTables collection
       DocumentReference tableRef =

@@ -92,7 +92,12 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
       // Navigate to the GuestRequestScreen after submission
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => const GuestRequestScreen()),
+        MaterialPageRoute(
+          builder: (context) => GuestRequestScreen(
+            tableId: widget.tableId,
+            userName: widget.userName,
+          ),
+        ),
         (Route<dynamic> route) => false,
       );
     } catch (e) {
