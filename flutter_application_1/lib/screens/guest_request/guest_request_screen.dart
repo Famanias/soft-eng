@@ -13,7 +13,8 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'faq_screen.dart'; // Import the FAQ screen file
 
 class GuestRequestScreen extends StatefulWidget {
-  const GuestRequestScreen({super.key, required String tableId, required String userName});
+  const GuestRequestScreen(
+      {super.key, required String tableId, required String userName});
 
   @override
   GuestRequestScreenState createState() => GuestRequestScreenState();
@@ -33,8 +34,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   List<String> selectedRequestItems = [];
   Map<String, List<String>> selectedRequestItemsMap = {};
 
-  Timer? _exitTimer;
-  AppLifecycleState? _lastLifecycleState;
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -119,7 +118,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    _lastLifecycleState = state;
     if (state == AppLifecycleState.paused) {
       _saveCurrentState();
     }
@@ -728,6 +726,23 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     if (tableId.isEmpty || userName.isEmpty) {
       return;
     }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text("Logging out, please wait..."),
+            ],
+          ),
+        );
+      },
+    );
     try {
       // Step 1: Update the activeTables collection
       DocumentReference tableRef =
