@@ -269,6 +269,8 @@ class ScanScreenState extends State<ScanScreen> {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('tableId', tableId);
           await prefs.setString('userName', userName);
+          await prefs.setInt(
+              'loginTimestamp', DateTime.now().millisecondsSinceEpoch);
 
           // Show confirmation to user
           ScaffoldMessenger.of(context).showSnackBar(

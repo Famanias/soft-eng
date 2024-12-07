@@ -48,6 +48,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     WidgetsBinding.instance.addObserver(this);
     _loadTableId();
     _fetchRequestHistory();
+    _checkLoginExpiry();
   }
 
   void _initializeLocalNotifications() {
@@ -56,6 +57,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     const InitializationSettings initializationSettings =
         InitializationSettings(android: initializationSettingsAndroid);
     _flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  void _checkLoginExpiry() async {
+    final prefs = await SharedPreferences.getInstance();
+    int? loginTimestamp = prefs.getInt('loginTimestamp');
+    if (loginTimestamp != null) {
+      int currentTime = DateTime.now().millisecondsSinceEpoch;
+      int elapsedTime = currentTime - loginTimestamp;
+      int eightHoursInMillis = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+
+      if (elapsedTime >= eightHoursInMillis) {
+        // Log out the user
+        await _exitRequest();
+      }
+    }
   }
 
   void _listenForNotifications() {
