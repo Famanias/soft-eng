@@ -34,7 +34,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   List<String> selectedRequestItems = [];
   Map<String, List<String>> selectedRequestItemsMap = {};
 
-
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   @override
@@ -752,6 +751,10 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       await tableRef.update({
         'userNames': FieldValue.arrayRemove([userName]),
       });
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('tableId');
+      await prefs.remove('userName');
 
       // Fetch the updated document to check the userNames array
       DocumentSnapshot updatedDoc = await tableRef.get();
