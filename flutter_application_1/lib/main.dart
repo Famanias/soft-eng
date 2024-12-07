@@ -12,6 +12,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 
+// final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -51,6 +52,12 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
+  // runZonedGuarded((){
+  //   runApp(const MyApp());
+  // },(error, stackTrace){
+  //   print("App forcefully closed.");
+  //   navigatorKey.currentState?.pop();
+  // });
   runApp(const MyApp());
 
   _setupGlobalNotificationListener();
