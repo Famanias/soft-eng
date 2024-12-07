@@ -211,10 +211,6 @@ class AdminPanelState extends State<AdminPanel> {
             label: 'Requests',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_add),
-            label: 'Incoming Users',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
             label: 'Analytics',
           ),
