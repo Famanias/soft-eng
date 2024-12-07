@@ -232,7 +232,7 @@ class ScanScreenState extends State<ScanScreen> {
                   isScanning = false;
                 });
               }
-              return;
+              return _toggleCamera();
             } else {
               await tableRef.update({
                 'status': 'active',
