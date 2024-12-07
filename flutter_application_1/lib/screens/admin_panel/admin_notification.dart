@@ -25,7 +25,7 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('adminNotifications')
-        .where('viewed', isEqualTo: false) 
+        .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
       for (var change in snapshot.docChanges) {
@@ -42,9 +42,7 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
       content: NotificationContent(
         id: 10,
         channelKey: 'high_importance_channel',
-        title: data['type'] == 'newMessage'
-            ? '${data['message']}'
-            : 'Request',
+        title: data['type'] == 'newMessage' ? '${data['message']}' : 'Request',
         body: data['type'] == 'newMessage'
             ? data['message']
             : '${data['message']}',
@@ -86,6 +84,42 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
             }).toList(),
           ),
           IconButton(
+            icon: const Icon(Icons.done_all),
+            onPressed: () async {
+              final bool? confirmMarkAllAsRead = await showDialog<bool>(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text('Mark All as Read'),
+                    content: const Text(
+                        'Are you sure you want to mark all notifications as read?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pop(false); // Cancel marking as read
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pop(true); // Confirm marking as read
+                        },
+                        child: const Text('Mark All',
+                            style: TextStyle(color: Colors.green)),
+                      ),
+                    ],
+                  );
+                },
+              );
+
+              if (confirmMarkAllAsRead == true) {
+                _markAllAsRead();
+              }
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.delete),
             onPressed: () async {
               final bool? confirmDelete = await showDialog<bool>(
@@ -93,7 +127,8 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text('Clear Notifications'),
-                    content: const Text('Are you sure you want to clear all notifications?'),
+                    content: const Text(
+                        'Are you sure you want to clear all notifications?'),
                     actions: [
                       TextButton(
                         onPressed: () {
@@ -106,7 +141,7 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
                           Navigator.of(context).pop(true); // Confirm deletion
                         },
                         child: const Text('Clear',
-                        style: TextStyle(color: Colors.red)),
+                            style: TextStyle(color: Colors.red)),
                       ),
                     ],
                   );
@@ -140,13 +175,13 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
               var doc = sortedDocs[index];
               var data = doc.data() as Map<String, dynamic>;
               return ListTile(
-                tileColor: data['viewed']
+                tileColor: data['viewed'] == true
                     ? Colors.transparent
-                    : Colors.grey[300], // Change background color based on viewed status
-                title: Text(
-                  data['message'],
-                ),
-                subtitle: Text(data['timestamp'].toDate().toString()),
+                    : Colors.grey[300],
+                title: Text(data['message'] ?? 'No message'),
+                subtitle: Text(data['timestamp'] != null
+                    ? data['timestamp'].toDate().toString()
+                    : 'No timestamp'),
                 onTap: () async {
                   // Mark notification as viewed using a WriteBatch
                   WriteBatch batch = FirebaseFirestore.instance.batch();
@@ -181,9 +216,8 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   }
 
   void _clearNotifications(BuildContext context) async {
-    var snapshots = await FirebaseFirestore.instance
-        .collection('adminNotifications')
-        .get();
+    var snapshots =
+        await FirebaseFirestore.instance.collection('adminNotifications').get();
     WriteBatch batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshots.docs) {
       batch.delete(doc.reference);
@@ -198,5 +232,4 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
       ),
     );
   }
-
 }
