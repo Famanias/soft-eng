@@ -275,7 +275,7 @@ class ScanScreenState extends State<ScanScreen> {
 
         // Validate the hash
         String secretKey =
-            'your_secret_key'; // Use the same secret key used to generate the QR code
+            '@tableserve_20+24';
         String dataToHash = '$tableId$secretKey';
         var bytes = utf8.encode(dataToHash);
         var digest = sha256.convert(bytes).toString();
