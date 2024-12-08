@@ -274,8 +274,7 @@ class ScanScreenState extends State<ScanScreen> {
         print("Extracted hash: $hash");
 
         // Validate the hash
-        String secretKey =
-            '@tableserve_20+24';
+        String secretKey = '@tableserve_20+24';
         String dataToHash = '$tableId$secretKey';
         var bytes = utf8.encode(dataToHash);
         var digest = sha256.convert(bytes).toString();
