@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 class faqScreen extends StatefulWidget {
+  const faqScreen({super.key});
+
   @override
-  faqScreenState createState() => faqScreenState();
+  FaqScreenState createState() => FaqScreenState();
 }
 
-class faqScreenState extends State<faqScreen> {
+class FaqScreenState extends State<faqScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
