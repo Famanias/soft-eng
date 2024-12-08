@@ -20,6 +20,44 @@ class GuestRequestScreen extends StatefulWidget {
   GuestRequestScreenState createState() => GuestRequestScreenState();
 }
 
+// Spinner Widget for number input
+class SpinnerWidget extends StatelessWidget {
+  final String item;
+  final int selectedCount;
+  final ValueChanged<int> onChanged;
+
+  SpinnerWidget({required this.item, required this.selectedCount, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          icon: Icon(Icons.remove),
+          onPressed: selectedCount > 0
+              ? () {
+                  if (selectedCount > 0) {
+                    onChanged(selectedCount - 1);
+                  }
+                }
+              : null,
+        ),
+        Text('$selectedCount'),
+        IconButton(
+          icon: Icon(Icons.add),
+          onPressed: selectedCount < 5
+              ? () {
+                  if (selectedCount < 5) {
+                    onChanged(selectedCount + 1);
+                  }
+                }
+              : null,
+        ),
+      ],
+    );
+  }
+}
+
 class GuestRequestScreenState extends State<GuestRequestScreen>
     with WidgetsBindingObserver {
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -33,6 +71,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   Map<String, String> requestInformation = {};
   List<String> selectedRequestItems = [];
   Map<String, List<String>> selectedRequestItemsMap = {};
+  Map<String, int> selectedItemQuantities = {};
 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -210,14 +249,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     return requestInformation[requestType] ?? 'No information available';
   }
 
-  Future<List<String>?> _showRequestDialog(String requestType,
-      {required List<String> items,
-      required List<String> initialSelectedItems}) async {
-    // Fetch items from Firestore
-    List<String> items = await _fetchItemsFromFirestore(requestType);
+  Future<List<String>?> _showRequestDialog(String requestType, {required List<String> items, required List<String> initialSelectedItems}) async {
+    // Initialize the selection state (0 means not selected)
+    Map<String, int> selectedItemsMap = {
+      for (var item in items) item: 0,
+    };
 
-    // Initialize the selection state
-    List<bool> selectedItems = List.filled(items.length, false);
+    // Update initial selections if necessary
+    for (var item in initialSelectedItems) {
+      selectedItemsMap[item] = selectedItemQuantities[item] ?? 0; // Set to saved quantity if available
+    }
 
     return showDialog<List<String>>(
       context: context,
@@ -228,17 +269,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
               title: Text('Select Items for $requestType'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                children: items.asMap().entries.map((entry) {
-                  int index = entry.key;
-                  String item = entry.value;
-                  return CheckboxListTile(
-                    title: Text(item),
-                    value: selectedItems[index],
-                    onChanged: (bool? value) {
-                      setDialogState(() {
-                        selectedItems[index] = value!;
-                      });
-                    },
+                children: items.map((item) {
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(item),
+                      SpinnerWidget(
+                        item: item,
+                        selectedCount: selectedItemsMap[item]!,
+                        onChanged: (int newCount) {
+                          setDialogState(() {
+                            selectedItemsMap[item] = newCount;
+                          });
+                        },
+                      ),
+                    ],
                   );
                 }).toList(),
               ),
@@ -246,38 +291,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    selectedItems.every((selected) => selected)
-                        ? TextButton(
-                            child: Text(
-                              "Deselect All",
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedItems =
-                                    List.filled(items.length, false);
-                              });
-                            },
-                          )
-                        : TextButton(
-                            child: Text(
-                              "Select All",
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            onPressed: () {
-                              setDialogState(() {
-                                selectedItems = List.filled(items.length, true);
-                              });
-                            },
-                          ),
                     TextButton(
                       child: Text('Done'),
                       onPressed: () {
                         // Collect selected items
                         List<String> selected = [];
-                        for (int i = 0; i < items.length; i++) {
-                          if (selectedItems[i]) selected.add(items[i]);
-                        }
+                        selectedItemsMap.forEach((item, quantity) {
+                            if(quantity>0){
+                              selected.add(item); // Add only items with quantity > 0
+                              selectedItemQuantities[item] = quantity; // Save the quantity
+                            }
+                            // selected.add(item); // Add only items with quantity > 0
+                            // selectedItemQuantities[item] = quantity; // Save the quantity
+                          });
                         Navigator.of(context).pop(selected);
                       },
                     ),
@@ -626,15 +652,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     for (int i = 0; i < selectedItems.length; i++) {
       if (selectedItems[i]) {
         List<String> items = selectedRequestItemsMap[requestTypes[i]] ?? [];
+        List<String> formattedItems = [];
+
         if (items.isEmpty) {
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items': null,
+            'items': null, // No items selected
           });
         } else {
+          for (var item in items) {
+            int quantity = selectedItemQuantities[item] ?? 1; // Get the selected quantity
+            formattedItems.add('$quantity $item'); // Combine quantity and item
+          }
           selectedRequests.add({
             'requestType': requestTypes[i],
-            'items': items,
+            'items': formattedItems, // The list of selected items
           });
         }
       }
@@ -671,6 +703,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
 
     try {
+      // Submit each request to Firestore
       for (var request in selectedRequests) {
         String requestType = request['requestType'];
         List<String>? items = request['items'];
@@ -719,6 +752,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       }
       setState(() {
         selectedItems = List.generate(10, (index) => false);
+        selectedItemQuantities.clear();
       });
 
       // Notify the user of successful submission
@@ -727,7 +761,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       );
     } catch (e) {
       // Show error message if submission fails
-      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to submit request: $e")),
       );
@@ -736,6 +769,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       Navigator.of(context).pop();
     }
   }
+
 
   Future<void> _exitRequest() async {
     if (tableId.isEmpty || userName.isEmpty) {
@@ -772,10 +806,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       await prefs.remove('tableId');
       await prefs.remove('userName');
       await prefs.remove('loginTimestamp');
-
-      final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('tableId');
-        await prefs.remove('userName');
 
       // Fetch the updated document to check the userNames array
       DocumentSnapshot updatedDoc = await tableRef.get();
