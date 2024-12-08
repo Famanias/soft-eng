@@ -130,7 +130,7 @@ class MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'TableServe',
+      title: 'TableServe Admin',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
