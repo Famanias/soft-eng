@@ -33,7 +33,6 @@ dependencies:
     sdk: flutter
   firebase_core: ^3.7.0 # Replace with the latest if this changes
   cloud_firestore: ^5.4.5 # Replace with the latest if this changes
-  qr_flutter: ^4.0.0          # For generating QR codes
   qr_code_scanner:
     git:
       url: https://github.com/juliuscanute/qr_code_scanner.git
