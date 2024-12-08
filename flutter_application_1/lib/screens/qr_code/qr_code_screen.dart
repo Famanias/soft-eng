@@ -41,6 +41,7 @@ class ScanScreenState extends State<ScanScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

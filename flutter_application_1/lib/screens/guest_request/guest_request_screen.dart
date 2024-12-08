@@ -49,6 +49,10 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     _loadTableId();
     _fetchRequestHistory();
     _checkLoginExpiry();
+
+    Timer.periodic(Duration(seconds: 1), (timer) {
+      _checkLoginExpiry();
+    });
   }
 
   void _initializeLocalNotifications() {
@@ -65,9 +69,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     if (loginTimestamp != null) {
       int currentTime = DateTime.now().millisecondsSinceEpoch;
       int elapsedTime = currentTime - loginTimestamp;
-      int eightHoursInMillis = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
+      int timer = 8 * 60 * 60 * 1000;
 
-      if (elapsedTime >= eightHoursInMillis) {
+      if (elapsedTime >= timer) {
         // Log out the user
         await _exitRequest();
       }
@@ -747,13 +751,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: const [
-              CircularProgressIndicator(),
-              SizedBox(height: 20),
-              Text("Logging out, please wait..."),
-            ],
+          content: Padding(
+            padding: const EdgeInsets.only(top: 17.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 20),
+                Text("Logging out, please wait..."),
+              ],
+            ),
           ),
         );
       },
