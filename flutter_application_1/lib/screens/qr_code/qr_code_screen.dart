@@ -152,7 +152,24 @@ class ScanScreenState extends State<ScanScreen> {
     // Test if location services are enabled.
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled, don't continue
+      // Show dialog to prompt the user to enable location services
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Location Services Disabled'),
+            content: Text('Please enable location services to continue.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
       return Future.error('Location services are disabled.');
     }
 
@@ -160,13 +177,48 @@ class ScanScreenState extends State<ScanScreen> {
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        // Permissions are denied, don't continue
+        // Show dialog to prompt the user to grant location permissions
+        await showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('Location Permission Denied'),
+              content: Text('Please grant location permissions to continue.'),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
         return Future.error('Location permissions are denied');
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      // Permissions are denied forever, don't continue
+      // Show dialog to inform the user that permissions are permanently denied
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Location Permission Permanently Denied'),
+            content: Text(
+                'Location permissions are permanently denied. Please enable them in settings.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
@@ -258,14 +310,15 @@ class ScanScreenState extends State<ScanScreen> {
         print("Scanned QR code: $tableId");
 
         Position userLocation = await _getCurrentLocation();
-        double targetLatitude = 14.856759; // Replace with your target latitude
+        // 14.856759 - my house latitude
+        double targetLatitude = 14.856759; // Replace with your target
+        // 120.328327 - my house longitude
         double targetLongitude =
             120.328327; // Replace with your target longitude
         double rangeInMeters = 1000; // Define the acceptable range in meters
 
         if (!_isLocationWithinRange(
             userLocation, targetLatitude, targetLongitude, rangeInMeters)) {
-
           // Show error if the user's location is not within the acceptable range
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

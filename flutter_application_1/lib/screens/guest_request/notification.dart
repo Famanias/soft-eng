@@ -67,7 +67,7 @@ class NotificationScreenState extends State<NotificationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Notifications"),
+        title: const Text("Notifications", style: TextStyle(fontSize: 17)),
         actions: [
           DropdownButton<String>(
             value: _selectedStatus,
