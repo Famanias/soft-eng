@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-import 'package:crypto/crypto.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -216,8 +214,7 @@ class ScanScreenState extends State<ScanScreen> {
         builder: (BuildContext context) {
           return AlertDialog(
             content: Padding(
-              padding:
-                  const EdgeInsets.only(top: 20.0), // Add margin at the top
+              padding: const EdgeInsets.only(top: 17.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: const [
@@ -233,63 +230,8 @@ class ScanScreenState extends State<ScanScreen> {
 
       try {
         // Get tableId from scanned QR code
-        String scannedData = scanData.code ?? '';
-        print("Scanned QR code: $scannedData");
-
-        // Ensure the QR code contains the unique identifier
-        const String uniqueIdentifier = "TABLESERVE_";
-        if (!scannedData.startsWith(uniqueIdentifier)) {
-          // Show error if the QR code is not genuine
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code')),
-          );
-          Navigator.of(context).pop(); // Dismiss the loading dialog
-          setState(() {
-            isScanning = false;
-          });
-          _toggleCamera();
-          return;
-        }
-
-        // Extract the tableId and hash from the scanned data
-        List<String> parts =
-            scannedData.substring(uniqueIdentifier.length).split('_');
-        if (parts.length != 2) {
-          // Show error if the QR code format is invalid
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code')),
-          );
-          Navigator.of(context).pop(); // Dismiss the loading dialog
-          setState(() {
-            isScanning = false;
-          });
-          _toggleCamera();
-          return;
-        }
-
-        String tableId = parts[0];
-        String hash = parts[1];
-        print("Extracted tableId: $tableId");
-        print("Extracted hash: $hash");
-
-        // Validate the hash
-        String secretKey = '@tableserve_20+24';
-        String dataToHash = '$tableId$secretKey';
-        var bytes = utf8.encode(dataToHash);
-        var digest = sha256.convert(bytes).toString();
-
-        if (digest != hash) {
-          // Show error if the hash is invalid
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code')),
-          );
-          Navigator.of(context).pop(); // Dismiss the loading dialog
-          setState(() {
-            isScanning = false;
-          });
-          _toggleCamera();
-          return;
-        }
+        String tableId = scanData.code ?? '';
+        print("Scanned QR code: $tableId");
 
         // Ensure tableId is not empty
         if (tableId.isNotEmpty) {
@@ -317,9 +259,7 @@ class ScanScreenState extends State<ScanScreen> {
                   isScanning = false;
                 });
               }
-              Navigator.of(context).pop(); // Dismiss the loading dialog
-              _toggleCamera();
-              return;
+              return _toggleCamera();
             } else {
               await tableRef.update({
                 'status': 'active',
