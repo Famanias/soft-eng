@@ -10,7 +10,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'faq_screen.dart'; // Import the FAQ screen file
+import 'faq_screen.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen(
@@ -69,7 +69,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     if (loginTimestamp != null) {
       int currentTime = DateTime.now().millisecondsSinceEpoch;
       int elapsedTime = currentTime - loginTimestamp;
-      int timer = 8 * 60 * 60 * 1000;
+      int timer = 8 * 1000;
 
       if (elapsedTime >= timer) {
         // Log out the user

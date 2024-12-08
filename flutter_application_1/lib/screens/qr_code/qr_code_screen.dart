@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:geolocator/geolocator.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -195,6 +196,48 @@ class ScanScreenState extends State<ScanScreen> {
     );
   }
 
+  Future<Position> _getCurrentLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Test if location services are enabled.
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      // Location services are not enabled, don't continue
+      return Future.error('Location services are disabled.');
+    }
+
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        // Permissions are denied, don't continue
+        return Future.error('Location permissions are denied');
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      // Permissions are denied forever, don't continue
+      return Future.error(
+          'Location permissions are permanently denied, we cannot request permissions.');
+    }
+
+    // When we reach here, permissions are granted and we can continue
+    return await Geolocator.getCurrentPosition();
+  }
+
+  bool _isLocationWithinRange(Position userLocation, double targetLatitude,
+      double targetLongitude, double rangeInMeters) {
+    double distance = Geolocator.distanceBetween(
+      userLocation.latitude,
+      userLocation.longitude,
+      targetLatitude,
+      targetLongitude,
+    );
+
+    return distance <= rangeInMeters;
+  }
+
   void _onQRViewCreated(QRViewController controller) {
     setState(() {
       this.controller = controller;
@@ -230,6 +273,30 @@ class ScanScreenState extends State<ScanScreen> {
       );
 
       try {
+        Position userLocation = await _getCurrentLocation();
+        double targetLatitude = 14.856759; // Replace with your target latitude
+        double targetLongitude =
+            120.328327; // Replace with your target longitude
+        double rangeInMeters = 1000; // Define the acceptable range in meters
+
+        if (!_isLocationWithinRange(
+            userLocation, targetLatitude, targetLongitude, rangeInMeters)) {
+          // Dismiss the loading dialog
+          Navigator.of(context).pop();
+
+          // Show error if the user's location is not within the acceptable range
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content:
+                    Text('The app will only work if you are in the resort')),
+          );
+          setState(() {
+            isScanning = false;
+          });
+          _toggleCamera();
+          return;
+        }
+
         // Get tableId from scanned QR code
         String tableId = scanData.code ?? '';
         print("Scanned QR code: $tableId");
@@ -238,7 +305,18 @@ class ScanScreenState extends State<ScanScreen> {
         if (tableId.isNotEmpty) {
           String? userName = await _promptForName();
           if (userName == null || userName.isEmpty) {
-            userName = "Guest";
+            // Dismiss the loading dialog
+            Navigator.of(context).pop();
+
+            // Show error if username is not provided
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Username is required')),
+            );
+            setState(() {
+              isScanning = false;
+            });
+            _toggleCamera();
+            return;
           }
 
           // Add the user to the list of users for the table
@@ -260,7 +338,9 @@ class ScanScreenState extends State<ScanScreen> {
                   isScanning = false;
                 });
               }
-              return _toggleCamera();
+              Navigator.of(context).pop(); // Dismiss the loading dialog
+              _toggleCamera();
+              return;
             } else {
               await tableRef.update({
                 'status': 'active',
@@ -300,6 +380,9 @@ class ScanScreenState extends State<ScanScreen> {
             'usersCount': FieldValue.increment(1),
           }, SetOptions(merge: true));
 
+          // Dismiss the loading dialog before navigating
+          Navigator.of(context).pop();
+
           // Navigate to GuestRequestScreen and pass the tableId and userName
           Navigator.pushReplacementNamed(
             context,
@@ -310,17 +393,27 @@ class ScanScreenState extends State<ScanScreen> {
             }, // Pass the tableId and userName here
           );
         } else {
+          // Dismiss the loading dialog
+          Navigator.of(context).pop();
+
           // Show error if tableId is invalid
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Invalid QR code')),
           );
         }
       } catch (e) {
+        // Dismiss the loading dialog
+        Navigator.of(context).pop();
+
         print("Error saving to Firebase: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error processing QR code')),
         );
       } finally {
+        // Ensure the loading dialog is dismissed
+        if (Navigator.canPop(context)) {
+          Navigator.of(context).pop();
+        }
         // Allow scanning again after a delay
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) {
