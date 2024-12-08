@@ -322,7 +322,7 @@ class AdminPanelState extends State<AdminPanel> {
     });
   }
 
-   void _listenForNotifications() {
+  void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('adminNotifications')
         .where('viewed', isEqualTo: false)
@@ -342,9 +342,7 @@ class AdminPanelState extends State<AdminPanel> {
       content: NotificationContent(
         id: 10,
         channelKey: 'high_importance_channel',
-        title: data['type'] == 'newMessage'
-            ? '${data['message']}'
-            : 'Request',
+        title: data['type'] == 'newMessage' ? '${data['message']}' : 'Request',
         body: data['type'] == 'newMessage'
             ? data['message']
             : '${data['message']}',
@@ -400,15 +398,13 @@ class AdminPanelState extends State<AdminPanel> {
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
-        leading:
-          IconButton(
-              icon: Transform.rotate(
-                angle: 3.14, // 180 degrees in radians
-                child: Icon(Icons.logout),
-              ),
-              onPressed: () =>
-                  _confirmLogout(context), // Call the logout function
-            ),
+        leading: IconButton(
+          icon: Transform.rotate(
+            angle: 3.14, // 180 degrees in radians
+            child: Icon(Icons.logout),
+          ),
+          onPressed: () => _confirmLogout(context), // Call the logout function
+        ),
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
@@ -461,7 +457,6 @@ class AdminPanelState extends State<AdminPanel> {
               }
             },
           ),
-
         ],
         toolbarHeight: 80,
         flexibleSpace: Column(
@@ -482,7 +477,11 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequestList() : _buildAnalytics(),
+      body: _selectedIndex == 0
+          ? _buildActiveTables()
+          : _selectedIndex == 1
+              ? _buildRequestList()
+              : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -613,6 +612,64 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
+  // Widget _buildIncomingUsers() {
+  //   return StreamBuilder(
+  //     stream: FirebaseFirestore.instance
+  //         .collection('adminNotifications')
+  //         .where('type', isEqualTo: 'newUser')
+  //         .where('viewed', isEqualTo: false)
+  //         .snapshots(),
+  //     builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+  //       if (snapshot.connectionState == ConnectionState.waiting) {
+  //         return const Center(child: CircularProgressIndicator());
+  //       }
+  //       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+  //         return const Center(child: Text("No incoming users"));
+  //       }
+  //       return ListView(
+  //         children: snapshot.data!.docs.map((doc) {
+  //           var data = doc.data() as Map<String, dynamic>;
+  //           String userName = data['message'].split('"')[1];
+  //           String tableId = data['message'].split('"')[5];
+  //           return ListTile(
+  //             title: Text('User: $userName'),
+  //             subtitle: Text('Table: $tableId'),
+  //             trailing: Row(
+  //               mainAxisSize: MainAxisSize.min,
+  //               children: [
+  //                 IconButton(
+  //                   icon: const Icon(Icons.check, color: Colors.green),
+  //                   onPressed: () async {
+  //                     await FirebaseFirestore.instance
+  //                         .collection('adminNotifications')
+  //                         .doc(doc.id)
+  //                         .update({'approved': true, 'viewed': true});
+  //                     ScaffoldMessenger.of(context).showSnackBar(
+  //                       const SnackBar(content: Text("User approved")),
+  //                     );
+  //                   },
+  //                 ),
+  //                 IconButton(
+  //                   icon: const Icon(Icons.close, color: Colors.red),
+  //                   onPressed: () async {
+  //                     await FirebaseFirestore.instance
+  //                         .collection('adminNotifications')
+  //                         .doc(doc.id)
+  //                         .update({'approved': false, 'viewed': true});
+  //                     ScaffoldMessenger.of(context).showSnackBar(
+  //                       const SnackBar(content: Text("User rejected")),
+  //                     );
+  //                   },
+  //                 ),
+  //               ],
+  //             ),
+  //           );
+  //         }).toList(),
+  //       );
+  //     },
+  //   );
+  // }
+
   Widget _buildRequestList() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('requestList').snapshots(),
@@ -687,15 +744,18 @@ class AdminPanelState extends State<AdminPanel> {
                 children: snapshot.data!.docs.map((doc) {
                   // Extracting the request details
                   String requestType = doc['type'] ?? 'Unknown';
-                  String information = doc['information'] ?? 'No information provided';
+                  String information =
+                      doc['information'] ?? 'No information provided';
                   List<String> items = List<String>.from(doc['items']);
                   String itemsJoined = items.join(',');
 
                   return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                    margin: const EdgeInsets.symmetric(
+                        vertical: 8.0, horizontal: 16.0),
                     elevation: 4,
                     child: ListTile(
-                      title: Text(requestType, style: TextStyle(fontWeight: FontWeight.bold)),
+                      title: Text(requestType,
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -725,7 +785,8 @@ class AdminPanelState extends State<AdminPanel> {
                           IconButton(
                             icon: Icon(Icons.delete, color: Colors.red),
                             onPressed: () {
-                              _showDeleteRequestConfirmationDialog(context, doc.id);
+                              _showDeleteRequestConfirmationDialog(
+                                  context, doc.id);
                             },
                           ),
                         ],
@@ -751,7 +812,8 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
-  void _showDeleteRequestConfirmationDialog(BuildContext context, String docId) {
+  void _showDeleteRequestConfirmationDialog(
+      BuildContext context, String docId) {
     TextEditingController confirmationController = TextEditingController();
 
     showDialog(
@@ -783,27 +845,43 @@ class AdminPanelState extends State<AdminPanel> {
             ElevatedButton(
               onPressed: () {
                 if (confirmationController.text == 'DELETE') {
-                  FirebaseFirestore.instance.collection('requestList').doc(docId).delete().then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request deleted successfully')));
+                  FirebaseFirestore.instance
+                      .collection('requestList')
+                      .doc(docId)
+                      .delete()
+                      .then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('Request deleted successfully')));
                   }).catchError((error) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete request')));
-                    });
-                  FirebaseFirestore.instance.collection('globalAnalytics').doc(docId).delete().then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request From Analytics Successfully')));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to delete request')));
+                  });
+                  FirebaseFirestore.instance
+                      .collection('globalAnalytics')
+                      .doc(docId)
+                      .delete()
+                      .then((_) {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text('Request From Analytics Successfully')));
                   }).catchError((error) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to delete request from Analytics')));
-                    });
-                  Navigator.of(context).pop();  // Close the dialog after deletion
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content:
+                            Text('Failed to delete request from Analytics')));
+                  });
+                  Navigator.of(context)
+                      .pop(); // Close the dialog after deletion
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Incorrect confirmation text")),
+                    const SnackBar(
+                        content: Text("Incorrect confirmation text")),
                   );
                 }
               },
               style: ButtonStyle(
                 backgroundColor: MaterialStateProperty.all(Colors.red),
               ),
-              child: const Text("DELETE", style: TextStyle(color: Colors.white)),
+              child:
+                  const Text("DELETE", style: TextStyle(color: Colors.white)),
             ),
           ],
         );
@@ -816,23 +894,32 @@ class AdminPanelState extends State<AdminPanel> {
       children: [
         Expanded(
           child: StreamBuilder(
-            stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
+            stream:
+                FirebaseFirestore.instance.collection('analytics').snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> analyticsSnapshot) {
-              if (analyticsSnapshot.connectionState == ConnectionState.waiting) {
+              if (analyticsSnapshot.connectionState ==
+                  ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              if (!analyticsSnapshot.hasData || analyticsSnapshot.data!.docs.isEmpty) {
+              if (!analyticsSnapshot.hasData ||
+                  analyticsSnapshot.data!.docs.isEmpty) {
                 return const Center(child: Text("No analytics data"));
               }
 
               return StreamBuilder(
-                stream: FirebaseFirestore.instance.collection('globalAnalytics').snapshots(),
-                builder: (context, AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
-                  if (globalAnalyticsSnapshot.connectionState == ConnectionState.waiting) {
+                stream: FirebaseFirestore.instance
+                    .collection('globalAnalytics')
+                    .snapshots(),
+                builder: (context,
+                    AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
+                  if (globalAnalyticsSnapshot.connectionState ==
+                      ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (!globalAnalyticsSnapshot.hasData || globalAnalyticsSnapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text("No global analytics data"));
+                  if (!globalAnalyticsSnapshot.hasData ||
+                      globalAnalyticsSnapshot.data!.docs.isEmpty) {
+                    return const Center(
+                        child: Text("No global analytics data"));
                   }
 
                   // Aggregate data for analytics collection
@@ -847,23 +934,30 @@ class AdminPanelState extends State<AdminPanel> {
                     int usersCount = data['usersCount'] ?? 0;
 
                     if (!aggregatedData.containsKey(tableId)) {
-                      aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
+                      aggregatedData[tableId] = {
+                        'requestCount': 0,
+                        'usersCount': 0
+                      };
                     }
 
                     aggregatedData[tableId]!['requestCount'] =
-                        (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+                        (aggregatedData[tableId]!['requestCount'] ?? 0) +
+                            requestCount;
                     aggregatedData[tableId]!['usersCount'] =
-                        (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
+                        (aggregatedData[tableId]!['usersCount'] ?? 0) +
+                            usersCount;
 
                     totalRequestsCount += requestCount;
                     totalUsersCount += usersCount;
                   }
 
-                  List<_ChartData> requestData = aggregatedData.entries.map((entry) {
+                  List<_ChartData> requestData =
+                      aggregatedData.entries.map((entry) {
                     return _ChartData(entry.key, entry.value['requestCount']!);
                   }).toList();
 
-                  List<_ChartData> userData = aggregatedData.entries.map((entry) {
+                  List<_ChartData> userData =
+                      aggregatedData.entries.map((entry) {
                     return _ChartData(entry.key, entry.value['usersCount']!);
                   }).toList();
 
@@ -871,9 +965,10 @@ class AdminPanelState extends State<AdminPanel> {
                   List<_ChartData> requestTypeData = [];
                   for (var doc in globalAnalyticsSnapshot.data!.docs) {
                     var data = doc.data() as Map<String, dynamic>;
-                      // Iterate over each field in the document
+                    // Iterate over each field in the document
                     data.forEach((key, value) {
-                      if (value is int) { // Ensure the value is an integer
+                      if (value is int) {
+                        // Ensure the value is an integer
                         requestTypeData.add(_ChartData(key, value));
                       }
                     });
@@ -891,7 +986,8 @@ class AdminPanelState extends State<AdminPanel> {
                             Container(
                               // width: 200,
                               padding: const EdgeInsets.all(8),
-                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
                                 color: Colors.blue[50],
                                 borderRadius: BorderRadius.circular(10),
@@ -903,11 +999,15 @@ class AdminPanelState extends State<AdminPanel> {
                                   Text(
                                     "$totalRequestsCount",
                                     style: const TextStyle(
-                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue),
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.blue),
                                   ),
                                   const Text(
                                     "Total Requests",
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -916,7 +1016,8 @@ class AdminPanelState extends State<AdminPanel> {
                             Container(
                               // width: 200,
                               padding: const EdgeInsets.all(8),
-                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              margin:
+                                  const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
                                 color: Colors.green[50],
                                 borderRadius: BorderRadius.circular(10),
@@ -928,11 +1029,15 @@ class AdminPanelState extends State<AdminPanel> {
                                   Text(
                                     "$totalUsersCount",
                                     style: const TextStyle(
-                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green),
                                   ),
                                   const Text(
                                     "Total Users",
-                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ],
                               ),
@@ -943,7 +1048,8 @@ class AdminPanelState extends State<AdminPanel> {
                         const SizedBox(height: 20),
                         const Text(
                           "Request Count by Table",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 5),
                         SizedBox(
@@ -953,8 +1059,10 @@ class AdminPanelState extends State<AdminPanel> {
                             series: <ChartSeries>[
                               ColumnSeries<_ChartData, String>(
                                 dataSource: requestData,
-                                xValueMapper: (_ChartData data, _) => data.tableId,
-                                yValueMapper: (_ChartData data, _) => data.count,
+                                xValueMapper: (_ChartData data, _) =>
+                                    data.tableId,
+                                yValueMapper: (_ChartData data, _) =>
+                                    data.count,
                                 color: Colors.blue,
                               ),
                             ],
@@ -963,7 +1071,8 @@ class AdminPanelState extends State<AdminPanel> {
                         const SizedBox(height: 10),
                         const Text(
                           "User Count by Table",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 5),
                         SizedBox(
@@ -973,8 +1082,10 @@ class AdminPanelState extends State<AdminPanel> {
                             series: <ChartSeries>[
                               ColumnSeries<_ChartData, String>(
                                 dataSource: userData,
-                                xValueMapper: (_ChartData data, _) => data.tableId,
-                                yValueMapper: (_ChartData data, _) => data.count,
+                                xValueMapper: (_ChartData data, _) =>
+                                    data.tableId,
+                                yValueMapper: (_ChartData data, _) =>
+                                    data.count,
                                 color: Colors.green,
                               ),
                             ],
@@ -983,7 +1094,8 @@ class AdminPanelState extends State<AdminPanel> {
                         const SizedBox(height: 10),
                         const Text(
                           "Request Type Frequency",
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 5),
                         SizedBox(
@@ -991,19 +1103,25 @@ class AdminPanelState extends State<AdminPanel> {
                           child: SfCircularChart(
                             legend: Legend(
                               isVisible: true,
-                              alignment: ChartAlignment.center, // Aligns the legend to the center
-                              position: LegendPosition.bottom, // Places the legend below the chart
+                              alignment: ChartAlignment
+                                  .center, // Aligns the legend to the center
+                              position: LegendPosition
+                                  .bottom, // Places the legend below the chart
                               orientation: LegendItemOrientation.vertical,
-                              overflowMode: LegendItemOverflowMode.wrap, // Allows wrapping for long legends
+                              overflowMode: LegendItemOverflowMode
+                                  .wrap, // Allows wrapping for long legends
                               itemPadding: 10,
 
                             ),
                             series: <CircularSeries>[
                               PieSeries<_ChartData, String>(
                                 dataSource: requestTypeData,
-                                xValueMapper: (_ChartData data, _) => data.tableId,
-                                yValueMapper: (_ChartData data, _) => data.count,
-                                dataLabelSettings: const DataLabelSettings(isVisible: true),
+                                xValueMapper: (_ChartData data, _) =>
+                                    data.tableId,
+                                yValueMapper: (_ChartData data, _) =>
+                                    data.count,
+                                dataLabelSettings:
+                                    const DataLabelSettings(isVisible: true),
                               ),
                             ],
                           ),
@@ -1019,8 +1137,6 @@ class AdminPanelState extends State<AdminPanel> {
       ],
     );
   }
-
-
 }
 
 class _ChartData {
@@ -1225,8 +1341,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           .collection('guestRequests')
           .doc(requestId)
           .update({
-            'status': 'done',
-          });
+        'status': 'done',
+      });
 
       // Add a new notification document
       await FirebaseFirestore.instance.collection('notifications').add({
@@ -1327,108 +1443,104 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           return const Center(child: Text("No requests for this table"));
         }
 
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: snapshot.data!.docs.map((doc) {
-          var data = doc.data() as Map<String, dynamic>;
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: snapshot.data!.docs.map((doc) {
+            var data = doc.data() as Map<String, dynamic>;
 
-          var requestType = doc['requestType'];
-          String requestTypeText;
-          if (requestType is List) {
-            requestTypeText = requestType.join(', ');
-          } else {
-            requestTypeText = requestType.toString();
-          }
+            var requestType = doc['requestType'];
+            String requestTypeText;
+            if (requestType is List) {
+              requestTypeText = requestType.join(', ');
+            } else {
+              requestTypeText = requestType.toString();
+            }
 
-          String userName = data['userName'] ?? "Guest";
-          String staffName = data['updatedBy'] ?? "Unassigned";
-          String itemName;
-          if(data['items']is List) {
-            itemName = data['items'].join(', ');
-          } else {
-            itemName = data['items'].toString();
-          }
-          return Container(
-            margin: const EdgeInsets.only(bottom: 16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  requestTypeText,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            String userName = data['userName'] ?? "Guest";
+            String staffName = data['updatedBy'] ?? "Unassigned";
+            String itemName;
+            if (data['items'] is List) {
+              itemName = data['items'].join(', ');
+            } else {
+              itemName = data['items'].toString();
+            }
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(height: 8),
-
-                if(itemName != "null")
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    "Items: $itemName",
-                    style: const TextStyle(fontSize: 14),
+                    requestTypeText,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-
-                const SizedBox(height: 8),
-                Text(
-                  "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
-                  style: const TextStyle(fontSize: 14),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
+                  const SizedBox(height: 8),
+                  if (itemName != "null")
                     Text(
-                      "Requested by: $userName",
+                      "Items: $itemName",
                       style: const TextStyle(fontSize: 14),
-                    ),  
-                    const SizedBox(width: 10),
-
+                    ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        "Requested by: $userName",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        "Status: ${doc['status']}",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (doc['status'] == 'rejected')
                     Text(
-                      "Status: ${doc['status']}",
+                      "Rejected by: $staffName",
                       style: const TextStyle(fontSize: 14),
-                    ),             
-
-                  ],
-                ),
-                const SizedBox(height: 4),
-                if (doc['status'] == 'rejected')
-                  Text(
-                    "Rejected by: $staffName",
-                    style: const TextStyle(fontSize: 14),
+                    ),
+                  if (doc['status'] == 'accepted')
+                    Text(
+                      "Accepted by: $staffName",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  if (doc['status'] == 'done')
+                    Text(
+                      "Done by: $staffName",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _buildTrailingButtons(status, doc.id) ?? Container(),
+                    ],
                   ),
-                if (doc['status'] == 'accepted')
-                  Text(
-                    "Accepted by: $staffName",
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                if (doc['status'] == 'done')
-                  Text(
-                    "Done by: $staffName",
-                    style: const TextStyle(fontSize: 14),
-                  ),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _buildTrailingButtons(status, doc.id) ?? Container(),
-                  ],
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-      );
+                ],
+              ),
+            );
+          }).toList(),
+        );
       },
     );
   }
@@ -1438,33 +1550,33 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle reject button
-                        _updateRequestStatus(requestId, 'rejected');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.grey[300],
-                      ),
-                      child: const Text(
-                        "Reject",
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle accept button
-                        _updateRequestStatus(requestId, 'accepted');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                      ),
-                      child: const Text(
-                        "Accept",
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+          ElevatedButton(
+            onPressed: () {
+              // Handle reject button
+              _updateRequestStatus(requestId, 'rejected');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey[300],
+            ),
+            child: const Text(
+              "Reject",
+              style: TextStyle(color: Colors.black),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              // Handle accept button
+              _updateRequestStatus(requestId, 'accepted');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text(
+              "Accept",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ],
       );
     } else if (status == 'accepted') {
@@ -1477,96 +1589,94 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     } else if (status == 'rejected') {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [                    
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: const Text("Confirm Deletion"),
-                              content: const Text(
-                                  "Are you sure you want to delete this request?"),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(); // Close the dialog
-                                  },
-                                  child: const Text("Cancel"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(); // Close the dialog
-                                    _deleteRequest(
-                                        requestId); // Perform the delete action
-                                  },
-                                  child: const Text("Delete",
-                                      style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Handle accept button
-                        _updateRequestStatus(requestId, 'accepted');
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text("Confirm Deletion"),
+                    content: const Text(
+                        "Are you sure you want to delete this request?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                        child: const Text("Cancel"),
                       ),
-                      child: const Text(
-                        "Accept",
-                        style: TextStyle(color: Colors.white),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          _deleteRequest(
+                              requestId); // Perform the delete action
+                        },
+                        child: const Text("Delete",
+                            style: TextStyle(color: Colors.red)),
                       ),
-                    ),
-
+                    ],
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton(
+            onPressed: () {
+              // Handle accept button
+              _updateRequestStatus(requestId, 'accepted');
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+            ),
+            child: const Text(
+              "Accept",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
         ],
       );
     } else if (status == 'done') {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [                    
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: const Text("Confirm Deletion"),
-                              content: const Text(
-                                  "Are you sure you want to delete this request?"),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(); // Close the dialog
-                                  },
-                                  child: const Text("Cancel"),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop(); // Close the dialog
-                                    _deleteRequest(
-                                        requestId); // Perform the delete action
-                                  },
-                                  child: const Text("Delete",
-                                      style: TextStyle(color: Colors.red)),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
+        children: [
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.red),
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: const Text("Confirm Deletion"),
+                    content: const Text(
+                        "Are you sure you want to delete this request?"),
+                    actions: [
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                        child: const Text("Cancel"),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the dialog
+                          _deleteRequest(
+                              requestId); // Perform the delete action
+                        },
+                        child: const Text("Delete",
+                            style: TextStyle(color: Colors.red)),
+                      ),
+                    ],
+                  );
+                },
+              );
+            },
+          ),
         ],
       );
-    } 
-    else {
+    } else {
       return null;
     }
   }
