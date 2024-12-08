@@ -773,10 +773,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       await prefs.remove('userName');
       await prefs.remove('loginTimestamp');
 
-      final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('tableId');
-        await prefs.remove('userName');
-
       // Fetch the updated document to check the userNames array
       DocumentSnapshot updatedDoc = await tableRef.get();
       List<dynamic> userNames = updatedDoc['userNames'] ?? [];
