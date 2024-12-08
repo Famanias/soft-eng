@@ -43,7 +43,6 @@ class ScanScreenState extends State<ScanScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         title: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -81,24 +80,17 @@ class ScanScreenState extends State<ScanScreen> {
             flex: 5,
             child: Center(
               child: SizedBox(
-                child: isCameraActive
-                    ? QRView(
-                        key: qrKey,
-                        onQRViewCreated: _onQRViewCreated,
-                        overlay: QrScannerOverlayShape(
-                          borderColor: Color(0xFFE4CB9D),
-                          borderRadius: 10,
-                          borderLength: 30,
-                          borderWidth: 10,
-                          cutOutSize: scanArea,
-                        ),
-                      )
-                    : Center(
-                        child: Text(
-                          'Turn on the camera to scan a QR code',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
+                child: QRView(
+                  key: qrKey,
+                  onQRViewCreated: _onQRViewCreated,
+                  overlay: QrScannerOverlayShape(
+                    borderColor: Color(0xFFE4CB9D),
+                    borderRadius: 10,
+                    borderLength: 30,
+                    borderWidth: 10,
+                    cutOutSize: scanArea,
+                  ),
+                ),
               ),
             ),
           ),

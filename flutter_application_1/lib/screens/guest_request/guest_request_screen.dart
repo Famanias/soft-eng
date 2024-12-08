@@ -49,10 +49,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     _loadTableId();
     _fetchRequestHistory();
     _checkLoginExpiry();
-
-    Timer.periodic(Duration(seconds: 1), (timer) {
-      _checkLoginExpiry();
-    });
   }
 
   void _initializeLocalNotifications() {
@@ -69,9 +65,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     if (loginTimestamp != null) {
       int currentTime = DateTime.now().millisecondsSinceEpoch;
       int elapsedTime = currentTime - loginTimestamp;
-      int timer = 8 * 60 * 60 * 1000;
+      int eightHoursInMillis = 8 * 60 * 60 * 1000; // 8 hours in milliseconds
 
-      if (elapsedTime >= timer) {
+      if (elapsedTime >= eightHoursInMillis) {
         // Log out the user
         await _exitRequest();
       }
@@ -325,7 +321,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
               color: Color(0xFF316175),
             ),
           ),
-          content: SizedBox(
+          content: Container(
             width: double.maxFinite,
             child: StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
@@ -751,21 +747,17 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          content: Padding(
-            padding: const EdgeInsets.only(top: 17.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                CircularProgressIndicator(),
-                SizedBox(height: 20),
-                Text("Logging out, please wait..."),
-              ],
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: const [
+              CircularProgressIndicator(),
+              SizedBox(height: 20),
+              Text("Logging out, please wait..."),
+            ],
           ),
         );
       },
     );
-
     try {
       // Step 1: Update the activeTables collection
       DocumentReference tableRef =
@@ -780,6 +772,10 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       await prefs.remove('tableId');
       await prefs.remove('userName');
       await prefs.remove('loginTimestamp');
+
+      final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('tableId');
+        await prefs.remove('userName');
 
       // Fetch the updated document to check the userNames array
       DocumentSnapshot updatedDoc = await tableRef.get();
