@@ -167,20 +167,39 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
 
           // Sort notifications by timestamp in descending order
           var sortedDocs = snapshot.data!.docs;
-          sortedDocs.sort((a, b) => b['timestamp'].compareTo(a['timestamp']));
+          sortedDocs.sort((a, b) {
+            var aData = a.data() as Map<String, dynamic>;
+            var bData = b.data() as Map<String, dynamic>;
+            var aTimestamp = aData['timestamp'] as Timestamp?;
+            var bTimestamp = bData['timestamp'] as Timestamp?;
+            if (aTimestamp != null && bTimestamp != null) {
+              return bTimestamp.compareTo(aTimestamp);
+            } else if (aTimestamp != null) {
+              return -1;
+            } else if (bTimestamp != null) {
+              return 1;
+            } else {
+              return 0;
+            }
+          });
 
           return ListView.builder(
             itemCount: sortedDocs.length,
             itemBuilder: (context, index) {
               var doc = sortedDocs[index];
               var data = doc.data() as Map<String, dynamic>;
+
+              // Check if the timestamp field exists
+              final timestamp =
+                  data.containsKey('timestamp') ? data['timestamp'] : null;
+
               return ListTile(
                 tileColor: data['viewed'] == true
                     ? Colors.transparent
                     : Colors.grey[300],
                 title: Text(data['message'] ?? 'No message'),
-                subtitle: Text(data['timestamp'] != null
-                    ? data['timestamp'].toDate().toString()
+                subtitle: Text(timestamp != null
+                    ? (timestamp as Timestamp).toDate().toString()
                     : 'No timestamp'),
                 onTap: () async {
                   // Mark notification as viewed using a WriteBatch

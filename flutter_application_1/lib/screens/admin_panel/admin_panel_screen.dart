@@ -122,7 +122,7 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
                   'information': information,
                   'items': items.isEmpty ? [] : items,
                 }).then((_) {
-                    Navigator.of(context).pop();
+                    
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
                   }).catchError((error) {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
