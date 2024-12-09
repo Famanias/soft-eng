@@ -88,11 +88,6 @@ void _setupGlobalNotificationListener() {
 }
 
 void _showLocalNotification(Map<String, dynamic> data) {
-  if (data['type'] == null ||
-      data['requestType'] == null ||
-      data['status'] == null) {
-    return;
-  }
 
   AwesomeNotifications().createNotification(
     content: NotificationContent(
