@@ -76,12 +76,14 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen>
         'userName': userName, // Save the userName separately
       });
 
-      String messageAdminNotify = "Message";
+      // Use a unique document ID for each notification
+      String notificationId =
+          'Notification - ${DateTime.now().millisecondsSinceEpoch}';
 
       // Add a notification document
       await FirebaseFirestore.instance
           .collection('notifications')
-          .doc(messageAdminNotify)
+          .doc(notificationId)
           .set({
         'tableId': widget.tableId,
         'userName': userName,
