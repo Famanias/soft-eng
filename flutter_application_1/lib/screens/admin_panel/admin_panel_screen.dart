@@ -21,7 +21,6 @@ class AddRequestDialog extends StatefulWidget {
 }
 
 class _AddRequestDialogState extends State<AddRequestDialog> {
-
   final TextEditingController _typeController = TextEditingController();
   final TextEditingController _informationController = TextEditingController();
   final TextEditingController _itemController = TextEditingController();
@@ -46,10 +45,10 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text("Create New Request",
-            style: TextStyle(
-              color: Color(0xFF316175),
-              fontFamily: "RubikOne",
-            )),
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
       content: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -63,17 +62,14 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
               decoration: InputDecoration(labelText: 'Information'),
             ),
             TextField(
-              controller: _itemController,
-              decoration:
-                InputDecoration(
+                controller: _itemController,
+                decoration: InputDecoration(
                   labelText: 'Add Item',
-                  suffixIcon:
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      onPressed: _addItem,
-                    ),
-                ) 
-            ),
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: _addItem,
+                  ),
+                )),
             SizedBox(height: 10),
             Column(
               children: _items.map((item) {
@@ -107,45 +103,61 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
             }
 
             if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type and information cannot be empty")));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Request type and information cannot be empty")));
               return;
             }
 
-            var existingDoc = await FirebaseFirestore.instance.collection('requestList').doc(type).get();
+            var existingDoc = await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(type)
+                .get();
 
             if (existingDoc.exists) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A request with this type already exists")));
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("A request with this type already exists")));
             } else {
               // Add request with 'type' as document ID
-                FirebaseFirestore.instance.collection('requestList').doc(type).set({
-                  'type': type,
-                  'information': information,
-                  'items': items.isEmpty ? [] : items,
-                }).then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
-                  });
-                  // add request to the analytics
-                  FirebaseFirestore.instance.collection('globalAnalytics').doc(type).set({
-                    type: 0,
-                  }).then((_) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added to Analytics')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request to Analytics')));
-                  });
-                }
-              },
-              child: Text("Save"),
-            ),
+              FirebaseFirestore.instance
+                  .collection('requestList')
+                  .doc(type)
+                  .set({
+                'type': type,
+                'information': information,
+                'items': items.isEmpty ? [] : items,
+              }).then((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Request added successfully')));
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add request')));
+              });
+              // add request to the analytics
+              FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type)
+                  .set({
+                type: 0,
+              }).then((_) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Request added to Analytics')));
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Failed to add request to Analytics')));
+              });
+            }
+          },
+          child: Text("Save"),
+        ),
       ],
     );
   }
 }
 
 class EditRequestDialog extends StatefulWidget {
-  final Map<String, dynamic> doc;  // Accept doc as a parameter
+  final Map<String, dynamic> doc; // Accept doc as a parameter
 
   EditRequestDialog({required this.doc});
 
@@ -243,16 +255,16 @@ class _EditRequestDialogState extends State<EditRequestDialog> {
             List<String> items = List.from(_items);
 
             if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Request type and information cannot be empty"))
-              );
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Request type and information cannot be empty")));
               return;
             }
 
             // Logic to update existing document with new data
             await FirebaseFirestore.instance
                 .collection('requestList')
-                .doc(widget.doc['type'])  // Use old type as doc ID
+                .doc(widget.doc['type']) // Use old type as doc ID
                 .delete(); // Delete old document
 
             // Add the updated request to Firestore
@@ -263,12 +275,10 @@ class _EditRequestDialogState extends State<EditRequestDialog> {
             }).then((_) {
               Navigator.of(context).pop();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Request updated successfully'))
-              );
+                  SnackBar(content: Text('Request updated successfully')));
             }).catchError((error) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to update request'))
-              );
+                  SnackBar(content: Text('Failed to update request')));
             });
 
             // Update global analytics
@@ -280,10 +290,10 @@ class _EditRequestDialogState extends State<EditRequestDialog> {
             if (oldDoc.exists) {
               var requestTypeValue = oldDoc.data()?[widget.doc['type']];
               // Now delete the old document
-                    await FirebaseFirestore.instance
-                        .collection('globalAnalytics')
-                        .doc(widget.doc['type'])
-                        .delete();
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(widget.doc['type'])
+                  .delete();
               await FirebaseFirestore.instance
                   .collection('globalAnalytics')
                   .doc(type) // Set the new type in global analytics
@@ -679,12 +689,11 @@ class AdminPanelState extends State<AdminPanel> {
             child: CircularProgressIndicator(),
           );
         }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // const Center(child: Text("No requests")),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -700,7 +709,9 @@ class AdminPanelState extends State<AdminPanel> {
                     child: Row(
                       children: [
                         Icon(Icons.add, color: Colors.blue),
-                        SizedBox(width: 8), // Optional: Adds space between icon and text
+                        SizedBox(
+                            width:
+                                8), // Optional: Adds space between icon and text
                         Text('Add Request'),
                       ],
                     ),
@@ -725,7 +736,6 @@ class AdminPanelState extends State<AdminPanel> {
                     fontFamily: 'RubikOne',
                   ),
                 ),
-                // const SizedBox(width: 5),
                 IconButton(
                   icon: Icon(Icons.add, color: Colors.blue),
                   onPressed: () {
@@ -735,6 +745,12 @@ class AdminPanelState extends State<AdminPanel> {
                         return AddRequestDialog();
                       },
                     );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit, color: Colors.blue),
+                  onPressed: () {
+                    _showFaqEditDialog();
                   },
                 ),
               ],
@@ -776,7 +792,8 @@ class AdminPanelState extends State<AdminPanel> {
                               showDialog(
                                 context: context,
                                 builder: (BuildContext context) {
-                                  return EditRequestDialog(doc: doc.data() as Map<String, dynamic>);
+                                  return EditRequestDialog(
+                                      doc: doc.data() as Map<String, dynamic>);
                                 },
                               );
                             },
@@ -793,18 +810,243 @@ class AdminPanelState extends State<AdminPanel> {
                       ),
                       onTap: () {
                         // Add navigation or actions on tap if necessary
-                        // Example:
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => RequestDetailsScreen(requestType: requestType),
-                        //   ),
-                        // );
                       },
                     ),
                   );
                 }).toList(),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFaqEditDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit FAQs"),
+          content: Container(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('faqs').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final faqs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: faqs.length,
+                  itemBuilder: (context, index) {
+                    var faq = faqs[index];
+                    var data = faq.data() as Map<String, dynamic>;
+
+                    return ListTile(
+                      title: Text(data['title'] ?? 'No Title'),
+                      subtitle: Text(data['content'] ?? 'No Content'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              _showEditDialog(faq.id, data);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              _showDeleteFaqConfirmationDialog(context, faq.id);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _showAddFaqDialog();
+              },
+              child: const Text("Add FAQ"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteFaqConfirmationDialog(BuildContext context, String docId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Delete FAQ"),
+          content: const Text("Are you sure you want to delete this FAQ?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('faqs')
+                    .doc(docId)
+                    .delete()
+                    .then((_) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('FAQ deleted successfully')),
+                  );
+                }).catchError((error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete FAQ: $error')),
+                  );
+                });
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(String docId, Map<String, dynamic> data) {
+    TextEditingController titleController =
+        TextEditingController(text: data['title']);
+    TextEditingController contentController =
+        TextEditingController(text: data['content']);
+    TextEditingController detailsController =
+        TextEditingController(text: data['details']);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit FAQ"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: contentController,
+                decoration: const InputDecoration(labelText: 'Content'),
+              ),
+              TextField(
+                controller: detailsController,
+                decoration: const InputDecoration(labelText: 'Details'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('faqs')
+                    .doc(docId)
+                    .update({
+                  'title': titleController.text,
+                  'content': contentController.text,
+                  'details': detailsController.text,
+                }).then((_) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('FAQ updated successfully')),
+                  );
+                }).catchError((error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to update FAQ: $error')),
+                  );
+                });
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAddFaqDialog() {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController contentController = TextEditingController();
+    TextEditingController detailsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add FAQ"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: contentController,
+                decoration: const InputDecoration(labelText: 'Content'),
+              ),
+              TextField(
+                controller: detailsController,
+                decoration: const InputDecoration(labelText: 'Details'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance.collection('faqs').add({
+                  'title': titleController.text,
+                  'content': contentController.text,
+                  'details': detailsController.text,
+                }).then((_) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('FAQ added successfully')),
+                  );
+                }).catchError((error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add FAQ: $error')),
+                  );
+                });
+              },
+              child: const Text("Save"),
             ),
           ],
         );
@@ -1111,7 +1353,6 @@ class AdminPanelState extends State<AdminPanel> {
                               overflowMode: LegendItemOverflowMode
                                   .wrap, // Allows wrapping for long legends
                               itemPadding: 10,
-
                             ),
                             series: <CircularSeries>[
                               PieSeries<_ChartData, String>(
