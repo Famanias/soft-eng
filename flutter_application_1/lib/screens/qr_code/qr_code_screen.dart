@@ -311,11 +311,11 @@ class ScanScreenState extends State<ScanScreen> {
 
         Position userLocation = await _getCurrentLocation();
         // 14.856759 - my house latitude
-        double targetLatitude = 14.856759; // Replace with your target
+        double targetLatitude = 14.8322955; // Replace with your target
         // 120.328327 - my house longitude
         double targetLongitude =
-            120.328327; // Replace with your target longitude
-        double rangeInMeters = 1000; // Define the acceptable range in meters
+            120.282504; // Replace with your target longitude
+        double rangeInMeters = 500; // Define the acceptable range in meters
 
         if (!_isLocationWithinRange(
             userLocation, targetLatitude, targetLongitude, rangeInMeters)) {
