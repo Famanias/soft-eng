@@ -732,12 +732,17 @@ class AdminPanelState extends State<AdminPanel> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Color(0xFF316175),
-                    fontSize: 32,
+                    fontSize: 22,
                     fontFamily: 'RubikOne',
                   ),
                 ),
-                IconButton(
+                TextButton.icon(
                   icon: Icon(Icons.add, color: Colors.blue),
+                  label: Text(
+                    'Add Request',
+                    style: TextStyle(color: Colors.blue, fontSize: 12),
+                    
+                  ),
                   onPressed: () {
                     showDialog(
                       context: context,
@@ -747,11 +752,21 @@ class AdminPanelState extends State<AdminPanel> {
                     );
                   },
                 ),
-                IconButton(
-                  icon: Icon(Icons.edit, color: Colors.blue),
-                  onPressed: () {
-                    _showFaqEditDialog();
-                  },
+                Padding(
+                  padding: const EdgeInsets.only(left: 5.0),
+                  child: TextButton.icon(
+                    icon: Icon(Icons.edit, color: Colors.blue),
+                    label: const Text(
+                      'Edit FAQ',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onPressed: () {
+                      _showFaqEditDialog();
+                    },
+                  ),
                 ),
               ],
             ),
