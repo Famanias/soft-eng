@@ -31,7 +31,7 @@ class MessagesScreen extends StatelessWidget {
         // Add a notification document
         await FirebaseFirestore.instance.collection('adminNotifications').add({
           'type': 'newMessage',
-          'message': 'New message from user "$userName" at table "$tableId"',
+          'message': 'New message from user "$userName" at table "$tableId" - ${messageController.text}',
           'timestamp': FieldValue.serverTimestamp(),
           'viewed': false,
         });
