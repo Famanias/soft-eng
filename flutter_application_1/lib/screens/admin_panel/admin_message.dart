@@ -88,7 +88,7 @@ class AdminMessagesScreenState extends State<AdminMessagesScreen>
         'tableId': widget.tableId,
         'userName': userName,
         'type': 'newMessage',
-        'message': 'New message from admin',
+        'message': messageController.text,
         'timestamp': FieldValue.serverTimestamp(),
         'viewed': false,
       });
