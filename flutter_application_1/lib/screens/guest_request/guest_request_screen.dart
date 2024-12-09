@@ -26,7 +26,7 @@ class SpinnerWidget extends StatelessWidget {
   final int selectedCount;
   final ValueChanged<int> onChanged;
 
-  SpinnerWidget({required this.item, required this.selectedCount, required this.onChanged});
+  const SpinnerWidget({super.key, required this.item, required this.selectedCount, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
