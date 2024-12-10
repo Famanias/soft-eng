@@ -389,13 +389,14 @@ class ScanScreenState extends State<ScanScreen> {
           // Create a new collection of users for analytics
           CollectionReference analyticsRef =
               FirebaseFirestore.instance.collection('analytics');
-          DocumentReference analyticsDoc =
-              analyticsRef.doc("$tableId + userCount");
+          DocumentReference analyticsDoc = analyticsRef.doc(
+              "$tableId + userCount + ${DateTime.now().toIso8601String().split('T').first}");
 
           // Increment the user count for specific table
           await analyticsDoc.set({
             'tableId': tableId,
             'usersCount': FieldValue.increment(1),
+            'timestamp': FieldValue.serverTimestamp(), // Add timestamp
           }, SetOptions(merge: true));
 
           showDialog(

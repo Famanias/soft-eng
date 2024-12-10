@@ -71,6 +71,18 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         'viewed': false,
       });
 
+      CollectionReference analyticsRef =
+          FirebaseFirestore.instance.collection('analytics');
+      String analyticsDocId =
+          "${widget.tableId} + requestCount + ${DateTime.now().toIso8601String().split('T').first}";
+      DocumentReference analyticsDoc = analyticsRef.doc(analyticsDocId);
+
+      await analyticsDoc.set({
+        'tableId': widget.tableId,
+        'requestCount': FieldValue.increment(1),
+        'timestamp': FieldValue.serverTimestamp(), // Add timestamp
+      }, SetOptions(merge: true));
+
       CollectionReference globalAnalyticsRef =
           FirebaseFirestore.instance.collection('globalAnalytics');
 
