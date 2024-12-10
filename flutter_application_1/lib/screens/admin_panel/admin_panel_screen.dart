@@ -15,304 +15,11 @@ class AdminPanel extends StatefulWidget {
   AdminPanelState createState() => AdminPanelState();
 }
 
-class AddRequestDialog extends StatefulWidget {
-  const AddRequestDialog({super.key});
-
-  @override
-  AddRequestDialogState createState() => AddRequestDialogState();
-}
-
-// add request for admin
-class AddRequestDialogState extends State<AddRequestDialog> {
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _informationController = TextEditingController();
-  final TextEditingController _itemController = TextEditingController();
-  List<String> _items = [];
-
-  void _addItem() {
-    setState(() {
-      if (_itemController.text.isNotEmpty) {
-        _items.add(_itemController.text);
-        _itemController.clear();
-      }
-    });
-  }
-
-  void _removeItem(int index) {
-    setState(() {
-      _items.removeAt(index);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Create New Request",
-          style: TextStyle(
-            color: Color(0xFF316175),
-            fontFamily: "RubikOne",
-          )),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _typeController,
-              decoration: InputDecoration(labelText: 'Request'),
-            ),
-            TextField(
-              controller: _informationController,
-              decoration: InputDecoration(labelText: 'Information'),
-            ),
-            TextField(
-                controller: _itemController,
-                decoration: InputDecoration(
-                  labelText: 'Add Item',
-                  suffixIcon: IconButton(
-                    icon: Icon(Icons.add),
-                    onPressed: _addItem,
-                  ),
-                )),
-            SizedBox(height: 10),
-            Column(
-              children: _items.map((item) {
-                int index = _items.indexOf(item);
-                return ListTile(
-                  title: Text(item),
-                  trailing: IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () => _removeItem(index),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            String type = _typeController.text;
-            String information = _informationController.text;
-            List<String> items = List.from(_items);
-            if (_items.isEmpty) {
-              items = [];
-            }
-
-            if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text("Request type and information cannot be empty")));
-              return;
-            }
-
-            var existingDoc = await FirebaseFirestore.instance
-                .collection('requestList')
-                .doc(type)
-                .get();
-
-            if (existingDoc.exists) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text("A request with this type already exists")));
-            } else {
-              // Add request with 'type' as document ID
-              FirebaseFirestore.instance
-                  .collection('requestList')
-                  .doc(type)
-                  .set({
-                'type': type,
-                'information': information,
-                'items': items.isEmpty ? [] : items,
-              }).then((_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Request added successfully')));
-              }).catchError((error) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to add request')));
-              });
-              // add request to the analytics
-              FirebaseFirestore.instance
-                  .collection('globalAnalytics')
-                  .doc(type)
-                  .set({
-                type: 0,
-              }).then((_) {
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Request added to Analytics')));
-              }).catchError((error) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Failed to add request to Analytics')));
-              });
-            }
-          },
-          child: Text("Save"),
-        ),
-      ],
-    );
-  }
-}
-
-class EditRequestDialog extends StatefulWidget {
-  final Map<String, dynamic> doc; // Accept doc as a parameter
-
-  const EditRequestDialog({super.key, required this.doc});
-
-  @override
-  EditRequestDialogState createState() => EditRequestDialogState();
-}
-
-class EditRequestDialogState extends State<EditRequestDialog> {
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _informationController = TextEditingController();
-  final TextEditingController _itemController = TextEditingController();
-  List<String> _items = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize controllers with current doc values
-    _typeController.text = widget.doc['type'];
-    _informationController.text = widget.doc['information'];
-    _items = List<String>.from(widget.doc['items'] ?? []);
-  }
-
-  void _addItem() {
-    setState(() {
-      if (_itemController.text.isNotEmpty) {
-        _items.add(_itemController.text);
-        _itemController.clear();
-      }
-    });
-  }
-
-  void _removeItem(int index) {
-    setState(() {
-      _items.removeAt(index);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Edit Request",
-          style: TextStyle(
-            color: Color(0xFF316175),
-            fontFamily: "RubikOne",
-          )),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _typeController,
-              decoration: InputDecoration(labelText: 'Request'),
-            ),
-            TextField(
-              controller: _informationController,
-              decoration: InputDecoration(labelText: 'Information'),
-            ),
-            TextField(
-              controller: _itemController,
-              decoration: InputDecoration(
-                labelText: 'Add Item',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: _addItem,
-                ),
-              ),
-            ),
-            SizedBox(height: 10),
-            Column(
-              children: _items.map((item) {
-                int index = _items.indexOf(item);
-                return ListTile(
-                  title: Text(item),
-                  trailing: IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () => _removeItem(index),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            String type = _typeController.text;
-            String information = _informationController.text;
-            List<String> items = List.from(_items);
-
-            if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text("Request type and information cannot be empty")));
-              return;
-            }
-
-            // Logic to update existing document with new data
-            await FirebaseFirestore.instance
-                .collection('requestList')
-                .doc(widget.doc['type']) // Use old type as doc ID
-                .delete(); // Delete old document
-
-            // Add the updated request to Firestore
-            FirebaseFirestore.instance.collection('requestList').doc(type).set({
-              'type': type,
-              'information': information,
-              'items': items.isEmpty ? [] : items,
-            }).then((_) {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Request updated successfully')));
-            }).catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update request')));
-            });
-
-            // Update global analytics
-            var oldDoc = await FirebaseFirestore.instance
-                .collection('globalAnalytics')
-                .doc(widget.doc['type'])
-                .get();
-
-            if (oldDoc.exists) {
-              var requestTypeValue = oldDoc.data()?[widget.doc['type']];
-              // Now delete the old document
-              await FirebaseFirestore.instance
-                  .collection('globalAnalytics')
-                  .doc(widget.doc['type'])
-                  .delete();
-              await FirebaseFirestore.instance
-                  .collection('globalAnalytics')
-                  .doc(type) // Set the new type in global analytics
-                  .set({type: requestTypeValue});
-            }
-          },
-          child: Text("Save"),
-        ),
-      ],
-    );
-  }
-}
-
 class AdminPanelState extends State<AdminPanel> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   int _selectedIndex = 0;
+  DateTime selectedWeek = DateTime.now();
+  List<DateTime> weeks = [];
 
   Future<void> _logout(BuildContext context) async {
     try {
@@ -419,6 +126,11 @@ class AdminPanelState extends State<AdminPanel> {
           onPressed: () => _confirmLogout(context), // Call the logout function
         ),
         actions: [
+          if (_selectedIndex == 2)
+          IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () => _selectDate(context),
+          ),
           StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('adminNotifications')
@@ -1091,10 +803,26 @@ class AdminPanelState extends State<AdminPanel> {
   }
 
   // analytics
+  DateTime selectedDate = DateTime.now();
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
 
   Widget _buildAnalytics() {
-    DateTime now = DateTime.now();
-    DateTime oneWeekAgo = now.subtract(Duration(days: 7));
+    DateTime startOfDay =
+        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    DateTime endOfDay = startOfDay.add(Duration(days: 1));
 
     return Column(
       children: [
@@ -1117,7 +845,9 @@ class AdminPanelState extends State<AdminPanel> {
                     .collection('globalAnalytics')
                     .where('timestamp',
                         isGreaterThanOrEqualTo:
-                            oneWeekAgo) // Filter by timestamp
+                            startOfDay) // Filter by timestamp
+                    .where('timestamp',
+                        isLessThan: endOfDay) // Filter by timestamp
                     .snapshots(),
                 builder: (context,
                     AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
@@ -1341,6 +1071,301 @@ class AdminPanelState extends State<AdminPanel> {
               );
             },
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class AddRequestDialog extends StatefulWidget {
+  const AddRequestDialog({super.key});
+
+  @override
+  AddRequestDialogState createState() => AddRequestDialogState();
+}
+
+// add request for admin
+class AddRequestDialogState extends State<AddRequestDialog> {
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Create New Request",
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+                controller: _itemController,
+                decoration: InputDecoration(
+                  labelText: 'Add Item',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: _addItem,
+                  ),
+                )),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+            if (_items.isEmpty) {
+              items = [];
+            }
+
+            if (type.isEmpty || information.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Request type and information cannot be empty")));
+              return;
+            }
+
+            var existingDoc = await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(type)
+                .get();
+
+            if (existingDoc.exists) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text("A request with this type already exists")));
+            } else {
+              // Add request with 'type' as document ID
+              FirebaseFirestore.instance
+                  .collection('requestList')
+                  .doc(type)
+                  .set({
+                'type': type,
+                'information': information,
+                'items': items.isEmpty ? [] : items,
+              }).then((_) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Request added successfully')));
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to add request')));
+              });
+              // add request to the analytics
+              FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type)
+                  .set({
+                type: 0,
+              }).then((_) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Request added to Analytics')));
+              }).catchError((error) {
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text('Failed to add request to Analytics')));
+              });
+            }
+          },
+          child: Text("Save"),
+        ),
+      ],
+    );
+  }
+}
+
+class EditRequestDialog extends StatefulWidget {
+  final Map<String, dynamic> doc; // Accept doc as a parameter
+
+  const EditRequestDialog({super.key, required this.doc});
+
+  @override
+  EditRequestDialogState createState() => EditRequestDialogState();
+}
+
+class EditRequestDialogState extends State<EditRequestDialog> {
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current doc values
+    _typeController.text = widget.doc['type'];
+    _informationController.text = widget.doc['information'];
+    _items = List<String>.from(widget.doc['items'] ?? []);
+  }
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Edit Request",
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+              controller: _itemController,
+              decoration: InputDecoration(
+                labelText: 'Add Item',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: _addItem,
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+
+            if (type.isEmpty || information.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content:
+                      Text("Request type and information cannot be empty")));
+              return;
+            }
+
+            // Logic to update existing document with new data
+            await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(widget.doc['type']) // Use old type as doc ID
+                .delete(); // Delete old document
+
+            // Add the updated request to Firestore
+            FirebaseFirestore.instance.collection('requestList').doc(type).set({
+              'type': type,
+              'information': information,
+              'items': items.isEmpty ? [] : items,
+            }).then((_) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Request updated successfully')));
+            }).catchError((error) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to update request')));
+            });
+
+            // Update global analytics
+            var oldDoc = await FirebaseFirestore.instance
+                .collection('globalAnalytics')
+                .doc(widget.doc['type'])
+                .get();
+
+            if (oldDoc.exists) {
+              var requestTypeValue = oldDoc.data()?[widget.doc['type']];
+              // Now delete the old document
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(widget.doc['type'])
+                  .delete();
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type) // Set the new type in global analytics
+                  .set({type: requestTypeValue});
+            }
+          },
+          child: Text("Save"),
         ),
       ],
     );
