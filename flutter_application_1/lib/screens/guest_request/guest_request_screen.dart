@@ -26,7 +26,11 @@ class SpinnerWidget extends StatelessWidget {
   final int selectedCount;
   final ValueChanged<int> onChanged;
 
-  const SpinnerWidget({super.key, required this.item, required this.selectedCount, required this.onChanged});
+  const SpinnerWidget(
+      {super.key,
+      required this.item,
+      required this.selectedCount,
+      required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -253,7 +257,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     return requestInformation[requestType] ?? 'No information available';
   }
 
-  Future<List<String>?> _showRequestDialog(String requestType, {required List<String> items, required List<String> initialSelectedItems}) async {
+  Future<List<String>?> _showRequestDialog(String requestType,
+      {required List<String> items,
+      required List<String> initialSelectedItems}) async {
     // Initialize the selection state (0 means not selected)
     Map<String, int> selectedItemsMap = {
       for (var item in items) item: 0,
@@ -261,7 +267,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
     // Update initial selections if necessary
     for (var item in initialSelectedItems) {
-      selectedItemsMap[item] = selectedItemQuantities[item] ?? 0; // Set to saved quantity if available
+      selectedItemsMap[item] = selectedItemQuantities[item] ??
+          0; // Set to saved quantity if available
     }
 
     return showDialog<List<String>>(
@@ -301,13 +308,15 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                         // Collect selected items
                         List<String> selected = [];
                         selectedItemsMap.forEach((item, quantity) {
-                            if(quantity>0){
-                              selected.add(item); // Add only items with quantity > 0
-                              selectedItemQuantities[item] = quantity; // Save the quantity
-                            }
-                            // selected.add(item); // Add only items with quantity > 0
-                            // selectedItemQuantities[item] = quantity; // Save the quantity
-                          });
+                          if (quantity > 0) {
+                            selected
+                                .add(item); // Add only items with quantity > 0
+                            selectedItemQuantities[item] =
+                                quantity; // Save the quantity
+                          }
+                          // selected.add(item); // Add only items with quantity > 0
+                          // selectedItemQuantities[item] = quantity; // Save the quantity
+                        });
                         Navigator.of(context).pop(selected);
                       },
                     ),
@@ -665,7 +674,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           });
         } else {
           for (var item in items) {
-            int quantity = selectedItemQuantities[item] ?? 1; // Get the selected quantity
+            int quantity =
+                selectedItemQuantities[item] ?? 1; // Get the selected quantity
             formattedItems.add('$quantity $item'); // Combine quantity and item
           }
           selectedRequests.add({
@@ -735,6 +745,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         await analyticsDoc.set({
           'tableId': tableId,
           'requestCount': FieldValue.increment(1),
+          'timestamp': FieldValue.serverTimestamp(), // Add timestamp
         }, SetOptions(merge: true));
 
         CollectionReference globalAnalyticsRef =
@@ -744,6 +755,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
         await globalAnalyticsDoc.set({
           requestType: FieldValue.increment(1),
+          'timestamp': FieldValue.serverTimestamp(), // Add timestamp
         }, SetOptions(merge: true));
 
         await FirebaseFirestore.instance.collection('adminNotifications').add({
@@ -773,7 +785,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       Navigator.of(context).pop();
     }
   }
-
 
   Future<void> _exitRequest() async {
     if (tableId.isEmpty || userName.isEmpty) {

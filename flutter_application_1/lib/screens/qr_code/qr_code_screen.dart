@@ -310,11 +310,11 @@ class ScanScreenState extends State<ScanScreen> {
         print("Scanned QR code: $tableId");
 
         Position userLocation = await _getCurrentLocation();
-        // 14.856759 - my house latitude
-        double targetLatitude = 14.8322955; // Replace with your target
-        // 120.328327 - my house longitude
+        // 14.856759 - my house latitude , school -  14.8322955
+        double targetLatitude = 14.856759; // Replace with your target
+        // 120.328327 - my house longitude, school = 120.282504
         double targetLongitude =
-            120.282504; // Replace with your target longitude
+            120.328327; // Replace with your target longitude
         double rangeInMeters = 500; // Define the acceptable range in meters
 
         if (!_isLocationWithinRange(
