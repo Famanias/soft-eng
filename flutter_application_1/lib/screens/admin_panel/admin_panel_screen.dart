@@ -127,10 +127,26 @@ class AdminPanelState extends State<AdminPanel> {
         ),
         actions: [
           if (_selectedIndex == 2)
-          IconButton(
-            icon: const Icon(Icons.calendar_today),
-            onPressed: () => _selectDate(context),
-          ),
+            Padding(
+              padding:
+                  const EdgeInsets.all(8.0), // Add padding around the InkWell
+              child: InkWell(
+                onTap: () => _selectDate(context),
+                hoverColor:
+                    Colors.grey.withOpacity(0.2), // Highlight color on hover
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today),
+                    SizedBox(
+                        width: 4), // Add some space between the icon and text
+                    Text(
+                      DateFormat('MM/dd/yyyy').format(selectedDate),
+                      style: const TextStyle(color: Colors.black, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('adminNotifications')
@@ -858,7 +874,7 @@ class AdminPanelState extends State<AdminPanel> {
                   if (!globalAnalyticsSnapshot.hasData ||
                       globalAnalyticsSnapshot.data!.docs.isEmpty) {
                     return const Center(
-                        child: Text("No global analytics data"));
+                        child: Text("No available analytics data"));
                   }
 
                   // Aggregate data for analytics collection
