@@ -16,11 +16,14 @@ class AdminPanel extends StatefulWidget {
 }
 
 class AddRequestDialog extends StatefulWidget {
+  const AddRequestDialog({super.key});
+
   @override
-  _AddRequestDialogState createState() => _AddRequestDialogState();
+  AddRequestDialogState createState() => AddRequestDialogState();
 }
 
-class _AddRequestDialogState extends State<AddRequestDialog> {
+// add request for admin
+class AddRequestDialogState extends State<AddRequestDialog> {
   final TextEditingController _typeController = TextEditingController();
   final TextEditingController _informationController = TextEditingController();
   final TextEditingController _itemController = TextEditingController();
@@ -159,13 +162,13 @@ class _AddRequestDialogState extends State<AddRequestDialog> {
 class EditRequestDialog extends StatefulWidget {
   final Map<String, dynamic> doc; // Accept doc as a parameter
 
-  EditRequestDialog({required this.doc});
+  const EditRequestDialog({super.key, required this.doc});
 
   @override
-  _EditRequestDialogState createState() => _EditRequestDialogState();
+  EditRequestDialogState createState() => EditRequestDialogState();
 }
 
-class _EditRequestDialogState extends State<EditRequestDialog> {
+class EditRequestDialogState extends State<EditRequestDialog> {
   final TextEditingController _typeController = TextEditingController();
   final TextEditingController _informationController = TextEditingController();
   final TextEditingController _itemController = TextEditingController();
@@ -622,64 +625,6 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
-  // Widget _buildIncomingUsers() {
-  //   return StreamBuilder(
-  //     stream: FirebaseFirestore.instance
-  //         .collection('adminNotifications')
-  //         .where('type', isEqualTo: 'newUser')
-  //         .where('viewed', isEqualTo: false)
-  //         .snapshots(),
-  //     builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-  //       if (snapshot.connectionState == ConnectionState.waiting) {
-  //         return const Center(child: CircularProgressIndicator());
-  //       }
-  //       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-  //         return const Center(child: Text("No incoming users"));
-  //       }
-  //       return ListView(
-  //         children: snapshot.data!.docs.map((doc) {
-  //           var data = doc.data() as Map<String, dynamic>;
-  //           String userName = data['message'].split('"')[1];
-  //           String tableId = data['message'].split('"')[5];
-  //           return ListTile(
-  //             title: Text('User: $userName'),
-  //             subtitle: Text('Table: $tableId'),
-  //             trailing: Row(
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 IconButton(
-  //                   icon: const Icon(Icons.check, color: Colors.green),
-  //                   onPressed: () async {
-  //                     await FirebaseFirestore.instance
-  //                         .collection('adminNotifications')
-  //                         .doc(doc.id)
-  //                         .update({'approved': true, 'viewed': true});
-  //                     ScaffoldMessenger.of(context).showSnackBar(
-  //                       const SnackBar(content: Text("User approved")),
-  //                     );
-  //                   },
-  //                 ),
-  //                 IconButton(
-  //                   icon: const Icon(Icons.close, color: Colors.red),
-  //                   onPressed: () async {
-  //                     await FirebaseFirestore.instance
-  //                         .collection('adminNotifications')
-  //                         .doc(doc.id)
-  //                         .update({'approved': false, 'viewed': true});
-  //                     ScaffoldMessenger.of(context).showSnackBar(
-  //                       const SnackBar(content: Text("User rejected")),
-  //                     );
-  //                   },
-  //                 ),
-  //               ],
-  //             ),
-  //           );
-  //         }).toList(),
-  //       );
-  //     },
-  //   );
-  // }
-
   Widget _buildRequestList() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('requestList').snapshots(),
@@ -741,7 +686,6 @@ class AdminPanelState extends State<AdminPanel> {
                   label: Text(
                     'Add Request',
                     style: TextStyle(color: Colors.blue, fontSize: 12),
-                    
                   ),
                   onPressed: () {
                     showDialog(
@@ -1146,7 +1090,12 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
+  // analytics
+
   Widget _buildAnalytics() {
+    DateTime now = DateTime.now();
+    DateTime oneWeekAgo = now.subtract(Duration(days: 7));
+
     return Column(
       children: [
         Expanded(
@@ -1166,6 +1115,9 @@ class AdminPanelState extends State<AdminPanel> {
               return StreamBuilder(
                 stream: FirebaseFirestore.instance
                     .collection('globalAnalytics')
+                    .where('timestamp',
+                        isGreaterThanOrEqualTo:
+                            oneWeekAgo) // Filter by timestamp
                     .snapshots(),
                 builder: (context,
                     AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
