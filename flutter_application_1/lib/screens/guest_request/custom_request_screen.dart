@@ -74,14 +74,18 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
       CollectionReference globalAnalyticsRef =
           FirebaseFirestore.instance.collection('globalAnalytics');
 
+// Include the current date in the document ID
+      String globalAnalyticsDocId =
+          "Custom Request + ${DateTime.now().toIso8601String().split('T').first}";
       DocumentReference globalAnalyticsDoc =
-          globalAnalyticsRef.doc("Custom Request");
+          globalAnalyticsRef.doc(globalAnalyticsDocId);
 
       await globalAnalyticsDoc.set({
         "Custom Request": FieldValue.increment(1),
+        'timestamp': FieldValue.serverTimestamp(), // Add timestamp
       }, SetOptions(merge: true));
 
-      // Notify the user of successful submission
+// Notify the user of successful submission
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Custom request submitted successfully")),
       );

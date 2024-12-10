@@ -739,8 +739,9 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         // Analytics and notifications...
         CollectionReference analyticsRef =
             FirebaseFirestore.instance.collection('analytics');
-        DocumentReference analyticsDoc =
-            analyticsRef.doc("$tableId + requestCount");
+        String analyticsDocId =
+            "$tableId + requestCount + ${DateTime.now().toIso8601String().split('T').first}";
+        DocumentReference analyticsDoc = analyticsRef.doc(analyticsDocId);
 
         await analyticsDoc.set({
           'tableId': tableId,
@@ -750,8 +751,10 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
         CollectionReference globalAnalyticsRef =
             FirebaseFirestore.instance.collection('globalAnalytics');
+        String globalAnalyticsDocId =
+            "$requestType + ${DateTime.now().toIso8601String().split('T').first}";
         DocumentReference globalAnalyticsDoc =
-            globalAnalyticsRef.doc(requestType);
+            globalAnalyticsRef.doc(globalAnalyticsDocId);
 
         await globalAnalyticsDoc.set({
           requestType: FieldValue.increment(1),
