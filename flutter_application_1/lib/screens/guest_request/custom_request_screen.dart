@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/screens/guest_request/guest_request_screen.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class CustomRequestScreen extends StatefulWidget {
   final String tableId;
@@ -19,8 +20,14 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
     String customRequestDetails = customRequestController.text.trim();
 
     if (customRequestDetails.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a custom request")),
+      Fluttertoast.showToast(
+        msg: "Please type your custom request.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
       return;
     }
@@ -86,7 +93,7 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
       CollectionReference globalAnalyticsRef =
           FirebaseFirestore.instance.collection('globalAnalytics');
 
-// Include the current date in the document ID
+      // Include the current date in the document ID
       String globalAnalyticsDocId =
           "Custom Request + ${DateTime.now().toIso8601String().split('T').first}";
       DocumentReference globalAnalyticsDoc =
@@ -97,9 +104,15 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         'timestamp': FieldValue.serverTimestamp(), // Add timestamp
       }, SetOptions(merge: true));
 
-// Notify the user of successful submission
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Custom request submitted successfully")),
+      // Notify the user of successful submission
+      Fluttertoast.showToast(
+        msg: "Custom request submitted successfully.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
 
       // Clear the text field after submission
@@ -117,8 +130,14 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         (Route<dynamic> route) => false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to submit request: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to submit request: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
     } finally {
       // Dismiss the loading dialog if it is still visible

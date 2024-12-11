@@ -48,6 +48,7 @@ dependencies:
   awesome_notifications: ^0.10.0
   syncfusion_flutter_charts: ^20.2.47
   connectivity_plus: ^4.0.1
+  fluttertoast: ^8.0.8
 
 
 
