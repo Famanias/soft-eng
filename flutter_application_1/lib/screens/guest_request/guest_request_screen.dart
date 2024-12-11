@@ -11,6 +11,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'faq_screen.dart'; 
+import 'package:fluttertoast/fluttertoast.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen(
@@ -486,18 +487,24 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                             await _fetchRequestHistory(); // Refresh the request history
                                             setState(
                                                 () {}); // Update the state to reflect the changes
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      "Request canceled successfully")),
+                                            Fluttertoast.showToast(
+                                              msg: "Request Cancelled successfully.",
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.BOTTOM,
+                                              timeInSecForIosWeb: 1,
+                                              backgroundColor: Colors.green,
+                                              textColor: Colors.white,
+                                              fontSize: 16.0
                                             );
                                           } else {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      "Request not found")),
+                                            Fluttertoast.showToast(
+                                              msg: "No Requests Found.",
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.BOTTOM,
+                                              timeInSecForIosWeb: 1,
+                                              backgroundColor: Colors.red,
+                                              textColor: Colors.white,
+                                              fontSize: 16.0
                                             );
                                           }
                                         }
@@ -592,8 +599,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   _fetchRequestHistory();
                 } else {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Request not found")),
+                  Fluttertoast.showToast(
+                    msg: "Request not found.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0
                   );
                 }
               },
@@ -633,13 +646,24 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                       .update({'requestType': customRequestController.text});
                   Navigator.of(context).pop();
                   _fetchRequestHistory();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        content: Text("Custom request updated successfully")),
+                  Fluttertoast.showToast(
+                    msg: "Custom request updated successfully.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0
                   );
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Custom request cannot be empty")),
+                  Fluttertoast.showToast(
+                    msg: "Custom Request cannot be empty.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0
                   );
                 }
               },
@@ -656,8 +680,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
     // Check for valid tableId
     if (tableId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No table ID available")),
+      Fluttertoast.showToast(
+        msg: "No Table ID available.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
       return;
     }
@@ -688,8 +718,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
     // Check if any requests were selected
     if (selectedRequests.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select at least one request")),
+      Fluttertoast.showToast(
+        msg: "Please select at least one request.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
       return;
     }
@@ -775,13 +811,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       });
 
       // Notify the user of successful submission
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Requests submitted successfully")),
+      Fluttertoast.showToast(
+        msg: "Requests submitted successfully.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
     } catch (e) {
       // Show error message if submission fails
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to submit request: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to submit request: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
     } finally {
       // Dismiss the loading dialog
@@ -877,8 +925,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
       // Step 4: Notify the user of success
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Thank you for using the service")),
+      Fluttertoast.showToast(
+        msg: "Thank you for using the service.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
 
       // Step 5: Reset state and navigate
@@ -893,8 +947,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       // Handle errors and log
       log("Error: $e");
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to update the table status: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to update the table status: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
       );
     }
   }
@@ -1048,9 +1108,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("No table ID available")),
+                          Fluttertoast.showToast(
+                            msg: "No Table ID available.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0
                           );
                         }
                       },
@@ -1068,9 +1133,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                             ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text("No table ID available")),
+                          Fluttertoast.showToast(
+                            msg: "No Table ID available.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0
                           );
                         }
                       },

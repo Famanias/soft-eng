@@ -3,6 +3,7 @@ import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 
 class ScanScreen extends StatefulWidget {
@@ -278,8 +279,14 @@ class ScanScreenState extends State<ScanScreen> {
                 if (nameController.text.isNotEmpty) {
                   Navigator.of(context).pop(nameController.text);
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Name is required")),
+                  Fluttertoast.showToast(
+                    msg: "Name is required.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0
                   );
                 }
               },
@@ -321,10 +328,14 @@ class ScanScreenState extends State<ScanScreen> {
         if (!_isLocationWithinRange(
             userLocation, targetLatitude, targetLongitude, rangeInMeters)) {
           // Show error if the user's location is not within the acceptable range
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content:
-                    Text('The app will only work if you are in the resort')),
+          Fluttertoast.showToast(
+            msg: "Please use the app at the resort.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0
           );
           setState(() {
             isScanning = false;
@@ -349,10 +360,14 @@ class ScanScreenState extends State<ScanScreen> {
           if (tableDoc.exists) {
             List<dynamic> userNames = tableDoc['userNames'] ?? [];
             if (userNames.contains(userName)) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(
-                        'Username "$userName" already exists. Please choose a different name.')),
+              Fluttertoast.showToast(
+                msg: "Username $userName already exists.",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0
               );
               if (mounted) {
                 setState(() {
@@ -383,8 +398,14 @@ class ScanScreenState extends State<ScanScreen> {
               'loginTimestamp', DateTime.now().millisecondsSinceEpoch);
 
           // Show confirmation to user
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Hello, $userName')),
+          Fluttertoast.showToast(
+            msg: "Hello, $userName.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0
           );
 
           // Create a new collection of users for analytics
@@ -441,14 +462,26 @@ class ScanScreenState extends State<ScanScreen> {
           );
         } else {
           // Show error if tableId is invalid
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Invalid QR code')),
+          Fluttertoast.showToast(
+            msg: "Invalid QR Code.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0
           );
         }
       } catch (e) {
         print("Error saving to Firebase: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error processing QR code')),
+        Fluttertoast.showToast(
+          msg: "Error processing QR Code.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0
         );
       } finally {
         // Allow scanning again after a delay
