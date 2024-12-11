@@ -7,6 +7,11 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -27,8 +32,14 @@ class AdminPanelState extends State<AdminPanel> {
       Navigator.pushReplacementNamed(
           context, '/login'); // Redirect to login screen
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+      Fluttertoast.showToast(
+        msg: "Error: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -106,15 +117,153 @@ class AdminPanelState extends State<AdminPanel> {
     });
   }
 
+  Future<void> _generatePdf(Map<String, Map<String, int>> overallData,
+      Map<String, Map<String, Map<String, int>>> dateWiseData) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Overall Statistics', style: pw.TextStyle(fontSize: 24)),
+              pw.SizedBox(height: 20),
+              pw.Text('Request Count by Table',
+                  style: pw.TextStyle(fontSize: 18)),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: ['Table ID', 'Request Count'],
+                data: overallData.entries.map((entry) {
+                  return [entry.key, entry.value['requestCount'].toString()];
+                }).toList(),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('User Count by Table', style: pw.TextStyle(fontSize: 18)),
+              pw.SizedBox(height: 10),
+              pw.TableHelper.fromTextArray(
+                headers: ['Table ID', 'User Count'],
+                data: overallData.entries.map((entry) {
+                  return [entry.key, entry.value['usersCount'].toString()];
+                }).toList(),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Date-wise Statistics',
+                  style: pw.TextStyle(fontSize: 24)),
+              pw.SizedBox(height: 20),
+              ...dateWiseData.entries.map((dateEntry) {
+                return pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('Date: ${dateEntry.key}',
+                        style: pw.TextStyle(fontSize: 18)),
+                    pw.SizedBox(height: 10),
+                    pw.Text('Request Count by Table',
+                        style: pw.TextStyle(fontSize: 16)),
+                    pw.SizedBox(height: 10),
+                    pw.TableHelper.fromTextArray(
+                      headers: ['Table ID', 'Request Count'],
+                      data: dateEntry.value.entries.map((entry) {
+                        return [
+                          entry.key,
+                          entry.value['requestCount'].toString()
+                        ];
+                      }).toList(),
+                    ),
+                    pw.SizedBox(height: 10),
+                    pw.Text('User Count by Table',
+                        style: pw.TextStyle(fontSize: 16)),
+                    pw.SizedBox(height: 10),
+                    pw.TableHelper.fromTextArray(
+                      headers: ['Table ID', 'User Count'],
+                      data: dateEntry.value.entries.map((entry) {
+                        return [
+                          entry.key,
+                          entry.value['usersCount'].toString()
+                        ];
+                      }).toList(),
+                    ),
+                    pw.SizedBox(height: 20),
+                  ],
+                );
+              }).toList(),
+            ],
+          );
+        },
+      ),
+    );
+
+    final output = await getTemporaryDirectory();
+    final file = File("${output.path}/statistics.pdf");
+    await file.writeAsBytes(await pdf.save());
+
+    // Provide an option to download the PDF
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('PDF generated successfully!'),
+        action: SnackBarAction(
+          label: 'Download',
+          onPressed: () async {
+            OpenFile.open(file.path);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _downloadStatistics() async {
+    // Aggregate data for analytics collection
+    Map<String, Map<String, int>> overallData = {};
+    Map<String, Map<String, Map<String, int>>> dateWiseData = {};
+
+    // Fetch data from Firestore and aggregate it
+    QuerySnapshot analyticsSnapshot =
+        await FirebaseFirestore.instance.collection('analytics').get();
+    for (var doc in analyticsSnapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>;
+      String tableId = data['tableId'] ?? 'Unknown';
+      int requestCount = data['requestCount'] ?? 0;
+      int usersCount = data['usersCount'] ?? 0;
+      DateTime timestamp = (data['timestamp'] as Timestamp).toDate();
+      String dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
+
+      if (!overallData.containsKey(tableId)) {
+        overallData[tableId] = {'requestCount': 0, 'usersCount': 0};
+      }
+
+      overallData[tableId]!['requestCount'] =
+          (overallData[tableId]!['requestCount'] ?? 0) + requestCount;
+      overallData[tableId]!['usersCount'] =
+          (overallData[tableId]!['usersCount'] ?? 0) + usersCount;
+
+      if (!dateWiseData.containsKey(dateKey)) {
+        dateWiseData[dateKey] = {};
+      }
+
+      if (!dateWiseData[dateKey]!.containsKey(tableId)) {
+        dateWiseData[dateKey]![tableId] = {'requestCount': 0, 'usersCount': 0};
+      }
+
+      dateWiseData[dateKey]![tableId]!['requestCount'] =
+          (dateWiseData[dateKey]![tableId]!['requestCount'] ?? 0) +
+              requestCount;
+      dateWiseData[dateKey]![tableId]!['usersCount'] =
+          (dateWiseData[dateKey]![tableId]!['usersCount'] ?? 0) + usersCount;
+    }
+
+    // Generate and download the PDF
+    await _generatePdf(overallData, dateWiseData);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        title: const Text("TableServe",
+        title: Text("TableServe",
             style: TextStyle(
-              color: Color(0xffD4C4AB),
-              fontSize: 32,
+              color: const Color(0xffD4C4AB),
+              fontSize: _selectedIndex == 2 ? 24 : 32,
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
@@ -123,24 +272,24 @@ class AdminPanelState extends State<AdminPanel> {
             angle: 3.14, // 180 degrees in radians
             child: Icon(Icons.logout),
           ),
-          onPressed: () => _confirmLogout(context), // Call the logout function
+          onPressed: () => _confirmLogout(context),
         ),
         actions: [
           if (_selectedIndex == 2)
             Padding(
-              padding:
-                  const EdgeInsets.all(8.0), // Add padding around the InkWell
+              padding: const EdgeInsets.all(8.0),
               child: InkWell(
-                onTap: () => _selectDate(context),
-                hoverColor:
-                    Colors.grey.withOpacity(0.2), // Highlight color on hover
+                onTap: () => _showDateOptions(context),
+                hoverColor: Colors.grey.withOpacity(0.2),
                 child: Row(
                   children: [
                     Icon(Icons.calendar_today),
                     SizedBox(
                         width: 4), // Add some space between the icon and text
                     Text(
-                      DateFormat('MM/dd/yyyy').format(selectedDate),
+                      selectedDate.year == 2000
+                          ? 'Overall'
+                          : DateFormat('MM/dd/yyyy').format(selectedDate),
                       style: const TextStyle(color: Colors.black, fontSize: 11),
                     ),
                   ],
@@ -218,11 +367,27 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0
-          ? _buildActiveTables()
-          : _selectedIndex == 1
-              ? _buildRequestList()
-              : _buildAnalytics(),
+      body: Stack(
+        children: [
+          _selectedIndex == 0
+              ? _buildActiveTables()
+              : _selectedIndex == 1
+                  ? _buildRequestList()
+                  : _buildAnalytics(),
+          if (_selectedIndex == 2)
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FloatingActionButton(
+                  onPressed: _downloadStatistics,
+                  backgroundColor: Colors.blue,
+                  child: Icon(Icons.download),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -397,47 +562,53 @@ class AdminPanelState extends State<AdminPanel> {
 
         return Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Stack(
               children: [
-                Text(
-                  'Request List',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF316175),
-                    fontSize: 22,
-                    fontFamily: 'RubikOne',
-                  ),
-                ),
-                TextButton.icon(
-                  icon: Icon(Icons.add, color: Colors.blue),
-                  label: Text(
-                    'Add Request',
-                    style: TextStyle(color: Colors.blue, fontSize: 12),
-                  ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AddRequestDialog();
-                      },
-                    );
-                  },
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 5.0),
-                  child: TextButton.icon(
-                    icon: Icon(Icons.edit, color: Colors.blue),
-                    label: const Text(
-                      'Edit FAQ',
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: Text(
+                      'Request List',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 12,
+                        color: Color(0xFF316175),
+                        fontSize: 22,
+                        fontFamily: 'RubikOne',
                       ),
                     ),
-                    onPressed: () {
-                      _showFaqEditDialog();
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  child: PopupMenuButton<String>(
+                    icon: Icon(Icons.menu,
+                        color: Colors.blue), // Burger menu icon
+                    onSelected: (String result) {
+                      switch (result) {
+                        case 'Add Request':
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AddRequestDialog();
+                            },
+                          );
+                          break;
+                        case 'Edit FAQ':
+                          _showFaqEditDialog();
+                          break;
+                      }
                     },
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'Add Request',
+                        child: Text('Add Request'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'Edit FAQ',
+                        child: Text('Edit FAQ'),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -523,6 +694,10 @@ class AdminPanelState extends State<AdminPanel> {
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                      child: Text("No FAQS available. Add one!"));
+                }
 
                 final faqs = snapshot.data!.docs;
 
@@ -600,12 +775,24 @@ class AdminPanelState extends State<AdminPanel> {
                     .delete()
                     .then((_) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('FAQ deleted successfully')),
+                  Fluttertoast.showToast(
+                    msg: "FAQ deleted successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }).catchError((error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to delete FAQ: $error')),
+                  Fluttertoast.showToast(
+                    msg: "Failed to delete FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 });
               },
@@ -665,12 +852,24 @@ class AdminPanelState extends State<AdminPanel> {
                   'details': detailsController.text,
                 }).then((_) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('FAQ updated successfully')),
+                  Fluttertoast.showToast(
+                    msg: "FAQ updated successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }).catchError((error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update FAQ: $error')),
+                  Fluttertoast.showToast(
+                    msg: "Failed to update FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 });
               },
@@ -724,12 +923,24 @@ class AdminPanelState extends State<AdminPanel> {
                   'details': detailsController.text,
                 }).then((_) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('FAQ added successfully')),
+                  Fluttertoast.showToast(
+                    msg: "FAQ added successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }).catchError((error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to add FAQ: $error')),
+                  Fluttertoast.showToast(
+                    msg: "Failed to add FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 });
               },
@@ -779,30 +990,61 @@ class AdminPanelState extends State<AdminPanel> {
                       .doc(docId)
                       .delete()
                       .then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('Request deleted successfully')));
+                    Fluttertoast.showToast(
+                      msg: "Request deleted successfully",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to delete request')));
+                    Fluttertoast.showToast(
+                      msg: "Failed to delete request",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   });
                   FirebaseFirestore.instance
                       .collection('globalAnalytics')
                       .doc(docId)
                       .delete()
                       .then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('Request From Analytics Successfully')));
+                    Fluttertoast.showToast(
+                      msg: "Request from Analytics deleted successfully",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content:
-                            Text('Failed to delete request from Analytics')));
+                    Fluttertoast.showToast(
+                      msg: "Failed to delete request from Analytics",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   });
-                  Navigator.of(context)
-                      .pop(); // Close the dialog after deletion
+                  Navigator.of(context).pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Incorrect confirmation text")),
+                  Fluttertoast.showToast(
+                    msg: "Incorrect confirmation text",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }
               },
@@ -824,7 +1066,7 @@ class AdminPanelState extends State<AdminPanel> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: selectedDate.year == 2000 ? DateTime.now() : selectedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2101),
     );
@@ -835,10 +1077,51 @@ class AdminPanelState extends State<AdminPanel> {
     }
   }
 
+  void _showDateOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Select Date"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text("Overall"),
+                onTap: () {
+                  setState(() {
+                    selectedDate = DateTime(2000); // Set to a very early date
+                  });
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: const Text("Pick a date"),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _selectDate(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildAnalytics() {
-    DateTime startOfDay =
-        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    DateTime endOfDay = startOfDay.add(Duration(days: 1));
+    DateTime startOfDay;
+    DateTime endOfDay;
+
+    if (selectedDate.year == 2000) {
+      // Handle the "Overall" option
+      startOfDay = DateTime(2000);
+      endOfDay = DateTime(2101);
+    } else {
+      startOfDay =
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+      endOfDay = startOfDay.add(Duration(days: 1));
+    }
 
     return Column(
       children: [
@@ -1184,9 +1467,15 @@ class AddRequestDialogState extends State<AddRequestDialog> {
             }
 
             if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text("Request type and information cannot be empty")));
+              Fluttertoast.showToast(
+                msg: "Request type and information cannot be empty",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
               return;
             }
 
@@ -1196,8 +1485,15 @@ class AddRequestDialogState extends State<AddRequestDialog> {
                 .get();
 
             if (existingDoc.exists) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text("A request with this type already exists")));
+              Fluttertoast.showToast(
+                msg: "A request with this type already exists",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
             } else {
               // Add request with 'type' as document ID
               FirebaseFirestore.instance
@@ -1208,11 +1504,25 @@ class AddRequestDialogState extends State<AddRequestDialog> {
                 'information': information,
                 'items': items.isEmpty ? [] : items,
               }).then((_) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Request added successfully')));
+                Fluttertoast.showToast(
+                  msg: "Request added successfully",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
               }).catchError((error) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to add request')));
+                Fluttertoast.showToast(
+                  msg: "Failed to add request",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
               });
               // add request to the analytics
               FirebaseFirestore.instance
@@ -1222,11 +1532,25 @@ class AddRequestDialogState extends State<AddRequestDialog> {
                 type: 0,
               }).then((_) {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Request added to Analytics')));
+                Fluttertoast.showToast(
+                  msg: "Request added to Analytics",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
               }).catchError((error) {
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Failed to add request to Analytics')));
+                Fluttertoast.showToast(
+                  msg: "Failed to add request to Analytics",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
               });
             }
           },
@@ -1336,12 +1660,17 @@ class EditRequestDialogState extends State<EditRequestDialog> {
             List<String> items = List.from(_items);
 
             if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content:
-                      Text("Request type and information cannot be empty")));
+              Fluttertoast.showToast(
+                msg: "Request type and information cannot be empty",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
               return;
             }
-
             // Logic to update existing document with new data
             await FirebaseFirestore.instance
                 .collection('requestList')
@@ -1355,11 +1684,25 @@ class EditRequestDialogState extends State<EditRequestDialog> {
               'items': items.isEmpty ? [] : items,
             }).then((_) {
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Request updated successfully')));
+              Fluttertoast.showToast(
+                msg: "Request updated successfully",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.green,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
             }).catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Failed to update request')));
+              Fluttertoast.showToast(
+                msg: "Failed to update request",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
             });
 
             // Update global analytics
@@ -1509,20 +1852,26 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       });
 
       // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Request status updated to $status"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
+      Fluttertoast.showToast(
+        msg: "Request status updated to $status",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
       // Show error message if update fails
       print("Error updating request status: $e"); // Debug: Print the error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to update request status: $e"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
+      Fluttertoast.showToast(
+        msg: "Failed to update request status: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -1604,13 +1953,24 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         'userName': userName,
         'sendTo': 'user',
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request marked as done successfully")),
+      Fluttertoast.showToast(
+        msg: "Request marked as done successfully",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to mark request as done: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to mark request as done: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -1650,9 +2010,14 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   _deleteAllRequests();
                   Navigator.of(context).pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Incorrect confirmation text")),
+                  Fluttertoast.showToast(
+                    msg: "Incorrect confirmation text",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }
               },
@@ -1936,12 +2301,24 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           .collection('guestRequests')
           .doc(requestId)
           .delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request deleted successfully")),
+      Fluttertoast.showToast(
+        msg: "Request deleted successfully",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete request: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to delete request: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
