@@ -85,7 +85,7 @@ class NotificationScreenState extends State<NotificationScreen> {
               'rejected',
               'pending',
               'done',
-              'newMessage'
+              'message'
             ].map<DropdownMenuItem<String>>((String value) {
               return DropdownMenuItem<String>(
                 value: value,
@@ -118,8 +118,7 @@ class NotificationScreenState extends State<NotificationScreen> {
             padding: EdgeInsets.zero,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var doc =
-                  snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
+              var doc = snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
               var data = doc.data() as Map<String, dynamic>;
 
               return ListTile(
