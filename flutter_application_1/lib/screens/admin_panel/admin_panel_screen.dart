@@ -7,6 +7,11 @@ import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:intl/intl.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:open_file/open_file.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -15,291 +20,11 @@ class AdminPanel extends StatefulWidget {
   AdminPanelState createState() => AdminPanelState();
 }
 
-class AddRequestDialog extends StatefulWidget {
-  @override
-  _AddRequestDialogState createState() => _AddRequestDialogState();
-}
-
-class _AddRequestDialogState extends State<AddRequestDialog> {
-
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _informationController = TextEditingController();
-  final TextEditingController _itemController = TextEditingController();
-  List<String> _items = [];
-
-  void _addItem() {
-    setState(() {
-      if (_itemController.text.isNotEmpty) {
-        _items.add(_itemController.text);
-        _itemController.clear();
-      }
-    });
-  }
-
-  void _removeItem(int index) {
-    setState(() {
-      _items.removeAt(index);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Create New Request",
-            style: TextStyle(
-              color: Color(0xFF316175),
-              fontFamily: "RubikOne",
-            )),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _typeController,
-              decoration: InputDecoration(labelText: 'Request'),
-            ),
-            TextField(
-              controller: _informationController,
-              decoration: InputDecoration(labelText: 'Information'),
-            ),
-            TextField(
-              controller: _itemController,
-              decoration:
-                InputDecoration(
-                  labelText: 'Add Item',
-                  suffixIcon:
-                    IconButton(
-                      icon: Icon(Icons.add),
-                      onPressed: _addItem,
-                    ),
-                ) 
-            ),
-            SizedBox(height: 10),
-            Column(
-              children: _items.map((item) {
-                int index = _items.indexOf(item);
-                return ListTile(
-                  title: Text(item),
-                  trailing: IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () => _removeItem(index),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            String type = _typeController.text;
-            String information = _informationController.text;
-            List<String> items = List.from(_items);
-            if (_items.isEmpty) {
-              items = [];
-            }
-
-            if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Request type and information cannot be empty")));
-              return;
-            }
-
-            var existingDoc = await FirebaseFirestore.instance.collection('requestList').doc(type).get();
-
-            if (existingDoc.exists) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("A request with this type already exists")));
-            } else {
-              // Add request with 'type' as document ID
-                FirebaseFirestore.instance.collection('requestList').doc(type).set({
-                  'type': type,
-                  'information': information,
-                  'items': items.isEmpty ? [] : items,
-                }).then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added successfully')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request')));
-                  });
-                  // add request to the analytics
-                  FirebaseFirestore.instance.collection('globalAnalytics').doc(type).set({
-                    type: 0,
-                  }).then((_) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Request added to Analytics')));
-                  }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to add request to Analytics')));
-                  });
-                }
-              },
-              child: Text("Save"),
-            ),
-      ],
-    );
-  }
-}
-
-class EditRequestDialog extends StatefulWidget {
-  final Map<String, dynamic> doc;  // Accept doc as a parameter
-
-  EditRequestDialog({required this.doc});
-
-  @override
-  _EditRequestDialogState createState() => _EditRequestDialogState();
-}
-
-class _EditRequestDialogState extends State<EditRequestDialog> {
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _informationController = TextEditingController();
-  final TextEditingController _itemController = TextEditingController();
-  List<String> _items = [];
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize controllers with current doc values
-    _typeController.text = widget.doc['type'];
-    _informationController.text = widget.doc['information'];
-    _items = List<String>.from(widget.doc['items'] ?? []);
-  }
-
-  void _addItem() {
-    setState(() {
-      if (_itemController.text.isNotEmpty) {
-        _items.add(_itemController.text);
-        _itemController.clear();
-      }
-    });
-  }
-
-  void _removeItem(int index) {
-    setState(() {
-      _items.removeAt(index);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Edit Request",
-          style: TextStyle(
-            color: Color(0xFF316175),
-            fontFamily: "RubikOne",
-          )),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _typeController,
-              decoration: InputDecoration(labelText: 'Request'),
-            ),
-            TextField(
-              controller: _informationController,
-              decoration: InputDecoration(labelText: 'Information'),
-            ),
-            TextField(
-              controller: _itemController,
-              decoration: InputDecoration(
-                labelText: 'Add Item',
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.add),
-                  onPressed: _addItem,
-                ),
-              ),
-            ),
-            SizedBox(height: 10),
-            Column(
-              children: _items.map((item) {
-                int index = _items.indexOf(item);
-                return ListTile(
-                  title: Text(item),
-                  trailing: IconButton(
-                    icon: Icon(Icons.remove),
-                    onPressed: () => _removeItem(index),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-          child: Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            String type = _typeController.text;
-            String information = _informationController.text;
-            List<String> items = List.from(_items);
-
-            if (type.isEmpty || information.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Request type and information cannot be empty"))
-              );
-              return;
-            }
-
-            // Logic to update existing document with new data
-            await FirebaseFirestore.instance
-                .collection('requestList')
-                .doc(widget.doc['type'])  // Use old type as doc ID
-                .delete(); // Delete old document
-
-            // Add the updated request to Firestore
-            FirebaseFirestore.instance.collection('requestList').doc(type).set({
-              'type': type,
-              'information': information,
-              'items': items.isEmpty ? [] : items,
-            }).then((_) {
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Request updated successfully'))
-              );
-            }).catchError((error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Failed to update request'))
-              );
-            });
-
-            // Update global analytics
-            var oldDoc = await FirebaseFirestore.instance
-                .collection('globalAnalytics')
-                .doc(widget.doc['type'])
-                .get();
-
-            if (oldDoc.exists) {
-              var requestTypeValue = oldDoc.data()?[widget.doc['type']];
-              // Now delete the old document
-                    await FirebaseFirestore.instance
-                        .collection('globalAnalytics')
-                        .doc(widget.doc['type'])
-                        .delete();
-              await FirebaseFirestore.instance
-                  .collection('globalAnalytics')
-                  .doc(type) // Set the new type in global analytics
-                  .set({type: requestTypeValue});
-            }
-          },
-          child: Text("Save"),
-        ),
-      ],
-    );
-  }
-}
-
 class AdminPanelState extends State<AdminPanel> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   int _selectedIndex = 0;
+  DateTime selectedWeek = DateTime.now();
+  List<DateTime> weeks = [];
 
   Future<void> _logout(BuildContext context) async {
     try {
@@ -307,8 +32,14 @@ class AdminPanelState extends State<AdminPanel> {
       Navigator.pushReplacementNamed(
           context, '/login'); // Redirect to login screen
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+      Fluttertoast.showToast(
+        msg: "Error: ${e.toString()}",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -386,15 +117,216 @@ class AdminPanelState extends State<AdminPanel> {
     });
   }
 
+  Future<void> _generatePdf(
+      Map<String, Map<String, int>> overallData,
+      Map<String, Map<String, Map<String, int>>> dateWiseData,
+      int totalRequestsCount,
+      int totalUsersCount) async {
+    final pdf = pw.Document();
+
+    pdf.addPage(
+      pw.Page(
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              if (selectedDate.year == 2000) ...[
+                pw.Text('Overall Statistics',
+                    style: pw.TextStyle(fontSize: 24)),
+                pw.SizedBox(height: 20),
+                pw.Text('Request Count by Table',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.TableHelper.fromTextArray(
+                  headers: ['Table ID', 'Request Count'],
+                  data: overallData.entries.map((entry) {
+                    return [entry.key, entry.value['requestCount'].toString()];
+                  }).toList(),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('User Count by Table',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.TableHelper.fromTextArray(
+                  headers: ['Table ID', 'User Count'],
+                  data: overallData.entries.map((entry) {
+                    return [entry.key, entry.value['usersCount'].toString()];
+                  }).toList(),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Total Requests: $totalRequestsCount',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.Text('Total Users: $totalUsersCount',
+                    style: pw.TextStyle(fontSize: 18)),
+              ],
+              if (selectedDate.year != 2000) ...[
+                pw.Text('TableServe Statistics',
+                    style: pw.TextStyle(fontSize: 24)),
+                pw.SizedBox(height: 20),
+                ...dateWiseData.entries.map((dateEntry) {
+                  int dateTotalRequests = dateEntry.value.values
+                      .fold(0, (sum, entry) => sum + entry['requestCount']!);
+                  int dateTotalUsers = dateEntry.value.values
+                      .fold(0, (sum, entry) => sum + entry['usersCount']!);
+                  return pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Date: ${dateEntry.key}',
+                          style: pw.TextStyle(fontSize: 18)),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Request Count by Table',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.TableHelper.fromTextArray(
+                        headers: ['Table ID', 'Request Count'],
+                        data: dateEntry.value.entries.map((entry) {
+                          return [
+                            entry.key,
+                            entry.value['requestCount'].toString()
+                          ];
+                        }).toList(),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text('User Count by Table',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.TableHelper.fromTextArray(
+                        headers: ['Table ID', 'User Count'],
+                        data: dateEntry.value.entries.map((entry) {
+                          return [
+                            entry.key,
+                            entry.value['usersCount'].toString()
+                          ];
+                        }).toList(),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Total Requests: $dateTotalRequests',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Total Users: $dateTotalUsers',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 20),
+                    ],
+                  );
+                }).toList(),
+              ],
+            ],
+          );
+        },
+      ),
+    );
+
+    final output = await getTemporaryDirectory();
+    final file = File("${output.path}/statistics.pdf");
+    await file.writeAsBytes(await pdf.save());
+
+    // Provide an option to download the PDF
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('PDF generated successfully!'),
+        action: SnackBarAction(
+          label: 'Open',
+          onPressed: () async {
+            OpenFile.open(file.path);
+          },
+        ),
+      ),
+    );
+  }
+
+  bool _isLoading = false;
+
+  void _downloadStatistics() async {
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
+    // Aggregate data for analytics collection
+    Map<String, Map<String, int>> overallData = {};
+    Map<String, Map<String, Map<String, int>>> dateWiseData = {};
+
+    DateTime startOfDay;
+    DateTime endOfDay;
+
+    if (selectedDate.year == 2000) {
+      // Handle the "Overall" option
+      startOfDay = DateTime(2000);
+      endOfDay = DateTime(2101);
+    } else {
+      startOfDay =
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+      endOfDay = startOfDay.add(Duration(days: 1));
+    }
+
+    // Fetch data from Firestore and aggregate it
+    QuerySnapshot analyticsSnapshot = await FirebaseFirestore.instance
+        .collection('analytics')
+        .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+        .where('timestamp', isLessThan: endOfDay)
+        .get();
+
+    int totalRequestsCount = 0;
+    int totalUsersCount = 0;
+
+    for (var doc in analyticsSnapshot.docs) {
+      var data = doc.data() as Map<String, dynamic>;
+      String tableId = data['tableId'] ?? 'Unknown';
+      int requestCount = data['requestCount'] ?? 0;
+      int usersCount = data['usersCount'] ?? 0;
+      DateTime timestamp = (data['timestamp'] as Timestamp).toDate();
+      String dateKey = DateFormat('yyyy-MM-dd').format(timestamp);
+
+      if (!overallData.containsKey(tableId)) {
+        overallData[tableId] = {'requestCount': 0, 'usersCount': 0};
+      }
+
+      overallData[tableId]!['requestCount'] =
+          (overallData[tableId]!['requestCount'] ?? 0) + requestCount;
+      overallData[tableId]!['usersCount'] =
+          (overallData[tableId]!['usersCount'] ?? 0) + usersCount;
+
+      totalRequestsCount += requestCount;
+      totalUsersCount += usersCount;
+
+      if (selectedDate.year != 2000) {
+        if (!dateWiseData.containsKey(dateKey)) {
+          dateWiseData[dateKey] = {};
+        }
+
+        if (!dateWiseData[dateKey]!.containsKey(tableId)) {
+          dateWiseData[dateKey]![tableId] = {
+            'requestCount': 0,
+            'usersCount': 0
+          };
+        }
+
+        dateWiseData[dateKey]![tableId]!['requestCount'] =
+            (dateWiseData[dateKey]![tableId]!['requestCount'] ?? 0) +
+                requestCount;
+        dateWiseData[dateKey]![tableId]!['usersCount'] =
+            (dateWiseData[dateKey]![tableId]!['usersCount'] ?? 0) + usersCount;
+      }
+    }
+
+    // Generate and download the PDF
+    await _generatePdf(
+        overallData, dateWiseData, totalRequestsCount, totalUsersCount);
+
+    setState(() {
+      _isLoading = false; // Hide loading indicator
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        title: const Text("TableServe",
+        title: Text("TableServe",
             style: TextStyle(
-              color: Color(0xffD4C4AB),
-              fontSize: 32,
+              color: const Color(0xffD4C4AB),
+              fontSize: _selectedIndex == 2 ? 24 : 32,
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
@@ -403,9 +335,30 @@ class AdminPanelState extends State<AdminPanel> {
             angle: 3.14, // 180 degrees in radians
             child: Icon(Icons.logout),
           ),
-          onPressed: () => _confirmLogout(context), // Call the logout function
+          onPressed: () => _confirmLogout(context),
         ),
         actions: [
+          if (_selectedIndex == 2)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: InkWell(
+                onTap: () => _showDateOptions(context),
+                hoverColor: Colors.grey.withOpacity(0.2),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today),
+                    SizedBox(
+                        width: 4), // Add some space between the icon and text
+                    Text(
+                      selectedDate.year == 2000
+                          ? 'Overall'
+                          : DateFormat('MM/dd/yyyy').format(selectedDate),
+                      style: const TextStyle(color: Colors.black, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           StreamBuilder(
             stream: FirebaseFirestore.instance
                 .collection('adminNotifications')
@@ -477,11 +430,32 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0
-          ? _buildActiveTables()
-          : _selectedIndex == 1
-              ? _buildRequestList()
-              : _buildAnalytics(),
+      body: Stack(
+        children: [
+          _selectedIndex == 0
+              ? _buildActiveTables()
+              : _selectedIndex == 1
+                  ? _buildRequestList()
+                  : _buildAnalytics(),
+          if (_selectedIndex == 2)
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: FloatingActionButton(
+                  onPressed: _isLoading ? null : _downloadStatistics,
+                  backgroundColor: Colors.blue,
+                  child: _isLoading
+                      ? CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Icon(Icons.download),
+                ),
+              ),
+            ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
@@ -612,64 +586,6 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
-  // Widget _buildIncomingUsers() {
-  //   return StreamBuilder(
-  //     stream: FirebaseFirestore.instance
-  //         .collection('adminNotifications')
-  //         .where('type', isEqualTo: 'newUser')
-  //         .where('viewed', isEqualTo: false)
-  //         .snapshots(),
-  //     builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-  //       if (snapshot.connectionState == ConnectionState.waiting) {
-  //         return const Center(child: CircularProgressIndicator());
-  //       }
-  //       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-  //         return const Center(child: Text("No incoming users"));
-  //       }
-  //       return ListView(
-  //         children: snapshot.data!.docs.map((doc) {
-  //           var data = doc.data() as Map<String, dynamic>;
-  //           String userName = data['message'].split('"')[1];
-  //           String tableId = data['message'].split('"')[5];
-  //           return ListTile(
-  //             title: Text('User: $userName'),
-  //             subtitle: Text('Table: $tableId'),
-  //             trailing: Row(
-  //               mainAxisSize: MainAxisSize.min,
-  //               children: [
-  //                 IconButton(
-  //                   icon: const Icon(Icons.check, color: Colors.green),
-  //                   onPressed: () async {
-  //                     await FirebaseFirestore.instance
-  //                         .collection('adminNotifications')
-  //                         .doc(doc.id)
-  //                         .update({'approved': true, 'viewed': true});
-  //                     ScaffoldMessenger.of(context).showSnackBar(
-  //                       const SnackBar(content: Text("User approved")),
-  //                     );
-  //                   },
-  //                 ),
-  //                 IconButton(
-  //                   icon: const Icon(Icons.close, color: Colors.red),
-  //                   onPressed: () async {
-  //                     await FirebaseFirestore.instance
-  //                         .collection('adminNotifications')
-  //                         .doc(doc.id)
-  //                         .update({'approved': false, 'viewed': true});
-  //                     ScaffoldMessenger.of(context).showSnackBar(
-  //                       const SnackBar(content: Text("User rejected")),
-  //                     );
-  //                   },
-  //                 ),
-  //               ],
-  //             ),
-  //           );
-  //         }).toList(),
-  //       );
-  //     },
-  //   );
-  // }
-
   Widget _buildRequestList() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('requestList').snapshots(),
@@ -679,12 +595,11 @@ class AdminPanelState extends State<AdminPanel> {
             child: CircularProgressIndicator(),
           );
         }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // const Center(child: Text("No requests")),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -700,7 +615,9 @@ class AdminPanelState extends State<AdminPanel> {
                     child: Row(
                       children: [
                         Icon(Icons.add, color: Colors.blue),
-                        SizedBox(width: 8), // Optional: Adds space between icon and text
+                        SizedBox(
+                            width:
+                                8), // Optional: Adds space between icon and text
                         Text('Add Request'),
                       ],
                     ),
@@ -713,29 +630,54 @@ class AdminPanelState extends State<AdminPanel> {
 
         return Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Stack(
               children: [
-                Text(
-                  'Request List',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Color(0xFF316175),
-                    fontSize: 32,
-                    fontFamily: 'RubikOne',
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 10.0),
+                    child: Text(
+                      'Request List',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF316175),
+                        fontSize: 22,
+                        fontFamily: 'RubikOne',
+                      ),
+                    ),
                   ),
                 ),
-                // const SizedBox(width: 5),
-                IconButton(
-                  icon: Icon(Icons.add, color: Colors.blue),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AddRequestDialog();
-                      },
-                    );
-                  },
+                Positioned(
+                  right: 0,
+                  child: PopupMenuButton<String>(
+                    icon: Icon(Icons.menu,
+                        color: Colors.blue), // Burger menu icon
+                    onSelected: (String result) {
+                      switch (result) {
+                        case 'Add Request':
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AddRequestDialog();
+                            },
+                          );
+                          break;
+                        case 'Edit FAQ':
+                          _showFaqEditDialog();
+                          break;
+                      }
+                    },
+                    itemBuilder: (BuildContext context) =>
+                        <PopupMenuEntry<String>>[
+                      const PopupMenuItem<String>(
+                        value: 'Add Request',
+                        child: Text('Add Request'),
+                      ),
+                      const PopupMenuItem<String>(
+                        value: 'Edit FAQ',
+                        child: Text('Edit FAQ'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -776,7 +718,8 @@ class AdminPanelState extends State<AdminPanel> {
                               showDialog(
                                 context: context,
                                 builder: (BuildContext context) {
-                                  return EditRequestDialog(doc: doc.data() as Map<String, dynamic>);
+                                  return EditRequestDialog(
+                                      doc: doc.data() as Map<String, dynamic>);
                                 },
                               );
                             },
@@ -793,18 +736,283 @@ class AdminPanelState extends State<AdminPanel> {
                       ),
                       onTap: () {
                         // Add navigation or actions on tap if necessary
-                        // Example:
-                        // Navigator.push(
-                        //   context,
-                        //   MaterialPageRoute(
-                        //     builder: (context) => RequestDetailsScreen(requestType: requestType),
-                        //   ),
-                        // );
                       },
                     ),
                   );
                 }).toList(),
               ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showFaqEditDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit FAQs"),
+          content: Container(
+            width: double.maxFinite,
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('faqs').snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                      child: Text("No FAQS available. Add one!"));
+                }
+
+                final faqs = snapshot.data!.docs;
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: faqs.length,
+                  itemBuilder: (context, index) {
+                    var faq = faqs[index];
+                    var data = faq.data() as Map<String, dynamic>;
+
+                    return ListTile(
+                      title: Text(data['title'] ?? 'No Title'),
+                      subtitle: Text(data['content'] ?? 'No Content'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () {
+                              _showEditDialog(faq.id, data);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () {
+                              _showDeleteFaqConfirmationDialog(context, faq.id);
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Close"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                _showAddFaqDialog();
+              },
+              child: const Text("Add FAQ"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showDeleteFaqConfirmationDialog(BuildContext context, String docId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Delete FAQ"),
+          content: const Text("Are you sure you want to delete this FAQ?"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('faqs')
+                    .doc(docId)
+                    .delete()
+                    .then((_) {
+                  Navigator.of(context).pop();
+                  Fluttertoast.showToast(
+                    msg: "FAQ deleted successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                }).catchError((error) {
+                  Fluttertoast.showToast(
+                    msg: "Failed to delete FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                });
+              },
+              child: const Text("Delete"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showEditDialog(String docId, Map<String, dynamic> data) {
+    TextEditingController titleController =
+        TextEditingController(text: data['title']);
+    TextEditingController contentController =
+        TextEditingController(text: data['content']);
+    TextEditingController detailsController =
+        TextEditingController(text: data['details']);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit FAQ"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: contentController,
+                decoration: const InputDecoration(labelText: 'Content'),
+              ),
+              TextField(
+                controller: detailsController,
+                decoration: const InputDecoration(labelText: 'Details'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance
+                    .collection('faqs')
+                    .doc(docId)
+                    .update({
+                  'title': titleController.text,
+                  'content': contentController.text,
+                  'details': detailsController.text,
+                }).then((_) {
+                  Navigator.of(context).pop();
+                  Fluttertoast.showToast(
+                    msg: "FAQ updated successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                }).catchError((error) {
+                  Fluttertoast.showToast(
+                    msg: "Failed to update FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                });
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAddFaqDialog() {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController contentController = TextEditingController();
+    TextEditingController detailsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Add FAQ"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: const InputDecoration(labelText: 'Title'),
+              ),
+              TextField(
+                controller: contentController,
+                decoration: const InputDecoration(labelText: 'Content'),
+              ),
+              TextField(
+                controller: detailsController,
+                decoration: const InputDecoration(labelText: 'Details'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text("Cancel"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                FirebaseFirestore.instance.collection('faqs').add({
+                  'title': titleController.text,
+                  'content': contentController.text,
+                  'details': detailsController.text,
+                }).then((_) {
+                  Navigator.of(context).pop();
+                  Fluttertoast.showToast(
+                    msg: "FAQ added successfully",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                }).catchError((error) {
+                  Fluttertoast.showToast(
+                    msg: "Failed to add FAQ: $error",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                });
+              },
+              child: const Text("Save"),
             ),
           ],
         );
@@ -850,30 +1058,61 @@ class AdminPanelState extends State<AdminPanel> {
                       .doc(docId)
                       .delete()
                       .then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('Request deleted successfully')));
+                    Fluttertoast.showToast(
+                      msg: "Request deleted successfully",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Failed to delete request')));
+                    Fluttertoast.showToast(
+                      msg: "Failed to delete request",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   });
                   FirebaseFirestore.instance
                       .collection('globalAnalytics')
                       .doc(docId)
                       .delete()
                       .then((_) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text('Request From Analytics Successfully')));
+                    Fluttertoast.showToast(
+                      msg: "Request from Analytics deleted successfully",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   }).catchError((error) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content:
-                            Text('Failed to delete request from Analytics')));
+                    Fluttertoast.showToast(
+                      msg: "Failed to delete request from Analytics",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
+                    );
                   });
-                  Navigator.of(context)
-                      .pop(); // Close the dialog after deletion
+                  Navigator.of(context).pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Incorrect confirmation text")),
+                  Fluttertoast.showToast(
+                    msg: "Incorrect confirmation text",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }
               },
@@ -889,13 +1128,83 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
+  // analytics
+  DateTime selectedDate = DateTime.now();
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate.year == 2000 ? DateTime.now() : selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null && picked != selectedDate) {
+      setState(() {
+        selectedDate = picked;
+        print("Selected date: $selectedDate"); // Debug print
+      });
+    }
+  }
+
+  void _showDateOptions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Select Date"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: const Text("Overall"),
+                onTap: () {
+                  setState(() {
+                    selectedDate = DateTime(2000); // Set to a very early date
+                    print("Selected Overall"); // Debug print
+                  });
+                  Navigator.of(context).pop();
+                },
+              ),
+              ListTile(
+                title: const Text("Pick a date"),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _selectDate(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildAnalytics() {
+    DateTime startOfDay;
+    DateTime endOfDay;
+
+    if (selectedDate.year == 2000) {
+      // Handle the "Overall" option
+      startOfDay = DateTime(2000);
+      endOfDay = DateTime(2101);
+      print("Using Overall date range"); // Debug print
+    } else {
+      startOfDay =
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+      endOfDay = startOfDay.add(Duration(days: 1));
+      print(
+          "Using selected date range: $startOfDay to $endOfDay"); // Debug print
+    }
+
     return Column(
       children: [
         Expanded(
           child: StreamBuilder(
-            stream:
-                FirebaseFirestore.instance.collection('analytics').snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('analytics')
+                .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+                .where('timestamp', isLessThan: endOfDay)
+                .snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> analyticsSnapshot) {
               if (analyticsSnapshot.connectionState ==
                   ConnectionState.waiting) {
@@ -909,6 +1218,11 @@ class AdminPanelState extends State<AdminPanel> {
               return StreamBuilder(
                 stream: FirebaseFirestore.instance
                     .collection('globalAnalytics')
+                    .where('timestamp',
+                        isGreaterThanOrEqualTo:
+                            startOfDay) // Filter by timestamp
+                    .where('timestamp',
+                        isLessThan: endOfDay) // Filter by timestamp
                     .snapshots(),
                 builder: (context,
                     AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
@@ -919,7 +1233,7 @@ class AdminPanelState extends State<AdminPanel> {
                   if (!globalAnalyticsSnapshot.hasData ||
                       globalAnalyticsSnapshot.data!.docs.isEmpty) {
                     return const Center(
-                        child: Text("No global analytics data"));
+                        child: Text("No available analytics data"));
                   }
 
                   // Aggregate data for analytics collection
@@ -962,17 +1276,25 @@ class AdminPanelState extends State<AdminPanel> {
                   }).toList();
 
                   // Aggregate data for globalAnalytics collection
-                  List<_ChartData> requestTypeData = [];
+                  Map<String, int> requestTypeCounts = {};
                   for (var doc in globalAnalyticsSnapshot.data!.docs) {
                     var data = doc.data() as Map<String, dynamic>;
                     // Iterate over each field in the document
                     data.forEach((key, value) {
                       if (value is int) {
-                        // Ensure the value is an integer
-                        requestTypeData.add(_ChartData(key, value));
+                        if (!requestTypeCounts.containsKey(key)) {
+                          requestTypeCounts[key] = 0;
+                        }
+                        requestTypeCounts[key] =
+                            requestTypeCounts[key]! + value;
                       }
                     });
                   }
+
+                  List<_ChartData> requestTypeData =
+                      requestTypeCounts.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value);
+                  }).toList();
 
                   return SingleChildScrollView(
                     child: Column(
@@ -1111,7 +1433,6 @@ class AdminPanelState extends State<AdminPanel> {
                               overflowMode: LegendItemOverflowMode
                                   .wrap, // Allows wrapping for long legends
                               itemPadding: 10,
-
                             ),
                             series: <CircularSeries>[
                               PieSeries<_ChartData, String>(
@@ -1133,6 +1454,361 @@ class AdminPanelState extends State<AdminPanel> {
               );
             },
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class AddRequestDialog extends StatefulWidget {
+  const AddRequestDialog({super.key});
+
+  @override
+  AddRequestDialogState createState() => AddRequestDialogState();
+}
+
+// add request for admin
+class AddRequestDialogState extends State<AddRequestDialog> {
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Create New Request",
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+                controller: _itemController,
+                decoration: InputDecoration(
+                  labelText: 'Add Item',
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.add),
+                    onPressed: _addItem,
+                  ),
+                )),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+            if (_items.isEmpty) {
+              items = [];
+            }
+
+            if (type.isEmpty || information.isEmpty) {
+              Fluttertoast.showToast(
+                msg: "Request type and information cannot be empty",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+              return;
+            }
+
+            var existingDoc = await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(type)
+                .get();
+
+            if (existingDoc.exists) {
+              Fluttertoast.showToast(
+                msg: "A request with this type already exists",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+            } else {
+              // Add request with 'type' as document ID
+              FirebaseFirestore.instance
+                  .collection('requestList')
+                  .doc(type)
+                  .set({
+                'type': type,
+                'information': information,
+                'items': items.isEmpty ? [] : items,
+              }).then((_) {
+                Fluttertoast.showToast(
+                  msg: "Request added successfully",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
+              }).catchError((error) {
+                Fluttertoast.showToast(
+                  msg: "Failed to add request",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
+              });
+              // add request to the analytics
+              FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type)
+                  .set({
+                type: 0,
+              }).then((_) {
+                Navigator.of(context).pop();
+                Fluttertoast.showToast(
+                  msg: "Request added to Analytics",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.green,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
+              }).catchError((error) {
+                Fluttertoast.showToast(
+                  msg: "Failed to add request to Analytics",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  timeInSecForIosWeb: 1,
+                  backgroundColor: Colors.red,
+                  textColor: Colors.white,
+                  fontSize: 16.0,
+                );
+              });
+            }
+          },
+          child: Text("Save"),
+        ),
+      ],
+    );
+  }
+}
+
+class EditRequestDialog extends StatefulWidget {
+  final Map<String, dynamic> doc; // Accept doc as a parameter
+
+  const EditRequestDialog({super.key, required this.doc});
+
+  @override
+  EditRequestDialogState createState() => EditRequestDialogState();
+}
+
+class EditRequestDialogState extends State<EditRequestDialog> {
+  final TextEditingController _typeController = TextEditingController();
+  final TextEditingController _informationController = TextEditingController();
+  final TextEditingController _itemController = TextEditingController();
+  List<String> _items = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize controllers with current doc values
+    _typeController.text = widget.doc['type'];
+    _informationController.text = widget.doc['information'];
+    _items = List<String>.from(widget.doc['items'] ?? []);
+  }
+
+  void _addItem() {
+    setState(() {
+      if (_itemController.text.isNotEmpty) {
+        _items.add(_itemController.text);
+        _itemController.clear();
+      }
+    });
+  }
+
+  void _removeItem(int index) {
+    setState(() {
+      _items.removeAt(index);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text("Edit Request",
+          style: TextStyle(
+            color: Color(0xFF316175),
+            fontFamily: "RubikOne",
+          )),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _typeController,
+              decoration: InputDecoration(labelText: 'Request'),
+            ),
+            TextField(
+              controller: _informationController,
+              decoration: InputDecoration(labelText: 'Information'),
+            ),
+            TextField(
+              controller: _itemController,
+              decoration: InputDecoration(
+                labelText: 'Add Item',
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.add),
+                  onPressed: _addItem,
+                ),
+              ),
+            ),
+            SizedBox(height: 10),
+            Column(
+              children: _items.map((item) {
+                int index = _items.indexOf(item);
+                return ListTile(
+                  title: Text(item),
+                  trailing: IconButton(
+                    icon: Icon(Icons.remove),
+                    onPressed: () => _removeItem(index),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+          child: Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            String type = _typeController.text;
+            String information = _informationController.text;
+            List<String> items = List.from(_items);
+
+            if (type.isEmpty || information.isEmpty) {
+              Fluttertoast.showToast(
+                msg: "Request type and information cannot be empty",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+              return;
+            }
+            // Logic to update existing document with new data
+            await FirebaseFirestore.instance
+                .collection('requestList')
+                .doc(widget.doc['type']) // Use old type as doc ID
+                .delete(); // Delete old document
+
+            // Add the updated request to Firestore
+            FirebaseFirestore.instance.collection('requestList').doc(type).set({
+              'type': type,
+              'information': information,
+              'items': items.isEmpty ? [] : items,
+            }).then((_) {
+              Navigator.of(context).pop();
+              Fluttertoast.showToast(
+                msg: "Request updated successfully",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.green,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+            }).catchError((error) {
+              Fluttertoast.showToast(
+                msg: "Failed to update request",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+            });
+
+            // Update global analytics
+            var oldDoc = await FirebaseFirestore.instance
+                .collection('globalAnalytics')
+                .doc(widget.doc['type'])
+                .get();
+
+            if (oldDoc.exists) {
+              var requestTypeValue = oldDoc.data()?[widget.doc['type']];
+              // Now delete the old document
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(widget.doc['type'])
+                  .delete();
+              await FirebaseFirestore.instance
+                  .collection('globalAnalytics')
+                  .doc(type) // Set the new type in global analytics
+                  .set({type: requestTypeValue});
+            }
+          },
+          child: Text("Save"),
         ),
       ],
     );
@@ -1260,20 +1936,26 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       });
 
       // Notify the user of successful update
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Request status updated to $status"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
+      Fluttertoast.showToast(
+        msg: "Request status updated to $status",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
       // Show error message if update fails
       print("Error updating request status: $e"); // Debug: Print the error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to update request status: $e"),
-          duration: Duration(seconds: 3), // Set the duration for the SnackBar
-        ),
+      Fluttertoast.showToast(
+        msg: "Failed to update request status: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -1355,13 +2037,24 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
         'userName': userName,
         'sendTo': 'user',
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request marked as done successfully")),
+      Fluttertoast.showToast(
+        msg: "Request marked as done successfully",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to mark request as done: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to mark request as done: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
@@ -1401,9 +2094,14 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   _deleteAllRequests();
                   Navigator.of(context).pop();
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text("Incorrect confirmation text")),
+                  Fluttertoast.showToast(
+                    msg: "Incorrect confirmation text",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
                   );
                 }
               },
@@ -1687,12 +2385,24 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           .collection('guestRequests')
           .doc(requestId)
           .delete();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request deleted successfully")),
+      Fluttertoast.showToast(
+        msg: "Request deleted successfully",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete request: $e")),
+      Fluttertoast.showToast(
+        msg: "Failed to delete request: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     }
   }
