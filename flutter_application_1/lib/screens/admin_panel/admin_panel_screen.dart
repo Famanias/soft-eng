@@ -1073,6 +1073,7 @@ class AdminPanelState extends State<AdminPanel> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
+        print("Selected date: $selectedDate"); // Debug print
       });
     }
   }
@@ -1091,6 +1092,7 @@ class AdminPanelState extends State<AdminPanel> {
                 onTap: () {
                   setState(() {
                     selectedDate = DateTime(2000); // Set to a very early date
+                    print("Selected Overall"); // Debug print
                   });
                   Navigator.of(context).pop();
                 },
@@ -1117,18 +1119,24 @@ class AdminPanelState extends State<AdminPanel> {
       // Handle the "Overall" option
       startOfDay = DateTime(2000);
       endOfDay = DateTime(2101);
+      print("Using Overall date range"); // Debug print
     } else {
       startOfDay =
           DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
       endOfDay = startOfDay.add(Duration(days: 1));
+      print(
+          "Using selected date range: $startOfDay to $endOfDay"); // Debug print
     }
 
     return Column(
       children: [
         Expanded(
           child: StreamBuilder(
-            stream:
-                FirebaseFirestore.instance.collection('analytics').snapshots(),
+            stream: FirebaseFirestore.instance
+                .collection('analytics')
+                .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+                .where('timestamp', isLessThan: endOfDay)
+                .snapshots(),
             builder: (context, AsyncSnapshot<QuerySnapshot> analyticsSnapshot) {
               if (analyticsSnapshot.connectionState ==
                   ConnectionState.waiting) {
@@ -1200,17 +1208,25 @@ class AdminPanelState extends State<AdminPanel> {
                   }).toList();
 
                   // Aggregate data for globalAnalytics collection
-                  List<_ChartData> requestTypeData = [];
+                  Map<String, int> requestTypeCounts = {};
                   for (var doc in globalAnalyticsSnapshot.data!.docs) {
                     var data = doc.data() as Map<String, dynamic>;
                     // Iterate over each field in the document
                     data.forEach((key, value) {
                       if (value is int) {
-                        // Ensure the value is an integer
-                        requestTypeData.add(_ChartData(key, value));
+                        if (!requestTypeCounts.containsKey(key)) {
+                          requestTypeCounts[key] = 0;
+                        }
+                        requestTypeCounts[key] =
+                            requestTypeCounts[key]! + value;
                       }
                     });
                   }
+
+                  List<_ChartData> requestTypeData =
+                      requestTypeCounts.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value);
+                  }).toList();
 
                   return SingleChildScrollView(
                     child: Column(
