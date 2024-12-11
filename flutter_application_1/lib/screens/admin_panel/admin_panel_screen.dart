@@ -117,8 +117,11 @@ class AdminPanelState extends State<AdminPanel> {
     });
   }
 
-  Future<void> _generatePdf(Map<String, Map<String, int>> overallData,
-      Map<String, Map<String, Map<String, int>>> dateWiseData) async {
+  Future<void> _generatePdf(
+      Map<String, Map<String, int>> overallData,
+      Map<String, Map<String, Map<String, int>>> dateWiseData,
+      int totalRequestsCount,
+      int totalUsersCount) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -127,66 +130,87 @@ class AdminPanelState extends State<AdminPanel> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('Overall Statistics', style: pw.TextStyle(fontSize: 24)),
-              pw.SizedBox(height: 20),
-              pw.Text('Request Count by Table',
-                  style: pw.TextStyle(fontSize: 18)),
-              pw.SizedBox(height: 10),
-              pw.TableHelper.fromTextArray(
-                headers: ['Table ID', 'Request Count'],
-                data: overallData.entries.map((entry) {
-                  return [entry.key, entry.value['requestCount'].toString()];
+              if (selectedDate.year == 2000) ...[
+                pw.Text('Overall Statistics',
+                    style: pw.TextStyle(fontSize: 24)),
+                pw.SizedBox(height: 20),
+                pw.Text('Request Count by Table',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.TableHelper.fromTextArray(
+                  headers: ['Table ID', 'Request Count'],
+                  data: overallData.entries.map((entry) {
+                    return [entry.key, entry.value['requestCount'].toString()];
+                  }).toList(),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('User Count by Table',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.TableHelper.fromTextArray(
+                  headers: ['Table ID', 'User Count'],
+                  data: overallData.entries.map((entry) {
+                    return [entry.key, entry.value['usersCount'].toString()];
+                  }).toList(),
+                ),
+                pw.SizedBox(height: 20),
+                pw.Text('Total Requests: $totalRequestsCount',
+                    style: pw.TextStyle(fontSize: 18)),
+                pw.SizedBox(height: 10),
+                pw.Text('Total Users: $totalUsersCount',
+                    style: pw.TextStyle(fontSize: 18)),
+              ],
+              if (selectedDate.year != 2000) ...[
+                pw.Text('TableServe Statistics',
+                    style: pw.TextStyle(fontSize: 24)),
+                pw.SizedBox(height: 20),
+                ...dateWiseData.entries.map((dateEntry) {
+                  int dateTotalRequests = dateEntry.value.values
+                      .fold(0, (sum, entry) => sum + entry['requestCount']!);
+                  int dateTotalUsers = dateEntry.value.values
+                      .fold(0, (sum, entry) => sum + entry['usersCount']!);
+                  return pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('Date: ${dateEntry.key}',
+                          style: pw.TextStyle(fontSize: 18)),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Request Count by Table',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.TableHelper.fromTextArray(
+                        headers: ['Table ID', 'Request Count'],
+                        data: dateEntry.value.entries.map((entry) {
+                          return [
+                            entry.key,
+                            entry.value['requestCount'].toString()
+                          ];
+                        }).toList(),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text('User Count by Table',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.TableHelper.fromTextArray(
+                        headers: ['Table ID', 'User Count'],
+                        data: dateEntry.value.entries.map((entry) {
+                          return [
+                            entry.key,
+                            entry.value['usersCount'].toString()
+                          ];
+                        }).toList(),
+                      ),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Total Requests: $dateTotalRequests',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 10),
+                      pw.Text('Total Users: $dateTotalUsers',
+                          style: pw.TextStyle(fontSize: 16)),
+                      pw.SizedBox(height: 20),
+                    ],
+                  );
                 }).toList(),
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text('User Count by Table', style: pw.TextStyle(fontSize: 18)),
-              pw.SizedBox(height: 10),
-              pw.TableHelper.fromTextArray(
-                headers: ['Table ID', 'User Count'],
-                data: overallData.entries.map((entry) {
-                  return [entry.key, entry.value['usersCount'].toString()];
-                }).toList(),
-              ),
-              pw.SizedBox(height: 20),
-              pw.Text('Date-wise Statistics',
-                  style: pw.TextStyle(fontSize: 24)),
-              pw.SizedBox(height: 20),
-              ...dateWiseData.entries.map((dateEntry) {
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text('Date: ${dateEntry.key}',
-                        style: pw.TextStyle(fontSize: 18)),
-                    pw.SizedBox(height: 10),
-                    pw.Text('Request Count by Table',
-                        style: pw.TextStyle(fontSize: 16)),
-                    pw.SizedBox(height: 10),
-                    pw.TableHelper.fromTextArray(
-                      headers: ['Table ID', 'Request Count'],
-                      data: dateEntry.value.entries.map((entry) {
-                        return [
-                          entry.key,
-                          entry.value['requestCount'].toString()
-                        ];
-                      }).toList(),
-                    ),
-                    pw.SizedBox(height: 10),
-                    pw.Text('User Count by Table',
-                        style: pw.TextStyle(fontSize: 16)),
-                    pw.SizedBox(height: 10),
-                    pw.TableHelper.fromTextArray(
-                      headers: ['Table ID', 'User Count'],
-                      data: dateEntry.value.entries.map((entry) {
-                        return [
-                          entry.key,
-                          entry.value['usersCount'].toString()
-                        ];
-                      }).toList(),
-                    ),
-                    pw.SizedBox(height: 20),
-                  ],
-                );
-              }).toList(),
+              ],
             ],
           );
         },
@@ -202,7 +226,7 @@ class AdminPanelState extends State<AdminPanel> {
       SnackBar(
         content: Text('PDF generated successfully!'),
         action: SnackBarAction(
-          label: 'Download',
+          label: 'Open',
           onPressed: () async {
             OpenFile.open(file.path);
           },
@@ -211,14 +235,40 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
+  bool _isLoading = false;
+
   void _downloadStatistics() async {
+    setState(() {
+      _isLoading = true; // Show loading indicator
+    });
+
     // Aggregate data for analytics collection
     Map<String, Map<String, int>> overallData = {};
     Map<String, Map<String, Map<String, int>>> dateWiseData = {};
 
+    DateTime startOfDay;
+    DateTime endOfDay;
+
+    if (selectedDate.year == 2000) {
+      // Handle the "Overall" option
+      startOfDay = DateTime(2000);
+      endOfDay = DateTime(2101);
+    } else {
+      startOfDay =
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+      endOfDay = startOfDay.add(Duration(days: 1));
+    }
+
     // Fetch data from Firestore and aggregate it
-    QuerySnapshot analyticsSnapshot =
-        await FirebaseFirestore.instance.collection('analytics').get();
+    QuerySnapshot analyticsSnapshot = await FirebaseFirestore.instance
+        .collection('analytics')
+        .where('timestamp', isGreaterThanOrEqualTo: startOfDay)
+        .where('timestamp', isLessThan: endOfDay)
+        .get();
+
+    int totalRequestsCount = 0;
+    int totalUsersCount = 0;
+
     for (var doc in analyticsSnapshot.docs) {
       var data = doc.data() as Map<String, dynamic>;
       String tableId = data['tableId'] ?? 'Unknown';
@@ -236,23 +286,36 @@ class AdminPanelState extends State<AdminPanel> {
       overallData[tableId]!['usersCount'] =
           (overallData[tableId]!['usersCount'] ?? 0) + usersCount;
 
-      if (!dateWiseData.containsKey(dateKey)) {
-        dateWiseData[dateKey] = {};
-      }
+      totalRequestsCount += requestCount;
+      totalUsersCount += usersCount;
 
-      if (!dateWiseData[dateKey]!.containsKey(tableId)) {
-        dateWiseData[dateKey]![tableId] = {'requestCount': 0, 'usersCount': 0};
-      }
+      if (selectedDate.year != 2000) {
+        if (!dateWiseData.containsKey(dateKey)) {
+          dateWiseData[dateKey] = {};
+        }
 
-      dateWiseData[dateKey]![tableId]!['requestCount'] =
-          (dateWiseData[dateKey]![tableId]!['requestCount'] ?? 0) +
-              requestCount;
-      dateWiseData[dateKey]![tableId]!['usersCount'] =
-          (dateWiseData[dateKey]![tableId]!['usersCount'] ?? 0) + usersCount;
+        if (!dateWiseData[dateKey]!.containsKey(tableId)) {
+          dateWiseData[dateKey]![tableId] = {
+            'requestCount': 0,
+            'usersCount': 0
+          };
+        }
+
+        dateWiseData[dateKey]![tableId]!['requestCount'] =
+            (dateWiseData[dateKey]![tableId]!['requestCount'] ?? 0) +
+                requestCount;
+        dateWiseData[dateKey]![tableId]!['usersCount'] =
+            (dateWiseData[dateKey]![tableId]!['usersCount'] ?? 0) + usersCount;
+      }
     }
 
     // Generate and download the PDF
-    await _generatePdf(overallData, dateWiseData);
+    await _generatePdf(
+        overallData, dateWiseData, totalRequestsCount, totalUsersCount);
+
+    setState(() {
+      _isLoading = false; // Hide loading indicator
+    });
   }
 
   @override
@@ -380,9 +443,14 @@ class AdminPanelState extends State<AdminPanel> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FloatingActionButton(
-                  onPressed: _downloadStatistics,
+                  onPressed: _isLoading ? null : _downloadStatistics,
                   backgroundColor: Colors.blue,
-                  child: Icon(Icons.download),
+                  child: _isLoading
+                      ? CircularProgressIndicator(
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : Icon(Icons.download),
                 ),
               ),
             ),
