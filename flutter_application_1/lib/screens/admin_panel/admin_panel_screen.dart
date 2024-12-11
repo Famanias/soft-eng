@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class AdminPanel extends StatefulWidget {
   const AdminPanel({super.key});
@@ -108,6 +109,7 @@ class AdminPanelState extends State<AdminPanel> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
         title: const Text("TableServe",
             style: TextStyle(
               color: Color(0xffD4C4AB),
@@ -115,7 +117,15 @@ class AdminPanelState extends State<AdminPanel> {
               fontFamily: "RubikOne",
             )),
         centerTitle: true,
-        automaticallyImplyLeading: false,
+        leading:
+          IconButton(
+              icon: Transform.rotate(
+                angle: 3.14, // 180 degrees in radians
+                child: Icon(Icons.logout),
+              ),
+              onPressed: () =>
+                  _confirmLogout(context), // Call the logout function
+            ),
         actions: [
           StreamBuilder(
             stream: FirebaseFirestore.instance
@@ -139,14 +149,6 @@ class AdminPanelState extends State<AdminPanel> {
                           constraints: const BoxConstraints(
                             minWidth: 12,
                             minHeight: 12,
-                          ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
                       ),
@@ -176,11 +178,7 @@ class AdminPanelState extends State<AdminPanel> {
               }
             },
           ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () =>
-                _confirmLogout(context), // Call the logout function
-          ),
+
         ],
         toolbarHeight: 80,
         flexibleSpace: Column(
@@ -201,12 +199,16 @@ class AdminPanelState extends State<AdminPanel> {
           ],
         ),
       ),
-      body: _selectedIndex == 0 ? _buildActiveTables() : _buildAnalytics(),
+      body: _selectedIndex == 0 ? _buildActiveTables() : _selectedIndex == 1 ? _buildRequests() : _buildAnalytics(),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.table_chart),
             label: 'Tables',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.room_service_rounded),
+            label: 'Requests',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.analytics),
@@ -328,94 +330,221 @@ class AdminPanelState extends State<AdminPanel> {
     );
   }
 
+  Widget _buildRequests() {
+    return Container(); // Add a return statement
+
+  }
+
   Widget _buildAnalytics() {
-    return StreamBuilder(
-      stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
-      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text("No analytics data"));
-        }
+    return Column(
+      children: [
+        Expanded(
+          child: StreamBuilder(
+            stream: FirebaseFirestore.instance.collection('analytics').snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> analyticsSnapshot) {
+              if (analyticsSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (!analyticsSnapshot.hasData || analyticsSnapshot.data!.docs.isEmpty) {
+                return const Center(child: Text("No analytics data"));
+              }
 
-        // Aggregate data
-        Map<String, Map<String, int>> aggregatedData = {};
-        for (var doc in snapshot.data!.docs) {
-          var data = doc.data() as Map<String, dynamic>;
-          String tableId = data['tableId'];
-          int requestCount = data['requestCount'] ?? 0;
-          int usersCount = data['usersCount'] ?? 0;
+              return StreamBuilder(
+                stream: FirebaseFirestore.instance.collection('globalAnalytics').snapshots(),
+                builder: (context, AsyncSnapshot<QuerySnapshot> globalAnalyticsSnapshot) {
+                  if (globalAnalyticsSnapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!globalAnalyticsSnapshot.hasData || globalAnalyticsSnapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text("No global analytics data"));
+                  }
 
-          if (!aggregatedData.containsKey(tableId)) {
-            aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
-          }
+                  // Aggregate data for analytics collection
+                  Map<String, Map<String, int>> aggregatedData = {};
+                  int totalUsersCount = 0;
+                  int totalRequestsCount = 0;
 
-          aggregatedData[tableId]!['requestCount'] =
-              (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
-          aggregatedData[tableId]!['usersCount'] =
-              (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
-        }
+                  for (var doc in analyticsSnapshot.data!.docs) {
+                    var data = doc.data() as Map<String, dynamic>;
+                    String tableId = data['tableId'] ?? 'Unknown';
+                    int requestCount = data['requestCount'] ?? 0;
+                    int usersCount = data['usersCount'] ?? 0;
 
-        List<_ChartData> requestData = aggregatedData.entries.map((entry) {
-          return _ChartData(entry.key, entry.value['requestCount']!);
-        }).toList();
+                    if (!aggregatedData.containsKey(tableId)) {
+                      aggregatedData[tableId] = {'requestCount': 0, 'usersCount': 0};
+                    }
 
-        List<_ChartData> userData = aggregatedData.entries.map((entry) {
-          return _ChartData(entry.key, entry.value['usersCount']!);
-        }).toList();
+                    aggregatedData[tableId]!['requestCount'] =
+                        (aggregatedData[tableId]!['requestCount'] ?? 0) + requestCount;
+                    aggregatedData[tableId]!['usersCount'] =
+                        (aggregatedData[tableId]!['usersCount'] ?? 0) + usersCount;
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                "Request Count",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 300,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  series: <ChartSeries>[
-                    ColumnSeries<_ChartData, String>(
-                      dataSource: requestData,
-                      xValueMapper: (_ChartData data, _) => data.tableId,
-                      yValueMapper: (_ChartData data, _) => data.count,
-                      color: Colors.blue,
+                    totalRequestsCount += requestCount;
+                    totalUsersCount += usersCount;
+                  }
+
+                  List<_ChartData> requestData = aggregatedData.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value['requestCount']!);
+                  }).toList();
+
+                  List<_ChartData> userData = aggregatedData.entries.map((entry) {
+                    return _ChartData(entry.key, entry.value['usersCount']!);
+                  }).toList();
+
+                  // Aggregate data for globalAnalytics collection
+                  List<_ChartData> requestTypeData = [];
+                  for (var doc in globalAnalyticsSnapshot.data!.docs) {
+                    var data = doc.data() as Map<String, dynamic>;
+                      // Iterate over each field in the document
+                    data.forEach((key, value) {
+                      if (value is int) { // Ensure the value is an integer
+                        requestTypeData.add(_ChartData(key, value));
+                      }
+                    });
+                  }
+
+                  return SingleChildScrollView(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 10),
+                        // Display Total Counts
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            // Total Requests
+                            Container(
+                              // width: 200,
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.blue),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$totalRequestsCount",
+                                    style: const TextStyle(
+                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.blue),
+                                  ),
+                                  const Text(
+                                    "Total Requests",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Total Users
+                            Container(
+                              // width: 200,
+                              padding: const EdgeInsets.all(8),
+                              margin: const EdgeInsets.symmetric(horizontal: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.green[50],
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.green),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    "$totalUsersCount",
+                                    style: const TextStyle(
+                                        fontSize: 36, fontWeight: FontWeight.bold, color: Colors.green),
+                                  ),
+                                  const Text(
+                                    "Total Users",
+                                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 20),
+                        const Text(
+                          "Request Count by Table",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 300,
+                          child: SfCartesianChart(
+                            primaryXAxis: CategoryAxis(),
+                            series: <ChartSeries>[
+                              ColumnSeries<_ChartData, String>(
+                                dataSource: requestData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                color: Colors.blue,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "User Count by Table",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 300,
+                          child: SfCartesianChart(
+                            primaryXAxis: CategoryAxis(),
+                            series: <ChartSeries>[
+                              ColumnSeries<_ChartData, String>(
+                                dataSource: userData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                color: Colors.green,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text(
+                          "Request Type Frequency",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          height: 400,
+                          child: SfCircularChart(
+                            legend: Legend(
+                              isVisible: true,
+                              alignment: ChartAlignment.center, // Aligns the legend to the center
+                              position: LegendPosition.bottom, // Places the legend below the chart
+                              orientation: LegendItemOrientation.vertical,
+                              overflowMode: LegendItemOverflowMode.wrap, // Allows wrapping for long legends
+                              itemPadding: 10,
+                              
+                            ),
+                            series: <CircularSeries>[
+                              PieSeries<_ChartData, String>(
+                                dataSource: requestTypeData,
+                                xValueMapper: (_ChartData data, _) => data.tableId,
+                                yValueMapper: (_ChartData data, _) => data.count,
+                                dataLabelSettings: const DataLabelSettings(isVisible: true),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "User Count",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                height: 300,
-                child: SfCartesianChart(
-                  primaryXAxis: CategoryAxis(),
-                  series: <ChartSeries>[
-                    ColumnSeries<_ChartData, String>(
-                      dataSource: userData,
-                      xValueMapper: (_ChartData data, _) => data.tableId,
-                      yValueMapper: (_ChartData data, _) => data.count,
-                      color: Colors.green,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                  );
+                },
+              );
+            },
           ),
-        );
-      },
+        ),
+      ],
     );
   }
+
+
 }
 
 class _ChartData {
@@ -606,6 +735,14 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       String requestType = requestDoc['requestType'];
       String userName = requestDoc['userName'];
 
+      // add the guest request to the done collection
+      await FirebaseFirestore.instance
+          .collection('guestRequests')
+          .doc(requestId)
+          .update({
+            'status': 'done',
+          });
+
       // Add a new notification document
       await FirebaseFirestore.instance.collection('notifications').add({
         'tableId': tableId,
@@ -704,28 +841,108 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           return const Center(child: Text("No requests for this table"));
         }
 
-        return ListView(
-          children: snapshot.data!.docs.map((doc) {
-            var data = doc.data() as Map<String, dynamic>;
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: snapshot.data!.docs.map((doc) {
+          var data = doc.data() as Map<String, dynamic>;
 
-            var requestType = doc['requestType'];
-            String requestTypeText;
-            if (requestType is List) {
-              requestTypeText = requestType.join(', ');
-            } else {
-              requestTypeText = requestType.toString();
-            }
+          var requestType = doc['requestType'];
+          String requestTypeText;
+          if (requestType is List) {
+            requestTypeText = requestType.join(', ');
+          } else {
+            requestTypeText = requestType.toString();
+          }
 
-            String userName = data['userName'] ?? "Guest";
+          String userName = data['userName'] ?? "Guest";
+          String staffName = data['updatedBy'] ?? "Unassigned";
+          String itemName;
+          if(data['items']is List) {
+            itemName = data['items'].join(', ');
+          } else {
+            itemName = data['items'].toString();
+          }
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  requestTypeText,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
 
-            return ListTile(
-              title: Text("Request: $requestTypeText"),
-              subtitle: Text(
-                  "Status: ${doc['status']}\nName: $userName\nStaff: ${data['updatedBy'] ?? 'Unassigned'}"),
-              trailing: _buildTrailingButtons(status, doc.id),
-            );
-          }).toList(),
-        );
+                if(itemName != "null")
+                  Text(
+                    "Items: $itemName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+
+                const SizedBox(height: 8),
+                Text(
+                  "Time of Request: ${DateFormat('MMMM d, y h:mm a').format(data['timestamp'].toDate())}",
+                  style: const TextStyle(fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Text(
+                      "Requested by: $userName",
+                      style: const TextStyle(fontSize: 14),
+                    ),  
+                    const SizedBox(width: 10),
+
+                    Text(
+                      "Status: ${doc['status']}",
+                      style: const TextStyle(fontSize: 14),
+                    ),             
+
+                  ],
+                ),
+                const SizedBox(height: 4),
+                if (doc['status'] == 'rejected')
+                  Text(
+                    "Rejected by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                if (doc['status'] == 'accepted')
+                  Text(
+                    "Accepted by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                if (doc['status'] == 'done')
+                  Text(
+                    "Done by: $staffName",
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    _buildTrailingButtons(status, doc.id) ?? Container(),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
       },
     );
   }
@@ -735,18 +952,33 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.green),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'accepted');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.red),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'rejected');
-            },
-          ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle reject button
+                        _updateRequestStatus(requestId, 'rejected');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey[300],
+                      ),
+                      child: const Text(
+                        "Reject",
+                        style: TextStyle(color: Colors.black),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle accept button
+                        _updateRequestStatus(requestId, 'accepted');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text(
+                        "Accept",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
         ],
       );
     } else if (status == 'accepted') {
@@ -759,48 +991,96 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     } else if (status == 'rejected') {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.check, color: Colors.green),
-            onPressed: () {
-              _updateRequestStatus(requestId, 'accepted');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return AlertDialog(
-                    title: const Text("Confirm Deletion"),
-                    content: const Text(
-                        "Are you sure you want to delete this request?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                        },
-                        child: const Text("Cancel"),
+        children: [                    
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("Confirm Deletion"),
+                              content: const Text(
+                                  "Are you sure you want to delete this request?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                  },
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                    _deleteRequest(
+                                        requestId); // Perform the delete action
+                                  },
+                                  child: const Text("Delete",
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Handle accept button
+                        _updateRequestStatus(requestId, 'accepted');
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
                       ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pop(); // Close the dialog
-                          _deleteRequest(
-                              requestId); // Perform the delete action
-                        },
-                        child: const Text("Delete",
-                            style: TextStyle(color: Colors.red)),
+                      child: const Text(
+                        "Accept",
+                        style: TextStyle(color: Colors.white),
                       ),
-                    ],
-                  );
-                },
-              );
-            },
-          ),
+                    ),
+
         ],
       );
-    } else {
+    } else if (status == 'done') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [                    
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: const Text("Confirm Deletion"),
+                              content: const Text(
+                                  "Are you sure you want to delete this request?"),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                  },
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop(); // Close the dialog
+                                    _deleteRequest(
+                                        requestId); // Perform the delete action
+                                  },
+                                  child: const Text("Delete",
+                                      style: TextStyle(color: Colors.red)),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      },
+                    ),
+        ],
+      );
+    } 
+    else {
       return null;
     }
   }
@@ -880,14 +1160,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                             minWidth: 12,
                             minHeight: 12,
                           ),
-                          child: const Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
                         ),
                       ),
                     ],
@@ -916,10 +1188,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
               }
             },
           ),
-          // IconButton(
-          //   icon: const Icon(Icons.delete),
-          //   onPressed: _showDeleteConfirmationDialog,
-          // ),
         ],
       ),
       body: TabBarView(
