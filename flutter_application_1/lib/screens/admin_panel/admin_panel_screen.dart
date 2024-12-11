@@ -175,7 +175,7 @@ class AdminPanelState extends State<AdminPanel> {
                       pw.Text('Date: ${dateEntry.key}',
                           style: pw.TextStyle(fontSize: 18)),
                       pw.SizedBox(height: 10),
-                      pw.Text('Request Count by Table',
+                      pw.Text('Request Count',
                           style: pw.TextStyle(fontSize: 16)),
                       pw.SizedBox(height: 10),
                       pw.TableHelper.fromTextArray(
@@ -188,7 +188,7 @@ class AdminPanelState extends State<AdminPanel> {
                         }).toList(),
                       ),
                       pw.SizedBox(height: 10),
-                      pw.Text('User Count by Table',
+                      pw.Text('User Count',
                           style: pw.TextStyle(fontSize: 16)),
                       pw.SizedBox(height: 10),
                       pw.TableHelper.fromTextArray(
