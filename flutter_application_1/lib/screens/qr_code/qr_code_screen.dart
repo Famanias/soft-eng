@@ -318,11 +318,10 @@ class ScanScreenState extends State<ScanScreen> {
         print("Scanned QR code: $tableId");
 
         Position userLocation = await _getCurrentLocation();
-        // 14.856759 - my house latitude , school -  14.8322955
-        double targetLatitude = 14.856759; // Replace with your target
-        // 120.328327 - my house longitude, school = 120.282504
-        double targetLongitude =
-            120.328327; // Replace with your target longitude
+        // 14.856759 - dave house latitude , school -  14.8322955, lynard - 14.852444
+        double targetLatitude = 14.852444; // Replace with your target
+        // 120.328327 - dave house longitude, school = 120.282504, lynard - 120.291917
+        double targetLongitude = 120.291917; // Replace with your target longitude
         double rangeInMeters = 500; // Define the acceptable range in meters
 
         if (!_isLocationWithinRange(
@@ -403,7 +402,7 @@ class ScanScreenState extends State<ScanScreen> {
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.green,
             textColor: Colors.white,
             fontSize: 16.0
           );
