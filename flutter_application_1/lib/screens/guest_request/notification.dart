@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:intl/intl.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String tableId;
@@ -125,9 +126,18 @@ class NotificationScreenState extends State<NotificationScreen> {
                 title: Text(data['type'] == 'newMessage'
                     ? "Message from Admin"
                     : "Request: ${data['requestType']}"),
-                subtitle: Text(data['type'] == 'newMessage'
-                    ? data['message']
-                    : "Status: ${data['status']}"),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(data['type'] == 'newMessage'
+                        ? data['message']
+                        : "Status: ${data['status']}"),
+                    Text(
+                      "Time: ${DateFormat('yyyy-MM-dd – kk:mm').format((data['timestamp'] as Timestamp).toDate())}",
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
                 onTap: () async {
                   // Mark the notification as viewed
                   await FirebaseFirestore.instance
@@ -146,6 +156,7 @@ class NotificationScreenState extends State<NotificationScreen> {
   Stream<QuerySnapshot> _getNotificationStream() {
     var query = FirebaseFirestore.instance
         .collection('notifications')
+        .orderBy('timestamp', descending: false)
         .where('tableId', isEqualTo: widget.tableId)
         .where('userName', isEqualTo: widget.userName);
 
