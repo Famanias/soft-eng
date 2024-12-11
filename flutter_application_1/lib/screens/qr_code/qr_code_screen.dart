@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 
+
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
 
@@ -398,6 +399,16 @@ class ScanScreenState extends State<ScanScreen> {
             'usersCount': FieldValue.increment(1),
             'timestamp': FieldValue.serverTimestamp(), // Add timestamp
           }, SetOptions(merge: true));
+
+          await FirebaseFirestore.instance
+              .collection('adminNotifications')
+              .add({
+            'type': 'newUser',
+            'message':
+                'New user "$userName" added at "$tableId"',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
 
           showDialog(
             context: context,

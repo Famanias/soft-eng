@@ -10,7 +10,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'faq_screen.dart'; // Import the FAQ screen file
+import 'faq_screen.dart'; 
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen(
