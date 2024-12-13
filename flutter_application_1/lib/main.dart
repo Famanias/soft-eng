@@ -55,54 +55,14 @@ void main() async {
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // runZonedGuarded((){
-  //   runApp(const MyApp());
-  // },(error, stackTrace){
-  //   print("App forcefully closed.");
-  //   navigatorKey.currentState?.pop();
-  // });
   runApp(MyApp(tableId: tableId, userName: userName));
 
-  // _setupGlobalNotificationListener();
 }
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
-
-// void _setupGlobalNotificationListener() {
-//   FirebaseFirestore.instance
-//       .collection('notifications')
-//       .where('viewed', isEqualTo: false)
-//       .snapshots()
-//       .listen((QuerySnapshot snapshot) {
-//     for (var change in snapshot.docChanges) {
-//       if (change.type == DocumentChangeType.added) {
-//         var data = change.doc.data() as Map<String, dynamic>;
-//         _showLocalNotification(data);
-//       }
-//     }
-//   });
-// }
-
-// void _showLocalNotification(Map<String, dynamic> data) {
-
-//   AwesomeNotifications().createNotification(
-//     content: NotificationContent(
-//       id: 10,
-//       channelKey: 'high_importance_channel',
-//       title: data['type'] == 'newMessage'
-//           ? 'Message from Admin'
-//           : 'Request: ${data['requestType']}',
-//       body: data['type'] == 'newMessage'
-//           ? data['message']
-//           : 'Status: ${data['status']}',
-//       notificationLayout: NotificationLayout.Default,
-//       icon: 'resource://drawable/ic_launcher',
-//     ),
-//   );
-// }
 
 class MyApp extends StatefulWidget {
   final String tableId;
