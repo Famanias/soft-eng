@@ -28,6 +28,8 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  open_file: ^3.5.10
+  open_file_web: ^0.0.4
 
   flutter:
     sdk: flutter
