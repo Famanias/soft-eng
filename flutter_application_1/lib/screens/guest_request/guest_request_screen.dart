@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
@@ -10,7 +11,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'faq_screen.dart'; 
+import 'faq_screen.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 class GuestRequestScreen extends StatefulWidget {
@@ -488,24 +489,23 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                             setState(
                                                 () {}); // Update the state to reflect the changes
                                             Fluttertoast.showToast(
-                                              msg: "Request Cancelled successfully.",
-                                              toastLength: Toast.LENGTH_SHORT,
-                                              gravity: ToastGravity.BOTTOM,
-                                              timeInSecForIosWeb: 1,
-                                              backgroundColor: Colors.green,
-                                              textColor: Colors.white,
-                                              fontSize: 16.0
-                                            );
+                                                msg:
+                                                    "Request Cancelled successfully.",
+                                                toastLength: Toast.LENGTH_SHORT,
+                                                gravity: ToastGravity.BOTTOM,
+                                                timeInSecForIosWeb: 1,
+                                                backgroundColor: Colors.green,
+                                                textColor: Colors.white,
+                                                fontSize: 16.0);
                                           } else {
                                             Fluttertoast.showToast(
-                                              msg: "No Requests Found.",
-                                              toastLength: Toast.LENGTH_SHORT,
-                                              gravity: ToastGravity.BOTTOM,
-                                              timeInSecForIosWeb: 1,
-                                              backgroundColor: Colors.red,
-                                              textColor: Colors.white,
-                                              fontSize: 16.0
-                                            );
+                                                msg: "No Requests Found.",
+                                                toastLength: Toast.LENGTH_SHORT,
+                                                gravity: ToastGravity.BOTTOM,
+                                                timeInSecForIosWeb: 1,
+                                                backgroundColor: Colors.red,
+                                                textColor: Colors.white,
+                                                fontSize: 16.0);
                                           }
                                         }
                                       },
@@ -600,14 +600,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                 } else {
                   Navigator.of(context).pop();
                   Fluttertoast.showToast(
-                    msg: "Request not found.",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 1,
-                    backgroundColor: Colors.green,
-                    textColor: Colors.white,
-                    fontSize: 16.0
-                  );
+                      msg: "Request not found.",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0);
                 }
               },
               child: Text('Update'),
@@ -647,24 +646,22 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   Navigator.of(context).pop();
                   _fetchRequestHistory();
                   Fluttertoast.showToast(
-                    msg: "Custom request updated successfully.",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 1,
-                    backgroundColor: Colors.green,
-                    textColor: Colors.white,
-                    fontSize: 16.0
-                  );
+                      msg: "Custom request updated successfully.",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.green,
+                      textColor: Colors.white,
+                      fontSize: 16.0);
                 } else {
                   Fluttertoast.showToast(
-                    msg: "Custom Request cannot be empty.",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 1,
-                    backgroundColor: Colors.red,
-                    textColor: Colors.white,
-                    fontSize: 16.0
-                  );
+                      msg: "Custom Request cannot be empty.",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM,
+                      timeInSecForIosWeb: 1,
+                      backgroundColor: Colors.red,
+                      textColor: Colors.white,
+                      fontSize: 16.0);
                 }
               },
               child: Text('Submit'),
@@ -681,14 +678,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     // Check for valid tableId
     if (tableId.isEmpty) {
       Fluttertoast.showToast(
-        msg: "No Table ID available.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "No Table ID available.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
       return;
     }
 
@@ -719,14 +715,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     // Check if any requests were selected
     if (selectedRequests.isEmpty) {
       Fluttertoast.showToast(
-        msg: "Please select at least one request.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "Please select at least one request.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
       return;
     }
 
@@ -812,25 +807,23 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
       // Notify the user of successful submission
       Fluttertoast.showToast(
-        msg: "Requests submitted successfully.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "Requests submitted successfully.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0);
     } catch (e) {
       // Show error message if submission fails
       Fluttertoast.showToast(
-        msg: "Failed to submit request: $e.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "Failed to submit request: $e.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
     } finally {
       // Dismiss the loading dialog
       Navigator.of(context).pop();
@@ -923,19 +916,21 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         log("No messages found for userName: $userName");
       }
 
-      // Step 4: Notify the user of success
+      // Step 4: Sign out from Firebase Authentication
+      await FirebaseAuth.instance.signOut();
+
+      // Step 5: Notify the user of success
       // ignore: use_build_context_synchronously
       Fluttertoast.showToast(
-        msg: "Thank you for using the service.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.green,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "Thank you for using the service.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 16.0);
 
-      // Step 5: Reset state and navigate
+      // Step 6: Reset state and navigate
       setState(() {
         tableId = "";
         selectedItems = List.generate(10, (index) => false);
@@ -948,14 +943,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       log("Error: $e");
       // ignore: use_build_context_synchronously
       Fluttertoast.showToast(
-        msg: "Failed to update the table status: $e.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        timeInSecForIosWeb: 1,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0
-      );
+          msg: "Failed to update the table status: $e.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0);
     }
   }
 
@@ -1109,14 +1103,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           Fluttertoast.showToast(
-                            msg: "No Table ID available.",
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 1,
-                            backgroundColor: Colors.red,
-                            textColor: Colors.white,
-                            fontSize: 16.0
-                          );
+                              msg: "No Table ID available.",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                              timeInSecForIosWeb: 1,
+                              backgroundColor: Colors.red,
+                              textColor: Colors.white,
+                              fontSize: 16.0);
                         }
                       },
                     );
@@ -1134,14 +1127,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                           );
                         } else {
                           Fluttertoast.showToast(
-                            msg: "No Table ID available.",
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                            timeInSecForIosWeb: 1,
-                            backgroundColor: Colors.red,
-                            textColor: Colors.white,
-                            fontSize: 16.0
-                          );
+                              msg: "No Table ID available.",
+                              toastLength: Toast.LENGTH_SHORT,
+                              gravity: ToastGravity.BOTTOM,
+                              timeInSecForIosWeb: 1,
+                              backgroundColor: Colors.red,
+                              textColor: Colors.white,
+                              fontSize: 16.0);
                         }
                       },
                     );

@@ -57,6 +57,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_speed_dial: ^7.0.0
   geolocator: ^13.0.2
+  google_sign_in: ^6.2.2
 
 dev_dependencies:
   flutter_test:
@@ -86,6 +87,7 @@ flutter:
     - images/bg.png
     - images/line.png
     - images/logo.png
+    - images/google_logo.png
     - assets/.env
 
   # An image asset can refer to one or more resolution-specific "variants", see
