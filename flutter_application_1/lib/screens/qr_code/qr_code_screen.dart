@@ -116,11 +116,25 @@ class ScanScreenState extends State<ScanScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          if (user != null)
+          if (user != null) ...[
             Text(
               'Signed in as $userName',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                setState(() {
+                  // Force rebuild to update UI
+                });
+                _showSignInDialog(tableId);
+              },
+              child: Text(
+                'Remove this account',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
           IconButton(
             icon: Icon(isCameraActive ? Icons.camera_alt : Icons.videocam_off),
             onPressed: _toggleCamera,
@@ -365,7 +379,15 @@ class ScanScreenState extends State<ScanScreen> {
       );
       User? user = userCredential.user;
 
-      // If the user is signing in (not new), do not prompt for the name
+      // If the user is signing in (not new), prompt for the name if not set
+      if (user != null &&
+          (user.displayName == null || user.displayName!.isEmpty)) {
+        String? userName = await _promptForUserName();
+        if (userName != null && userName.isNotEmpty) {
+          await user.updateDisplayName(userName);
+        }
+      }
+
       return user;
     } catch (e) {
       if (e is FirebaseAuthException) {
@@ -509,6 +531,7 @@ class ScanScreenState extends State<ScanScreen> {
 
           String finalUserName =
               userName ?? user.displayName ?? user.email ?? "Guest";
+          String userEmail = user.email ?? "unknown";
 
           // Show loading dialog
           showDialog(
@@ -538,8 +561,19 @@ class ScanScreenState extends State<ScanScreen> {
           DocumentSnapshot tableDoc = await tableRef.get();
 
           if (tableDoc.exists) {
-            List<dynamic> userNames = tableDoc['userNames'] ?? [];
-            if (userNames.contains(finalUserName)) {
+            var userNames = tableDoc['userNames'];
+            if (userNames is List) {
+              // Convert list to map
+              Map<String, dynamic> userNamesMap = {};
+              for (var name in userNames) {
+                userNamesMap[name] = '';
+              }
+              userNames = userNamesMap;
+            }
+            Map<String, dynamic> userNamesMap =
+                Map<String, dynamic>.from(userNames ?? {});
+            print("Existing userNames: $userNamesMap");
+            if (userNamesMap.containsKey(finalUserName)) {
               Fluttertoast.showToast(
                 msg: "Username $finalUserName already exists.",
                 toastLength: Toast.LENGTH_SHORT,
@@ -557,23 +591,28 @@ class ScanScreenState extends State<ScanScreen> {
               Navigator.of(context).pop(); // Close loading dialog
               return _toggleCamera();
             } else {
+              userNamesMap[finalUserName] = userEmail;
               await tableRef.update({
                 'status': 'active',
-                'userNames': FieldValue.arrayUnion([finalUserName]),
+                'userNames': userNamesMap,
               });
+              print("Updated userNames: $userNamesMap");
             }
           } else {
             await tableRef.set({
               'status': 'active',
               'timestamp': Timestamp.now(),
-              'userNames': [finalUserName],
+              'userNames': {finalUserName: userEmail},
             });
+            print(
+                "Created new table with userNames: {$finalUserName: $userEmail}");
           }
 
           // Save tableId and userName to shared preferences
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('tableId', scannedTableId);
           await prefs.setString('userName', finalUserName);
+          await prefs.setString('userEmail', userEmail);
           await prefs.setInt(
               'loginTimestamp', DateTime.now().millisecondsSinceEpoch);
 
@@ -634,7 +673,7 @@ class ScanScreenState extends State<ScanScreen> {
       } catch (e) {
         print("Error saving to Firebase: $e");
         Fluttertoast.showToast(
-          msg: "Error processing QR Code.",
+          msg: "Error processing QR Code: $e",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
@@ -659,6 +698,9 @@ class ScanScreenState extends State<ScanScreen> {
 
   _showSignInDialog(String scannedTableId) {
     _toggleCamera();
+    setState(() {
+      isLoading = false; // Reset isLoading state
+    });
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

@@ -18,6 +18,7 @@ void main() async {
   final prefs = await SharedPreferences.getInstance();
   final tableId = prefs.getString('tableId') ?? "";
   final userName = prefs.getString('userName') ?? "Guest";
+  final userEmail = prefs.getString('userEmail') ?? "";
 
   // Load environment variables and ensure it completes
   await dotenv.load(fileName: "assets/.env");
@@ -61,7 +62,7 @@ void main() async {
   //   print("App forcefully closed.");
   //   navigatorKey.currentState?.pop();
   // });
-  runApp(MyApp(tableId: tableId, userName: userName));
+  runApp(MyApp(tableId: tableId, userName: userName, userEmail: userEmail));
 
   // _setupGlobalNotificationListener();
 }
@@ -107,8 +108,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class MyApp extends StatefulWidget {
   final String tableId;
   final String userName;
+  final String userEmail;
 
-  const MyApp({super.key, required this.tableId, required this.userName});
+  const MyApp({super.key, required this.tableId, required this.userName, required this.userEmail});
 
   @override
   MyAppState createState() => MyAppState();
@@ -150,10 +152,10 @@ class MyAppState extends State<MyApp> {
       initialRoute: '/',
       routes: {
         '/': (context) => widget.tableId.isNotEmpty
-            ? GuestRequestScreen(tableId: widget.tableId, userName: widget.userName)
+            ? GuestRequestScreen(tableId: widget.tableId, userName: widget.userName, userEmail: widget.userEmail,)
             : const ScanScreen(),
         '/qrCode': (context) => const ScanScreen(),
-        '/guestRequest': (context) => GuestRequestScreen(tableId: widget.tableId, userName: widget.userName),
+        '/guestRequest': (context) => GuestRequestScreen(tableId: widget.tableId, userName: widget.userName, userEmail: widget.userEmail),
         '/customRequest': (context) => CustomRequestScreen(tableId: widget.tableId, userName: widget.userName),
         '/faq': (context) => faqScreen(),
       },
