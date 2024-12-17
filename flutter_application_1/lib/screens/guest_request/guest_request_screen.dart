@@ -1049,13 +1049,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   color: Color(0xffffffff),
                   fontFamily: "RubikOne",
                 )),
-            Text(
-              '$userName - $tableId',
-              style: const TextStyle(
-                fontSize: 16,
-                color: Colors.white,
-              ),
-            ),
           ],
         ),
         leading: IconButton(
