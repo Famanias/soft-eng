@@ -4,16 +4,27 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class MessagesScreen extends StatelessWidget {
   final String tableId;
   final String userName;
+  final String userEmail;
 
-  const MessagesScreen({required this.tableId, required this.userName, super.key});
+  const MessagesScreen({
+    required this.tableId,
+    required this.userName,
+    required this.userEmail,
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
     final TextEditingController messageController = TextEditingController();
+    String uniqueUserName = "$userName: $userEmail";
 
     void sendMessage() async {
       if (messageController.text.isNotEmpty) {
         String docName = 'Guest Message - ${DateTime.now().millisecondsSinceEpoch}';
+
+        // Debugging print statements
+        print("Sending message with uniqueUserName: $uniqueUserName");
+        print("Message: ${messageController.text}");
 
         // Save the message to the new 'messages' collection
         await FirebaseFirestore.instance
@@ -24,14 +35,14 @@ class MessagesScreen extends StatelessWidget {
           'message': messageController.text,
           'timestamp': FieldValue.serverTimestamp(),
           'sender': 'guest',
-          'userName': userName, // Save the userName separately
+          'userName': uniqueUserName,
         });
         messageController.clear();
 
         // Add a notification document
         await FirebaseFirestore.instance.collection('adminNotifications').add({
           'type': 'newMessage',
-          'message': 'New message from user "$userName" at table "$tableId" - ${messageController.text}',
+          'message': 'New message from user "$uniqueUserName" at table "$tableId" - ${messageController.text}',
           'timestamp': FieldValue.serverTimestamp(),
           'viewed': false,
         });
@@ -49,7 +60,7 @@ class MessagesScreen extends StatelessWidget {
               stream: FirebaseFirestore.instance
                   .collection('messages')
                   .where('tableId', isEqualTo: tableId)
-                  .where('userName', isEqualTo: userName) // Filter messages by userName
+                  .where('userName', isEqualTo: uniqueUserName) // Filter messages by uniqueUserName
                   .orderBy('timestamp', descending: true) // Order messages by timestamp
                   .snapshots(),
               builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
