@@ -275,6 +275,7 @@ class AdminPanelState extends State<AdminPanel> {
     Map<String, Map<String, int>> overallData = {};
     Map<String, Map<String, Map<String, int>>> dateWiseData = {};
     Map<int, List<String>> weeklyVisitors = {};
+    Map<String, String> userLoginDates = {};
 
     DateTime startOfDay;
     DateTime endOfDay;
@@ -347,7 +348,7 @@ class AdminPanelState extends State<AdminPanel> {
           DateTime(selectedDate.year, selectedDate.month + 1, 0);
 
       QuerySnapshot visitorsSnapshot = await FirebaseFirestore.instance
-          .collection('activeTables')
+          .collection('adminAnalytics')
           .where('timestamp', isGreaterThanOrEqualTo: firstDayOfMonth)
           .where('timestamp', isLessThanOrEqualTo: lastDayOfMonth)
           .get();
@@ -365,20 +366,31 @@ class AdminPanelState extends State<AdminPanel> {
         if (userNames is List) {
           for (var name in userNames) {
             weeklyVisitors[weekOfMonth]!.add(name);
+            userLoginDates[name] = DateFormat('yyyy-MM-dd').format(timestamp);
           }
         } else if (userNames is Map) {
           userNames.forEach((userName, userEmail) {
             weeklyVisitors[weekOfMonth]!.add(userName);
+            userLoginDates[userName] =
+                DateFormat('yyyy-MM-dd').format(timestamp);
           });
         }
       }
 
-      // Ensure all weeks are represented
-      for (int i = 1; i <= 5; i++) {
+      // Ensure all weeks are represented and sorted
+      for (int i = 1; i <= 4; i++) {
         if (!weeklyVisitors.containsKey(i)) {
           weeklyVisitors[i] = [];
         }
       }
+
+      // Create a document in adminAnalytics with user names and login dates
+      await FirebaseFirestore.instance.collection('adminAnalytics').add({
+        'month': DateFormat('MMMM').format(selectedDate),
+        'year': selectedDate.year,
+        'userNames': userLoginDates,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
     }
 
     // Generate and download the PDF
@@ -849,73 +861,101 @@ class AdminPanelState extends State<AdminPanel> {
   }
 
   void _showFaqEditDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Edit FAQs"),
-          content: Container(
-            width: double.maxFinite,
-            child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('faqs').snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                      child: Text("No FAQS available. Add one!"));
-                }
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height *
+                0.8, // Set height to 80% of screen height
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Edit FAQs",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('faqs')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.data!.docs.isEmpty) {
+                        return const Center(
+                            child: Text("No FAQs available. Add one!"));
+                      }
 
-                final faqs = snapshot.data!.docs;
+                      final faqs = snapshot.data!.docs;
 
-                return ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: faqs.length,
-                  itemBuilder: (context, index) {
-                    var faq = faqs[index];
-                    var data = faq.data() as Map<String, dynamic>;
+                      return ListView.builder(
+                        itemCount: faqs.length,
+                        itemBuilder: (context, index) {
+                          var faq = faqs[index];
+                          var data = faq.data() as Map<String, dynamic>;
 
-                    return ListTile(
-                      title: Text(data['title'] ?? 'No Title'),
-                      subtitle: Text(data['content'] ?? 'No Content'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit, color: Colors.blue),
-                            onPressed: () {
-                              _showEditDialog(faq.id, data);
-                            },
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              _showDeleteFaqConfirmationDialog(context, faq.id);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
+                          return ListTile(
+                            title: Text(data['title'] ?? 'No Title'),
+                            subtitle: Text(data['content'] ?? 'No Content'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit,
+                                      color: Colors.blue),
+                                  onPressed: () {
+                                    _showEditDialog(faq.id, data);
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete,
+                                      color: Colors.red),
+                                  onPressed: () {
+                                    _showDeleteFaqConfirmationDialog(
+                                        context, faq.id);
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text("Close"),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _showAddFaqDialog();
+                      },
+                      child: const Text("Add FAQ"),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text("Close"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _showAddFaqDialog();
-              },
-              child: const Text("Add FAQ"),
-            ),
-          ],
         );
       },
     );
