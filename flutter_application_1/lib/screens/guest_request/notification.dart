@@ -8,9 +8,14 @@ import 'package:intl/intl.dart';
 class NotificationScreen extends StatefulWidget {
   final String tableId;
   final String userName;
+  final String userEmail;
 
-  const NotificationScreen(
-      {required this.tableId, required this.userName, super.key});
+  const NotificationScreen({
+    required this.tableId,
+    required this.userName,
+    required this.userEmail,
+    super.key,
+  });
 
   @override
   NotificationScreenState createState() => NotificationScreenState();
@@ -18,10 +23,12 @@ class NotificationScreen extends StatefulWidget {
 
 class NotificationScreenState extends State<NotificationScreen> {
   String _selectedStatus = 'all';
+  late String uniqueUserName;
 
   @override
   void initState() {
     super.initState();
+    uniqueUserName = "${widget.userName}: ${widget.userEmail}";
     _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       _showLocalNotification(message.data);
@@ -31,7 +38,7 @@ class NotificationScreenState extends State<NotificationScreen> {
   void _listenForNotifications() {
     FirebaseFirestore.instance
         .collection('notifications')
-        .where('userName', isEqualTo: widget.userName)
+        .where('userName', isEqualTo: uniqueUserName)
         .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
@@ -158,7 +165,7 @@ class NotificationScreenState extends State<NotificationScreen> {
         .collection('notifications')
         .orderBy('timestamp', descending: false)
         .where('tableId', isEqualTo: widget.tableId)
-        .where('userName', isEqualTo: widget.userName);
+        .where('userName', isEqualTo: uniqueUserName);
 
     if (_selectedStatus != 'all') {
       query = query.where('status', isEqualTo: _selectedStatus);
@@ -173,8 +180,7 @@ class NotificationScreenState extends State<NotificationScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Clear Notifications"),
-          content:
-              const Text("Are you sure you want to clear all notifications?"),
+          content: const Text("Are you sure you want to clear all notifications?"),
           actions: [
             TextButton(
               child: const Text("Cancel"),
@@ -191,7 +197,7 @@ class NotificationScreenState extends State<NotificationScreen> {
                   var snapshots = await FirebaseFirestore.instance
                       .collection('notifications')
                       .where('tableId', isEqualTo: widget.tableId)
-                      .where('userName', isEqualTo: widget.userName)
+                      .where('userName', isEqualTo: uniqueUserName)
                       .get();
                   for (var doc in snapshots.docs) {
                     batch.delete(doc.reference);
@@ -206,7 +212,7 @@ class NotificationScreenState extends State<NotificationScreen> {
                       textColor: Colors.white,
                       fontSize: 16.0);
                 } catch (e) {
-                    Fluttertoast.showToast(
+                  Fluttertoast.showToast(
                       msg: "Failed to clear notifications: $e",
                       toastLength: Toast.LENGTH_SHORT,
                       gravity: ToastGravity.BOTTOM,

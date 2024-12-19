@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class ScanScreen extends StatefulWidget {
   const ScanScreen({super.key});
@@ -14,11 +15,20 @@ class ScanScreen extends StatefulWidget {
 }
 
 class ScanScreenState extends State<ScanScreen> {
+  bool isSignUp = false;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
   QRViewController? controller;
   String tableId = ""; // Store the tableId here
   bool isScanning = false; // Prevent multiple scans
   bool isCameraActive = true; // Track camera state
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showSignInDialog(tableId);
+    });
+  }
 
   @override
   void dispose() {
@@ -42,6 +52,9 @@ class ScanScreenState extends State<ScanScreen> {
     double scanArea =
         MediaQuery.of(context).size.width * 0.75; // 75% of the screen width
 
+    User? user = FirebaseAuth.instance.currentUser;
+    String userName = user?.displayName ?? user?.email ?? "Guest";
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -52,7 +65,6 @@ class ScanScreenState extends State<ScanScreen> {
           ],
         ),
         elevation: 0,
-        // toolbarHeight: 75,
         flexibleSpace: Column(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
@@ -103,7 +115,26 @@ class ScanScreenState extends State<ScanScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 10), // Add some spacing
+          const SizedBox(height: 10),
+          if (user != null) ...[
+            Text(
+              'Signed in as $userName',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                setState(() {
+                  // Force rebuild to update UI
+                });
+                _showSignInDialog(tableId);
+              },
+              child: Text(
+                'Remove this account',
+                style: TextStyle(color: Colors.red),
+              ),
+            ),
+          ],
           IconButton(
             icon: Icon(isCameraActive ? Icons.camera_alt : Icons.videocam_off),
             onPressed: _toggleCamera,
@@ -241,54 +272,71 @@ class ScanScreenState extends State<ScanScreen> {
     return distance <= rangeInMeters;
   }
 
-  Future<String?> _promptForName() async {
+  Future<User?> _signInWithGoogle() async {
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      await googleSignIn.signOut(); // Ensure the user is signed out first
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        return null; // The user canceled the sign-in
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithCredential(credential);
+      User? user = userCredential.user;
+
+      if (user != null &&
+          (user.displayName == null || user.displayName!.isEmpty)) {
+        // Prompt for the user's name if not already set
+        String? userName = await _promptForUserName();
+        if (userName != null && userName.isNotEmpty) {
+          await user.updateDisplayName(userName);
+        }
+      }
+
+      return user;
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error signing in with Google: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      return null;
+    }
+  }
+
+  Future<String?> _promptForUserName() async {
     TextEditingController nameController = TextEditingController();
+
     return showDialog<String>(
       context: context,
-      barrierDismissible:
-          false, // Prevent dismissing the dialog by tapping outside
+      barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text(
-            "Enter Your Username",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-            ),
-          ),
-          content: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: nameController,
-              decoration: InputDecoration(
-                labelText: 'Username',
-                hintText: 'Enter your name',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).primaryColor),
-                  borderRadius: BorderRadius.circular(10.0),
-                ),
-              ),
+          title: const Text("Enter Your Name"),
+          content: TextField(
+            controller: nameController,
+            decoration: InputDecoration(
+              labelText: 'Name',
+              border: OutlineInputBorder(),
             ),
           ),
           actions: [
-            ElevatedButton(
+            TextButton(
               onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  Navigator.of(context).pop(nameController.text);
-                } else {
-                  Fluttertoast.showToast(
-                    msg: "Name is required.",
-                    toastLength: Toast.LENGTH_SHORT,
-                    gravity: ToastGravity.BOTTOM,
-                    timeInSecForIosWeb: 1,
-                    backgroundColor: Colors.red,
-                    textColor: Colors.white,
-                    fontSize: 16.0
-                  );
-                }
+                Navigator.of(context).pop(nameController.text);
               },
               child: const Text("OK"),
             ),
@@ -298,7 +346,131 @@ class ScanScreenState extends State<ScanScreen> {
     );
   }
 
-  void _onQRViewCreated(QRViewController controller) {
+  Future<User?> _signUpWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      return userCredential.user;
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Error creating account: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+      return null;
+    }
+  }
+
+  Future<User?> _signInWithEmailAndPassword(
+      String email, String password) async {
+    try {
+      final UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      User? user = userCredential.user;
+
+      // If the user is signing in (not new), prompt for the name if not set
+      if (user != null &&
+          (user.displayName == null || user.displayName!.isEmpty)) {
+        String? userName = await _promptForUserName();
+        if (userName != null && userName.isNotEmpty) {
+          await user.updateDisplayName(userName);
+        }
+      }
+
+      return user;
+    } catch (e) {
+      if (e is FirebaseAuthException) {
+        if (e.code == 'user-not-found') {
+          try {
+            final UserCredential userCredential =
+                await FirebaseAuth.instance.createUserWithEmailAndPassword(
+              email: email,
+              password: password,
+            );
+            User? user = userCredential.user;
+
+            if (user != null) {
+              // Prompt for the user's name
+              String? userName = await _promptForUserName();
+              if (userName != null && userName.isNotEmpty) {
+                await user.updateDisplayName(userName);
+              }
+            }
+
+            return user;
+          } catch (e) {
+            Fluttertoast.showToast(
+              msg: "Error creating account: $e",
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              timeInSecForIosWeb: 1,
+              backgroundColor: Colors.red,
+              textColor: Colors.white,
+              fontSize: 16.0,
+            );
+            return null;
+          }
+        } else if (e.code == 'wrong-password') {
+          Fluttertoast.showToast(
+            msg: "Incorrect password. Please try again.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+        } else if (e.code == 'invalid-email') {
+          Fluttertoast.showToast(
+            msg: "Invalid email address. Please check and try again.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+        } else {
+          Fluttertoast.showToast(
+            msg: "Error: ${e.message}",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+        }
+      } else {
+        Fluttertoast.showToast(
+          msg: "Error: ${e.toString()}",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          timeInSecForIosWeb: 1,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+      }
+      return null;
+    }
+  }
+
+  bool isLoading = false;
+
+  void _onQRViewCreated(QRViewController controller,
+      [String? userName, String? tableId]) {
     setState(() {
       this.controller = controller;
     });
@@ -313,9 +485,9 @@ class ScanScreenState extends State<ScanScreen> {
       _toggleCamera();
 
       try {
-        // Get tableId from scanned QR code
-        String tableId = scanData.code ?? '';
-        print("Scanned QR code: $tableId");
+        // Get tableId from scanned QR code if not provided
+        String scannedTableId = tableId ?? scanData.code ?? '';
+        print("Scanned QR code: $scannedTableId");
 
         Position userLocation = await _getCurrentLocation();
         // 14.856759 - dave house latitude , school -  14.8322955, lynard - 14.852444
@@ -334,7 +506,7 @@ class ScanScreenState extends State<ScanScreen> {
             timeInSecForIosWeb: 1,
             backgroundColor: Colors.red,
             textColor: Colors.white,
-            fontSize: 16.0
+            fontSize: 16.0,
           );
           setState(() {
             isScanning = false;
@@ -344,92 +516,25 @@ class ScanScreenState extends State<ScanScreen> {
         }
 
         // Ensure tableId is not empty
-        if (tableId.isNotEmpty) {
-          String? userName = await _promptForName();
-          if (userName == null || userName.isEmpty) {
-            userName = "Guest";
-          }
-
-          // Add the user to the list of users for the table
-          DocumentReference tableRef = FirebaseFirestore.instance
-              .collection('activeTables')
-              .doc(tableId);
-          DocumentSnapshot tableDoc = await tableRef.get();
-
-          if (tableDoc.exists) {
-            List<dynamic> userNames = tableDoc['userNames'] ?? [];
-            if (userNames.contains(userName)) {
-              Fluttertoast.showToast(
-                msg: "Username $userName already exists.",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                timeInSecForIosWeb: 1,
-                backgroundColor: Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0
-              );
-              if (mounted) {
-                setState(() {
-                  isScanning = false;
-                });
-              }
-              return _toggleCamera();
-            } else {
-              await tableRef.update({
-                'status': 'active',
-                'timestamp': Timestamp.now(),
-                'userNames': FieldValue.arrayUnion([userName]),
+        if (scannedTableId.isNotEmpty) {
+          User? user = FirebaseAuth.instance.currentUser;
+          if (user == null) {
+            // Prompt the user to sign in
+            user = await _showSignInDialog(scannedTableId);
+            if (user == null) {
+              setState(() {
+                isScanning = false;
               });
+              _toggleCamera();
+              return;
             }
-          } else {
-            await tableRef.set({
-              'status': 'active',
-              'timestamp': Timestamp.now(),
-              'userNames': [userName],
-            });
           }
 
-          // Save tableId and userName to shared preferences
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.setString('tableId', tableId);
-          await prefs.setString('userName', userName);
-          await prefs.setInt(
-              'loginTimestamp', DateTime.now().millisecondsSinceEpoch);
+          String finalUserName =
+              userName ?? user.displayName ?? user.email ?? "Guest";
+          String userEmail = user.email ?? "unknown";
 
-          // Show confirmation to user
-          Fluttertoast.showToast(
-            msg: "Hello, $userName.",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
-            fontSize: 16.0
-          );
-
-          // Create a new collection of users for analytics
-          CollectionReference analyticsRef =
-              FirebaseFirestore.instance.collection('analytics');
-          DocumentReference analyticsDoc = analyticsRef.doc(
-              "$tableId + userCount + ${DateTime.now().toIso8601String().split('T').first}");
-
-          // Increment the user count for specific table
-          await analyticsDoc.set({
-            'tableId': tableId,
-            'usersCount': FieldValue.increment(1),
-            'timestamp': FieldValue.serverTimestamp(), // Add timestamp
-          }, SetOptions(merge: true));
-
-          await FirebaseFirestore.instance
-              .collection('adminNotifications')
-              .add({
-            'type': 'newUser',
-            'message':
-                'New user "$userName" added at "$tableId"',
-            'timestamp': FieldValue.serverTimestamp(),
-            'viewed': false,
-          });
-
+          // Show loading dialog
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -450,13 +555,108 @@ class ScanScreenState extends State<ScanScreen> {
             },
           );
 
+          // Add the user to the list of users for the table
+          DocumentReference tableRef = FirebaseFirestore.instance
+              .collection('activeTables')
+              .doc(scannedTableId);
+          DocumentSnapshot tableDoc = await tableRef.get();
+
+          if (tableDoc.exists) {
+            var userNames = tableDoc['userNames'];
+            if (userNames is List) {
+              // Convert list to map
+              Map<String, dynamic> userNamesMap = {};
+              for (var name in userNames) {
+                userNamesMap[name] = '';
+              }
+              userNames = userNamesMap;
+            }
+            Map<String, dynamic> userNamesMap =
+                Map<String, dynamic>.from(userNames ?? {});
+            print("Existing userNames: $userNamesMap");
+            if (userNamesMap.containsKey(finalUserName)) {
+              Fluttertoast.showToast(
+                msg: "Username $finalUserName already exists.",
+                toastLength: Toast.LENGTH_SHORT,
+                gravity: ToastGravity.BOTTOM,
+                timeInSecForIosWeb: 1,
+                backgroundColor: Colors.red,
+                textColor: Colors.white,
+                fontSize: 16.0,
+              );
+              if (mounted) {
+                setState(() {
+                  isScanning = false;
+                });
+              }
+              Navigator.of(context).pop(); // Close loading dialog
+              return _toggleCamera();
+            } else {
+              userNamesMap[finalUserName] = userEmail;
+              await tableRef.update({
+                'status': 'active',
+                'userNames': userNamesMap,
+              });
+              print("Updated userNames: $userNamesMap");
+            }
+          } else {
+            await tableRef.set({
+              'status': 'active',
+              'timestamp': Timestamp.now(),
+              'userNames': {finalUserName: userEmail},
+            });
+            print(
+                "Created new table with userNames: {$finalUserName: $userEmail}");
+          }
+
+          // Save tableId and userName to shared preferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('tableId', scannedTableId);
+          await prefs.setString('userName', finalUserName);
+          await prefs.setString('userEmail', userEmail);
+          await prefs.setInt(
+              'loginTimestamp', DateTime.now().millisecondsSinceEpoch);
+
+          // Show confirmation to user
+          Fluttertoast.showToast(
+            msg: "Hello, $finalUserName.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            timeInSecForIosWeb: 1,
+            backgroundColor: Colors.green,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+
+          // Create a new collection of users for analytics
+          CollectionReference analyticsRef =
+              FirebaseFirestore.instance.collection('analytics');
+          DocumentReference analyticsDoc = analyticsRef.doc(
+              "$scannedTableId + userCount + ${DateTime.now().toIso8601String().split('T').first}");
+
+          // Increment the user count for specific table
+          await analyticsDoc.set({
+            'tableId': scannedTableId,
+            'usersCount': FieldValue.increment(1),
+            'timestamp': FieldValue.serverTimestamp(), // Add timestamp
+          }, SetOptions(merge: true));
+
+          await FirebaseFirestore.instance
+              .collection('adminNotifications')
+              .add({
+            'type': 'newUser',
+            'message': 'New user "$finalUserName" added at "$scannedTableId"',
+            'timestamp': FieldValue.serverTimestamp(),
+            'viewed': false,
+          });
+
           // Navigate to GuestRequestScreen and pass the tableId and userName
           Navigator.pushReplacementNamed(
             context,
             '/guestRequest',
             arguments: {
-              'tableId': tableId,
-              'userName': userName
+              'tableId': scannedTableId,
+              'userName': finalUserName
             }, // Pass the tableId and userName here
           );
         } else {
@@ -468,19 +668,19 @@ class ScanScreenState extends State<ScanScreen> {
             timeInSecForIosWeb: 1,
             backgroundColor: Colors.red,
             textColor: Colors.white,
-            fontSize: 16.0
+            fontSize: 16.0,
           );
         }
       } catch (e) {
         print("Error saving to Firebase: $e");
         Fluttertoast.showToast(
-          msg: "Error processing QR Code.",
+          msg: "Error processing QR Code: $e",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM,
           timeInSecForIosWeb: 1,
           backgroundColor: Colors.red,
           textColor: Colors.white,
-          fontSize: 16.0
+          fontSize: 16.0,
         );
       } finally {
         // Allow scanning again after a delay
@@ -492,5 +692,155 @@ class ScanScreenState extends State<ScanScreen> {
         }
       }
     });
+  }
+
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
+
+  _showSignInDialog(String scannedTableId) {
+    _toggleCamera();
+    setState(() {
+      isLoading = false; // Reset isLoading state
+    });
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            height: MediaQuery.of(context).size.height,
+            padding: const EdgeInsets.all(16.0),
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                return Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Please log in first before scanning the QR code.',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(height: 20),
+                        if (isLoading)
+                          CircularProgressIndicator()
+                        else ...[
+                          TextField(
+                            controller: emailController,
+                            decoration: InputDecoration(labelText: 'Email'),
+                          ),
+                          TextField(
+                            controller: passwordController,
+                            decoration: InputDecoration(labelText: 'Password'),
+                            obscureText: true,
+                          ),
+                          SizedBox(height: 20),
+                          ElevatedButton(
+                            onPressed: () async {
+                              setState(() {
+                                isLoading = true;
+                              });
+                              final email = emailController.text;
+                              final password = passwordController.text;
+                              User? user;
+                              if (isSignUp) {
+                                user = await _signUpWithEmailAndPassword(
+                                    email, password);
+                                if (user != null) {
+                                  Fluttertoast.showToast(
+                                    msg: "Sign up successful! Please sign in.",
+                                    toastLength: Toast.LENGTH_SHORT,
+                                    gravity: ToastGravity.BOTTOM,
+                                    timeInSecForIosWeb: 1,
+                                    backgroundColor: Colors.green,
+                                    textColor: Colors.white,
+                                    fontSize: 16.0,
+                                  );
+                                  setState(() {
+                                    isSignUp = false;
+                                    isLoading = false;
+                                  });
+                                } else {
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                }
+                              } else {
+                                user = await _signInWithEmailAndPassword(
+                                    email, password);
+                                if (user != null) {
+                                  String userName =
+                                      user.displayName ?? user.email ?? "Guest";
+                                  Navigator.of(context).pop(user);
+                                  _onQRViewCreated(
+                                      controller!, userName, scannedTableId);
+                                } else {
+                                  setState(() {
+                                    isLoading = false;
+                                  });
+                                }
+                              }
+                            },
+                            child: Text(isSignUp ? 'Sign Up' : 'Sign In'),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                isSignUp = !isSignUp;
+                              });
+                            },
+                            child: Text(isSignUp
+                                ? 'Already have an account? Sign in here'
+                                : 'Don\'t have an account? Sign up here'),
+                          ),
+                          Divider(),
+                          Text('or'),
+                          SizedBox(height: 10),
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              setState(() {
+                                isLoading = true;
+                              });
+                              User? user = await _signInWithGoogle();
+                              if (user != null) {
+                                String userName =
+                                    user.displayName ?? user.email ?? "Guest";
+                                Navigator.of(context).pop(user);
+                                _onQRViewCreated(
+                                    controller!, userName, scannedTableId);
+                              } else {
+                                setState(() {
+                                  isLoading = false;
+                                });
+                              }
+                            },
+                            icon: Image.asset(
+                              'images/google_logo.png',
+                              height: 24.0,
+                              width: 24.0,
+                            ),
+                            label: Text('Sign in with Google'),
+                            style: ElevatedButton.styleFrom(
+                              foregroundColor: Colors.black,
+                              backgroundColor: Colors.white,
+                              minimumSize: Size(double.infinity, 50),
+                              side: BorderSide(color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
   }
 }
