@@ -121,7 +121,9 @@ class AdminPanelState extends State<AdminPanel> {
       Map<String, Map<String, int>> overallData,
       Map<String, Map<String, Map<String, int>>> dateWiseData,
       int totalRequestsCount,
-      int totalUsersCount) async {
+      int totalUsersCount,
+      Map<int, List<String>> weeklyVisitors,
+      bool isVisitorStatistics) async {
     final pdf = pw.Document();
 
     pdf.addPage(
@@ -130,82 +132,108 @@ class AdminPanelState extends State<AdminPanel> {
           return pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              if (selectedDate.year == 2000) ...[
-                pw.Text('Overall Statistics',
-                    style: pw.TextStyle(fontSize: 24)),
-                pw.SizedBox(height: 20),
-                pw.Text('Request Count by Table',
-                    style: pw.TextStyle(fontSize: 18)),
-                pw.SizedBox(height: 10),
-                pw.TableHelper.fromTextArray(
-                  headers: ['Table ID', 'Request Count'],
-                  data: overallData.entries.map((entry) {
-                    return [entry.key, entry.value['requestCount'].toString()];
+              if (!isVisitorStatistics) ...[
+                if (selectedDate.year == 2000) ...[
+                  pw.Text('Overall Statistics',
+                      style: pw.TextStyle(fontSize: 24)),
+                  pw.SizedBox(height: 20),
+                  pw.Text('Request Count by Table',
+                      style: pw.TextStyle(fontSize: 18)),
+                  pw.SizedBox(height: 10),
+                  pw.TableHelper.fromTextArray(
+                    headers: ['Table ID', 'Request Count'],
+                    data: overallData.entries.map((entry) {
+                      return [
+                        entry.key,
+                        entry.value['requestCount'].toString()
+                      ];
+                    }).toList(),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text('User Count by Table',
+                      style: pw.TextStyle(fontSize: 18)),
+                  pw.SizedBox(height: 10),
+                  pw.TableHelper.fromTextArray(
+                    headers: ['Table ID', 'User Count'],
+                    data: overallData.entries.map((entry) {
+                      return [entry.key, entry.value['usersCount'].toString()];
+                    }).toList(),
+                  ),
+                  pw.SizedBox(height: 20),
+                  pw.Text('Total Requests: $totalRequestsCount',
+                      style: pw.TextStyle(fontSize: 18)),
+                  pw.SizedBox(height: 10),
+                  pw.Text('Total Users: $totalUsersCount',
+                      style: pw.TextStyle(fontSize: 18)),
+                ],
+                if (selectedDate.year != 2000) ...[
+                  pw.Text('TableServe Statistics',
+                      style: pw.TextStyle(fontSize: 24)),
+                  pw.SizedBox(height: 20),
+                  ...dateWiseData.entries.map((dateEntry) {
+                    int dateTotalRequests = dateEntry.value.values
+                        .fold(0, (sum, entry) => sum + entry['requestCount']!);
+                    int dateTotalUsers = dateEntry.value.values
+                        .fold(0, (sum, entry) => sum + entry['usersCount']!);
+                    return pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        pw.Text('Date: ${dateEntry.key}',
+                            style: pw.TextStyle(fontSize: 18)),
+                        pw.SizedBox(height: 10),
+                        pw.Text('Request Count',
+                            style: pw.TextStyle(fontSize: 16)),
+                        pw.SizedBox(height: 10),
+                        pw.TableHelper.fromTextArray(
+                          headers: ['Table ID', 'Request Count'],
+                          data: dateEntry.value.entries.map((entry) {
+                            return [
+                              entry.key,
+                              entry.value['requestCount'].toString()
+                            ];
+                          }).toList(),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Text('User Count',
+                            style: pw.TextStyle(fontSize: 16)),
+                        pw.SizedBox(height: 10),
+                        pw.TableHelper.fromTextArray(
+                          headers: ['Table ID', 'User Count'],
+                          data: dateEntry.value.entries.map((entry) {
+                            return [
+                              entry.key,
+                              entry.value['usersCount'].toString()
+                            ];
+                          }).toList(),
+                        ),
+                        pw.SizedBox(height: 10),
+                        pw.Text('Total Requests: $dateTotalRequests',
+                            style: pw.TextStyle(fontSize: 16)),
+                        pw.SizedBox(height: 10),
+                        pw.Text('Total Users: $dateTotalUsers',
+                            style: pw.TextStyle(fontSize: 16)),
+                        pw.SizedBox(height: 20),
+                      ],
+                    );
                   }).toList(),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text('User Count by Table',
-                    style: pw.TextStyle(fontSize: 18)),
-                pw.SizedBox(height: 10),
-                pw.TableHelper.fromTextArray(
-                  headers: ['Table ID', 'User Count'],
-                  data: overallData.entries.map((entry) {
-                    return [entry.key, entry.value['usersCount'].toString()];
-                  }).toList(),
-                ),
-                pw.SizedBox(height: 20),
-                pw.Text('Total Requests: $totalRequestsCount',
-                    style: pw.TextStyle(fontSize: 18)),
-                pw.SizedBox(height: 10),
-                pw.Text('Total Users: $totalUsersCount',
-                    style: pw.TextStyle(fontSize: 18)),
+                ],
               ],
-              if (selectedDate.year != 2000) ...[
-                pw.Text('TableServe Statistics',
+              if (isVisitorStatistics) ...[
+                pw.Text('Visitors This Month',
                     style: pw.TextStyle(fontSize: 24)),
-                pw.SizedBox(height: 20),
-                ...dateWiseData.entries.map((dateEntry) {
-                  int dateTotalRequests = dateEntry.value.values
-                      .fold(0, (sum, entry) => sum + entry['requestCount']!);
-                  int dateTotalUsers = dateEntry.value.values
-                      .fold(0, (sum, entry) => sum + entry['usersCount']!);
+                pw.SizedBox(height: 10),
+                ...weeklyVisitors.entries.map((entry) {
                   return pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('Date: ${dateEntry.key}',
+                      pw.Text('Week ${entry.key}:',
                           style: pw.TextStyle(fontSize: 18)),
                       pw.SizedBox(height: 10),
-                      pw.Text('Request Count',
-                          style: pw.TextStyle(fontSize: 16)),
-                      pw.SizedBox(height: 10),
-                      pw.TableHelper.fromTextArray(
-                        headers: ['Table ID', 'Request Count'],
-                        data: dateEntry.value.entries.map((entry) {
-                          return [
-                            entry.key,
-                            entry.value['requestCount'].toString()
-                          ];
-                        }).toList(),
-                      ),
-                      pw.SizedBox(height: 10),
-                      pw.Text('User Count',
-                          style: pw.TextStyle(fontSize: 16)),
-                      pw.SizedBox(height: 10),
-                      pw.TableHelper.fromTextArray(
-                        headers: ['Table ID', 'User Count'],
-                        data: dateEntry.value.entries.map((entry) {
-                          return [
-                            entry.key,
-                            entry.value['usersCount'].toString()
-                          ];
-                        }).toList(),
-                      ),
-                      pw.SizedBox(height: 10),
-                      pw.Text('Total Requests: $dateTotalRequests',
-                          style: pw.TextStyle(fontSize: 16)),
-                      pw.SizedBox(height: 10),
-                      pw.Text('Total Users: $dateTotalUsers',
-                          style: pw.TextStyle(fontSize: 16)),
+                      if (entry.value.isEmpty)
+                        pw.Text('None', style: pw.TextStyle(fontSize: 16)),
+                      if (entry.value.isNotEmpty)
+                        ...entry.value.map((visitor) => pw.Text(visitor,
+                            style: pw.TextStyle(fontSize: 16))),
                       pw.SizedBox(height: 20),
                     ],
                   );
@@ -237,7 +265,7 @@ class AdminPanelState extends State<AdminPanel> {
 
   bool _isLoading = false;
 
-  void _downloadStatistics() async {
+  void _downloadStatistics(bool isVisitorStatistics) async {
     setState(() {
       _isLoading = true; // Show loading indicator
     });
@@ -245,6 +273,7 @@ class AdminPanelState extends State<AdminPanel> {
     // Aggregate data for analytics collection
     Map<String, Map<String, int>> overallData = {};
     Map<String, Map<String, Map<String, int>>> dateWiseData = {};
+    Map<int, List<String>> weeklyVisitors = {};
 
     DateTime startOfDay;
     DateTime endOfDay;
@@ -309,13 +338,74 @@ class AdminPanelState extends State<AdminPanel> {
       }
     }
 
+    if (isVisitorStatistics) {
+      // Fetch visitor data for the current month
+      DateTime now = DateTime.now();
+      DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
+      DateTime lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+
+      QuerySnapshot visitorsSnapshot = await FirebaseFirestore.instance
+          .collection('activeTables')
+          .where('timestamp', isGreaterThanOrEqualTo: firstDayOfMonth)
+          .where('timestamp', isLessThanOrEqualTo: lastDayOfMonth)
+          .get();
+
+      for (var doc in visitorsSnapshot.docs) {
+        var data = doc.data() as Map<String, dynamic>;
+        String userName = data['userName'] ?? 'Unknown';
+        DateTime timestamp = (data['timestamp'] as Timestamp).toDate();
+        int weekOfMonth = ((timestamp.day - 1) / 7).floor() + 1;
+
+        if (!weeklyVisitors.containsKey(weekOfMonth)) {
+          weeklyVisitors[weekOfMonth] = [];
+        }
+
+        weeklyVisitors[weekOfMonth]!.add(userName);
+      }
+
+      // Ensure all weeks are represented
+      for (int i = 1; i <= 5; i++) {
+        if (!weeklyVisitors.containsKey(i)) {
+          weeklyVisitors[i] = [];
+        }
+      }
+    }
+
     // Generate and download the PDF
-    await _generatePdf(
-        overallData, dateWiseData, totalRequestsCount, totalUsersCount);
+    await _generatePdf(overallData, dateWiseData, totalRequestsCount,
+        totalUsersCount, weeklyVisitors, isVisitorStatistics);
 
     setState(() {
       _isLoading = false; // Hide loading indicator
     });
+  }
+
+  void _showDownloadOptions() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Download Options"),
+          content: const Text("Choose the type of statistics to download:"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _downloadStatistics(false); // Download overall statistics
+              },
+              child: const Text("Overall Statistics"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _downloadStatistics(true); // Download visitor statistics
+              },
+              child: const Text("Visitor Statistics"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -443,7 +533,7 @@ class AdminPanelState extends State<AdminPanel> {
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: FloatingActionButton(
-                  onPressed: _isLoading ? null : _downloadStatistics,
+                  onPressed: _isLoading ? null : _showDownloadOptions,
                   backgroundColor: Colors.blue,
                   child: _isLoading
                       ? CircularProgressIndicator(
@@ -2200,14 +2290,18 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      Text(
-                        "Requested by: $userName",
-                        style: const TextStyle(fontSize: 14),
+                      Expanded(
+                        child: Text(
+                          "Requested by $userName",
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
                       const SizedBox(width: 10),
-                      Text(
-                        "Status: ${doc['status']}",
-                        style: const TextStyle(fontSize: 14),
+                      Expanded(
+                        child: Text(
+                          "Status: ${doc['status']}",
+                          style: const TextStyle(fontSize: 14),
+                        ),
                       ),
                     ],
                   ),
@@ -2231,7 +2325,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      _buildTrailingButtons(status, doc.id) ?? Container(),
+                      _buildTrailingButtons(doc['status'], doc.id) ??
+                          Container(),
                     ],
                   ),
                 ],
@@ -2319,20 +2414,6 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                 },
               );
             },
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton(
-            onPressed: () {
-              // Handle accept button
-              _updateRequestStatus(requestId, 'accepted');
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-            ),
-            child: const Text(
-              "Accept",
-              style: TextStyle(color: Colors.white),
-            ),
           ),
         ],
       );
