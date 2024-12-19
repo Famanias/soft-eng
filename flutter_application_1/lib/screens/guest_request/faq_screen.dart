@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class faqScreen extends StatefulWidget {
+  const faqScreen({super.key});
+
   @override
   faqScreenState createState() => faqScreenState();
 }

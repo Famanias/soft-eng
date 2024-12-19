@@ -613,6 +613,8 @@ class ScanScreenState extends State<ScanScreen> {
             'tableId': scannedTableId,
             'usersCount': FieldValue.increment(1),
             'timestamp': FieldValue.serverTimestamp(), // Add timestamp
+            'userNames':
+                FieldValue.arrayUnion([finalUserName]), // Add user name
           }, SetOptions(merge: true));
 
           await FirebaseFirestore.instance
