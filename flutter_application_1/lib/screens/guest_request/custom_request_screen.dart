@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/screens/guest_request/guest_request_screen.dart';
@@ -22,13 +21,14 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
 
     if (customRequestDetails.isEmpty) {
       Fluttertoast.showToast(
-          msg: "Please type your custom request.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Please type your custom request.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
       return;
     }
 
@@ -52,25 +52,6 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
     );
 
     try {
-      // Get the current user
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        Fluttertoast.showToast(
-            msg: "User not signed in.",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.red,
-            textColor: Colors.white,
-            fontSize: 16.0);
-        Navigator.of(context).pop();
-        return;
-      }
-
-      String finalUserName = user.displayName ?? user.email ?? "Guest";
-      String userEmail = user.email ?? "unknown";
-      String uniqueUserName = "$finalUserName: $userEmail";
-
       // Generate a custom document ID using the table ID and timestamp
       String docName =
           '${widget.tableId}-${DateTime.now().millisecondsSinceEpoch}';
@@ -84,14 +65,15 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         'requestType': customRequestDetails,
         'status': 'pending', // Set status to 'pending'
         'timestamp': Timestamp.now(),
-        'userName': uniqueUserName,
+        'userName': widget.userName,
       });
 
       // Add a notification document
+
       await FirebaseFirestore.instance.collection('adminNotifications').add({
         'type': 'newRequest',
         'message':
-            'New request "$customRequestDetails" from user "$uniqueUserName" at table "${widget.tableId}"',
+            'New request "$customRequestDetails" from user "${widget.userName}" at table "${widget.tableId}"',
         'timestamp': FieldValue.serverTimestamp(),
         'viewed': false,
       });
@@ -124,13 +106,14 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
 
       // Notify the user of successful submission
       Fluttertoast.showToast(
-          msg: "Custom request submitted successfully.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Custom request submitted successfully.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
 
       // Clear the text field after submission
       customRequestController.clear();
@@ -141,20 +124,21 @@ class CustomRequestScreenState extends State<CustomRequestScreen> {
         MaterialPageRoute(
           builder: (context) => GuestRequestScreen(
             tableId: widget.tableId,
-            userName: uniqueUserName, userEmail: userEmail,
+            userName: widget.userName,
           ),
         ),
         (Route<dynamic> route) => false,
       );
     } catch (e) {
       Fluttertoast.showToast(
-          msg: "Failed to submit request: $e.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Failed to submit request: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
     } finally {
       // Dismiss the loading dialog if it is still visible
       if (Navigator.of(context).canPop()) {

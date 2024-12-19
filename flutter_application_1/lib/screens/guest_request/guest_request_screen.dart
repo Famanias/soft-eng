@@ -1,7 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_request_screen.dart';
@@ -12,15 +10,12 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'faq_screen.dart';
+import 'faq_screen.dart'; 
 import 'package:fluttertoast/fluttertoast.dart';
 
 class GuestRequestScreen extends StatefulWidget {
   const GuestRequestScreen(
-      {super.key,
-      required String tableId,
-      required String userName,
-      required String userEmail});
+      {super.key, required String tableId, required String userName});
 
   @override
   GuestRequestScreenState createState() => GuestRequestScreenState();
@@ -75,7 +70,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   bool isScanning = false; // Prevent multiple scans
   String tableId = "";
   String userName = "Guest";
-  String userEmail = "";
   List<bool> selectedItems = List.generate(10, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
   List<String> requestTypes = [];
@@ -172,9 +166,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       setState(() {
         tableId = args['tableId'];
         userName = args['userName'];
-        userEmail = args['userEmail'];
       });
-      _saveTableId(args['tableId'], args['userName'], args['userEmail']);
+      _saveTableId(args['tableId'], args['userName']);
     }
   }
 
@@ -197,7 +190,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tableId', tableId);
     await prefs.setString('userName', userName);
-    await prefs.setString('userEmail', userEmail);
   }
 
   Future<void> _loadTableId() async {
@@ -205,29 +197,22 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     setState(() {
       tableId = prefs.getString('tableId') ?? "";
       userName = prefs.getString('userName') ?? "Guest";
-      userEmail = prefs.getString('userEmail') ?? "unknown";
     });
     _fetchRequestHistory();
   }
 
-  Future<void> _saveTableId(String id, String name, String userEmail) async {
+  Future<void> _saveTableId(String id, String name) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('tableId', id);
     await prefs.setString('userName', name);
-    await prefs.setString('userEmail', userEmail);
   }
 
   Future<void> _fetchRequestHistory() async {
     if (tableId.isNotEmpty) {
-      User? user = FirebaseAuth.instance.currentUser;
-      String finalUserName = user?.displayName ?? user?.email ?? "Guest";
-      String userEmail = user?.email ?? "unknown";
-      String uniqueUserName = "$finalUserName: $userEmail";
-
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('guestRequests')
           .where('tableId', isEqualTo: tableId)
-          .where('userName', isEqualTo: uniqueUserName)
+          .where('userName', isEqualTo: userName)
           .orderBy('timestamp', descending: true)
           .get();
 
@@ -364,226 +349,190 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   void _showRequestHistoryDialog() async {
     await _fetchRequestHistory(); // Fetch the latest request history
 
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
+        return AlertDialog(
+          title: Text(
+            'Your Request',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF316175),
+            ),
           ),
-          child: Container(
-            padding: const EdgeInsets.all(16.0),
-            height: MediaQuery.of(context).size.height * 0.8,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Requests',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF316175),
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-                Expanded(
-                  child: StatefulBuilder(
-                    builder: (BuildContext context, StateSetter setState) {
-                      return requestHistory.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No Request Found',
+          content: Container(
+            width: double.maxFinite,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                return requestHistory.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No Request Found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: requestHistory.length,
+                        itemBuilder: (context, index) {
+                          var request = requestHistory[index];
+                          return Card(
+                            margin: EdgeInsets.symmetric(vertical: 8.0),
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.0,
+                                horizontal: 16.0,
+                              ),
+                              title: Text(
+                                request['requestType'],
                                 style: TextStyle(
                                   fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF316175),
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Status: ${request['status']}',
+                                style: TextStyle(
+                                  fontSize: 16,
                                   color: Colors.grey[600],
                                 ),
                               ),
-                            )
-                          : ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: requestHistory.length,
-                              itemBuilder: (context, index) {
-                                var request = requestHistory[index];
-                                var timestamp =
-                                    (request['timestamp'] as Timestamp)
-                                        .toDate();
-                                return Card(
-                                  margin: EdgeInsets.symmetric(vertical: 8.0),
-                                  elevation: 3,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: ListTile(
-                                    contentPadding: EdgeInsets.symmetric(
-                                      vertical: 10.0,
-                                      horizontal: 16.0,
-                                    ),
-                                    title: Text(
-                                      request['requestType'],
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF316175),
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Status: ${request['status']}',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4.0),
-                                        Text(
-                                          'Time: ${DateFormat('yyyy-MM-dd – kk:mm').format(timestamp)}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey[500],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (request['status'] != 'done' &&
-                                            request['status'] != 'accepted' &&
-                                            request['status'] != 'canceled')
-                                          IconButton(
-                                            icon: Icon(Icons.cancel,
-                                                color: Colors.red),
-                                            onPressed: () async {
-                                              bool? confirmDelete =
-                                                  await showDialog<bool>(
-                                                context: context,
-                                                builder:
-                                                    (BuildContext context) {
-                                                  return AlertDialog(
-                                                    title: const Text(
-                                                        "Confirm Cancel"),
-                                                    content: const Text(
-                                                        "Are you sure you want to cancel this request?"),
-                                                    actions: [
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop(false),
-                                                        child: const Text("No"),
-                                                      ),
-                                                      TextButton(
-                                                        onPressed: () =>
-                                                            Navigator.of(
-                                                                    context)
-                                                                .pop(true),
-                                                        child: const Text("Yes",
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .red)),
-                                                      ),
-                                                    ],
-                                                  );
-                                                },
-                                              );
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // if (request['status'] != 'done' &&
+                                  //     request['status'] != 'accepted' &&
+                                  //     request['status'] != 'rejected')
+                                  //   IconButton(
+                                  //     icon:
+                                  //         Icon(Icons.edit, color: Colors.blue),
+                                  //     onPressed: () {
+                                  //       Navigator.of(context).pop();
+                                  //       _updateRequest(request);
+                                  //     },
+                                  //   ),
+                                  if (request['status'] != 'done' &&
+                                      request['status'] != 'accepted' &&
+                                      request['status'] != 'canceled')
+                                    IconButton(
+                                      icon:
+                                          Icon(Icons.cancel, color: Colors.red),
+                                      onPressed: () async {
+                                        bool? confirmDelete =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (BuildContext context) {
+                                            return AlertDialog(
+                                              title:
+                                                  const Text("Confirm Cancel"),
+                                              content: const Text(
+                                                  "Are you sure you want to cancel this request?"),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(false),
+                                                  child: const Text("No"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.of(context)
+                                                          .pop(true),
+                                                  child: const Text("Yes",
+                                                      style: TextStyle(
+                                                          color: Colors.red)),
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        );
 
-                                              if (confirmDelete == true) {
-                                                // Check if the document exists before deleting
-                                                DocumentSnapshot docSnapshot =
-                                                    await FirebaseFirestore
-                                                        .instance
-                                                        .collection(
-                                                            'guestRequests')
-                                                        .doc(request['docId'])
-                                                        .get();
+                                        if (confirmDelete == true) {
+                                          // Check if the document exists before deleting
+                                          DocumentSnapshot docSnapshot =
+                                              await FirebaseFirestore.instance
+                                                  .collection('guestRequests')
+                                                  .doc(request['docId'])
+                                                  .get();
 
-                                                if (docSnapshot.exists) {
-                                                  // Update the status to "canceled"
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection(
-                                                          'guestRequests')
-                                                      .doc(request['docId'])
-                                                      .update({
-                                                    'status': 'canceled'
-                                                  });
+                                          if (docSnapshot.exists) {
+                                            // Update the status to "canceled"
+                                            await FirebaseFirestore.instance
+                                                .collection('guestRequests')
+                                                .doc(request['docId'])
+                                                .update({'status': 'canceled'});
 
-                                                  // Notify the admin
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection(
-                                                          'adminNotifications')
-                                                      .add({
-                                                    'type': 'requestCanceled',
-                                                    'message':
-                                                        'Request "${request['requestType']}" from user "${request['userName']}" at table "${request['tableId']}" has been canceled.',
-                                                    'timestamp': FieldValue
-                                                        .serverTimestamp(),
-                                                    'viewed': false,
-                                                  });
+                                            // Notify the admin
+                                            await FirebaseFirestore.instance
+                                                .collection(
+                                                    'adminNotifications')
+                                                .add({
+                                              'type': 'requestCanceled',
+                                              'message':
+                                                  'Request "${request['requestType']}" from user "${request['userName']}" at table "${request['tableId']}" has been canceled.',
+                                              'timestamp':
+                                                  FieldValue.serverTimestamp(),
+                                              'viewed': false,
+                                            });
 
-                                                  await _fetchRequestHistory(); // Refresh the request history
-                                                  setState(
-                                                      () {}); // Update the state to reflect the changes
-                                                  Fluttertoast.showToast(
-                                                      msg:
-                                                          "Request Cancelled successfully.",
-                                                      toastLength:
-                                                          Toast.LENGTH_SHORT,
-                                                      gravity:
-                                                          ToastGravity.BOTTOM,
-                                                      timeInSecForIosWeb: 1,
-                                                      backgroundColor:
-                                                          Colors.green,
-                                                      textColor: Colors.white,
-                                                      fontSize: 16.0);
-                                                } else {
-                                                  Fluttertoast.showToast(
-                                                      msg: "No Requests Found.",
-                                                      toastLength:
-                                                          Toast.LENGTH_SHORT,
-                                                      gravity:
-                                                          ToastGravity.BOTTOM,
-                                                      timeInSecForIosWeb: 1,
-                                                      backgroundColor:
-                                                          Colors.red,
-                                                      textColor: Colors.white,
-                                                      fontSize: 16.0);
-                                                }
-                                              }
-                                            },
-                                          ),
-                                      ],
+                                            await _fetchRequestHistory(); // Refresh the request history
+                                            setState(
+                                                () {}); // Update the state to reflect the changes
+                                            Fluttertoast.showToast(
+                                              msg: "Request Cancelled successfully.",
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.BOTTOM,
+                                              timeInSecForIosWeb: 1,
+                                              backgroundColor: Colors.green,
+                                              textColor: Colors.white,
+                                              fontSize: 16.0
+                                            );
+                                          } else {
+                                            Fluttertoast.showToast(
+                                              msg: "No Requests Found.",
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.BOTTOM,
+                                              timeInSecForIosWeb: 1,
+                                              backgroundColor: Colors.red,
+                                              textColor: Colors.white,
+                                              fontSize: 16.0
+                                            );
+                                          }
+                                        }
+                                      },
                                     ),
-                                  ),
-                                );
-                              },
-                            );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 16.0),
-                Center(
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    child: Text(
-                      'Close',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(0xFF316175),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+              },
             ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF316175),
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
@@ -651,13 +600,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                 } else {
                   Navigator.of(context).pop();
                   Fluttertoast.showToast(
-                      msg: "Request not found.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.green,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
+                    msg: "Request not found.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0
+                  );
                 }
               },
               child: Text('Update'),
@@ -697,22 +647,24 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   Navigator.of(context).pop();
                   _fetchRequestHistory();
                   Fluttertoast.showToast(
-                      msg: "Custom request updated successfully.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.green,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
+                    msg: "Custom request updated successfully.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0
+                  );
                 } else {
                   Fluttertoast.showToast(
-                      msg: "Custom Request cannot be empty.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.red,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
+                    msg: "Custom Request cannot be empty.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0
+                  );
                 }
               },
               child: Text('Submit'),
@@ -729,13 +681,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     // Check for valid tableId
     if (tableId.isEmpty) {
       Fluttertoast.showToast(
-          msg: "No Table ID available.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "No Table ID available.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
       return;
     }
 
@@ -766,13 +719,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     // Check if any requests were selected
     if (selectedRequests.isEmpty) {
       Fluttertoast.showToast(
-          msg: "Please select at least one request.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Please select at least one request.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
       return;
     }
 
@@ -799,25 +753,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
 
     try {
-      // Get the current user
-      User? user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        Fluttertoast.showToast(
-            msg: "User not signed in.",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            timeInSecForIosWeb: 1,
-            backgroundColor: Colors.red,
-            textColor: Colors.white,
-            fontSize: 16.0);
-        Navigator.of(context).pop();
-        return;
-      }
-
-      String finalUserName = user.displayName ?? user.email ?? "Guest";
-      String userEmail = user.email ?? "unknown";
-      String uniqueUserName = "$finalUserName: $userEmail";
-
       // Submit each request to Firestore
       for (var request in selectedRequests) {
         String requestType = request['requestType'];
@@ -834,7 +769,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
           'items': items,
           'status': 'pending',
           'timestamp': Timestamp.now(),
-          'userName': uniqueUserName,
+          'userName': userName,
         });
 
         // Analytics and notifications...
@@ -865,7 +800,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         await FirebaseFirestore.instance.collection('adminNotifications').add({
           'type': 'newRequest',
           'message':
-              'New request "$requestType" from user "$uniqueUserName" at table "$tableId"',
+              'New request "$requestType" from user "$userName" at table "$tableId"',
           'timestamp': FieldValue.serverTimestamp(),
           'viewed': false,
         });
@@ -877,23 +812,25 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
 
       // Notify the user of successful submission
       Fluttertoast.showToast(
-          msg: "Requests submitted successfully.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Requests submitted successfully.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
     } catch (e) {
       // Show error message if submission fails
       Fluttertoast.showToast(
-          msg: "Failed to submit request: $e.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Failed to submit request: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
     } finally {
       // Dismiss the loading dialog
       Navigator.of(context).pop();
@@ -986,21 +923,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
         log("No messages found for userName: $userName");
       }
 
-      // Step 4: Sign out from Firebase Authentication
-      await FirebaseAuth.instance.signOut();
-
-      // Step 5: Notify the user of success
+      // Step 4: Notify the user of success
       // ignore: use_build_context_synchronously
       Fluttertoast.showToast(
-          msg: "Thank you for using the service.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.green,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Thank you for using the service.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
 
-      // Step 6: Reset state and navigate
+      // Step 5: Reset state and navigate
       setState(() {
         tableId = "";
         selectedItems = List.generate(10, (index) => false);
@@ -1013,13 +948,14 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       log("Error: $e");
       // ignore: use_build_context_synchronously
       Fluttertoast.showToast(
-          msg: "Failed to update the table status: $e.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          timeInSecForIosWeb: 1,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0);
+        msg: "Failed to update the table status: $e.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0
+      );
     }
   }
 
@@ -1027,11 +963,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MessagesScreen(
-          tableId: tableId,
-          userName: userName,
-          userEmail: userEmail,
-        ),
+        builder: (context) =>
+            MessagesScreen(tableId: tableId, userName: userName),
       ),
     );
   }
@@ -1049,6 +982,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                   color: Color(0xffffffff),
                   fontFamily: "RubikOne",
                 )),
+            Text(
+              '$userName - $tableId',
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.white,
+              ),
+            ),
           ],
         ),
         leading: IconButton(
@@ -1164,21 +1104,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                             context,
                             MaterialPageRoute(
                               builder: (context) => NotificationScreen(
-                                tableId: tableId,
-                                userName: userName,
-                                userEmail: userEmail,
-                              ),
+                                  tableId: tableId, userName: userName),
                             ),
                           );
                         } else {
                           Fluttertoast.showToast(
-                              msg: "No Table ID available.",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                              fontSize: 16.0);
+                            msg: "No Table ID available.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0
+                          );
                         }
                       },
                     );
@@ -1191,21 +1129,19 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                             context,
                             MaterialPageRoute(
                               builder: (context) => NotificationScreen(
-                                tableId: tableId,
-                                userName: userName,
-                                userEmail: userEmail,
-                              ),
+                                  tableId: tableId, userName: userName),
                             ),
                           );
                         } else {
                           Fluttertoast.showToast(
-                              msg: "No Table ID available.",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                              fontSize: 16.0);
+                            msg: "No Table ID available.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0
+                          );
                         }
                       },
                     );
