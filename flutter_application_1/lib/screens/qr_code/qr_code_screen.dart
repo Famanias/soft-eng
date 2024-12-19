@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:qr_code_scanner/qr_code_scanner.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -613,9 +614,15 @@ class ScanScreenState extends State<ScanScreen> {
             'tableId': scannedTableId,
             'usersCount': FieldValue.increment(1),
             'timestamp': FieldValue.serverTimestamp(), // Add timestamp
-            'userNames':
-                FieldValue.arrayUnion([finalUserName]), // Add user name
           }, SetOptions(merge: true));
+
+          await FirebaseFirestore.instance.collection('adminAnalytics').add({
+            'tableId': scannedTableId,
+            'userNames': {
+              uniqueUserName: DateFormat('yyyy-MM-dd').format(DateTime.now())
+            },
+            'timestamp': FieldValue.serverTimestamp(),
+          });
 
           await FirebaseFirestore.instance
               .collection('adminNotifications')
