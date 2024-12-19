@@ -14,6 +14,45 @@ class ScanScreen extends StatefulWidget {
   ScanScreenState createState() => ScanScreenState();
 }
 
+class PasswordVisibilityToggle extends StatefulWidget {
+  final TextEditingController controller;
+  final String labelText;
+
+  const PasswordVisibilityToggle({
+    Key? key,
+    required this.controller,
+    required this.labelText,
+  }) : super(key: key);
+
+  @override
+  _PasswordVisibilityToggleState createState() => _PasswordVisibilityToggleState();
+}
+
+class _PasswordVisibilityToggleState extends State<PasswordVisibilityToggle> {
+  bool _isObscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: widget.controller,
+      decoration: InputDecoration(
+        labelText: widget.labelText,
+        prefixIcon: Icon(Icons.vpn_key),
+        suffixIcon: IconButton(
+          icon: Icon(_isObscure ? Icons.visibility_off : Icons.visibility),
+          onPressed: () {
+            setState(() {
+              _isObscure = !_isObscure;
+            });
+          },
+        ),
+      ),
+      obscureText: _isObscure,
+    );
+  }
+}
+
+
 class ScanScreenState extends State<ScanScreen> {
   bool isSignUp = false;
   final GlobalKey qrKey = GlobalKey(debugLabel: 'QR');
@@ -696,6 +735,8 @@ class ScanScreenState extends State<ScanScreen> {
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController confirmPasswordController = TextEditingController();
+
 
   _showSignInDialog(String scannedTableId) {
     _toggleCamera();
@@ -706,141 +747,287 @@ class ScanScreenState extends State<ScanScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            height: MediaQuery.of(context).size.height,
-            padding: const EdgeInsets.all(16.0),
-            child: StatefulBuilder(
-              builder: (context, setState) {
-                return Center(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Please log in first before scanning the QR code.',
-                          style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 20),
-                        if (isLoading)
-                          CircularProgressIndicator()
-                        else ...[
-                          TextField(
-                            controller: emailController,
-                            decoration: InputDecoration(labelText: 'Email'),
-                          ),
-                          TextField(
-                            controller: passwordController,
-                            decoration: InputDecoration(labelText: 'Password'),
-                            obscureText: true,
-                          ),
-                          SizedBox(height: 20),
-                          ElevatedButton(
-                            onPressed: () async {
-                              setState(() {
-                                isLoading = true;
-                              });
-                              final email = emailController.text;
-                              final password = passwordController.text;
-                              User? user;
-                              if (isSignUp) {
-                                user = await _signUpWithEmailAndPassword(
-                                    email, password);
-                                if (user != null) {
-                                  Fluttertoast.showToast(
-                                    msg: "Sign up successful! Please sign in.",
-                                    toastLength: Toast.LENGTH_SHORT,
-                                    gravity: ToastGravity.BOTTOM,
-                                    timeInSecForIosWeb: 1,
-                                    backgroundColor: Colors.green,
-                                    textColor: Colors.white,
-                                    fontSize: 16.0,
-                                  );
-                                  setState(() {
-                                    isSignUp = false;
-                                    isLoading = false;
-                                  });
-                                } else {
-                                  setState(() {
-                                    isLoading = false;
-                                  });
-                                }
-                              } else {
-                                user = await _signInWithEmailAndPassword(
-                                    email, password);
-                                if (user != null) {
-                                  String userName =
-                                      user.displayName ?? user.email ?? "Guest";
-                                  Navigator.of(context).pop(user);
-                                  _onQRViewCreated(
-                                      controller!, userName, scannedTableId);
-                                } else {
-                                  setState(() {
-                                    isLoading = false;
-                                  });
-                                }
-                              }
-                            },
-                            child: Text(isSignUp ? 'Sign Up' : 'Sign In'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              setState(() {
-                                isSignUp = !isSignUp;
-                              });
-                            },
-                            child: Text(isSignUp
-                                ? 'Already have an account? Sign in here'
-                                : 'Don\'t have an account? Sign up here'),
-                          ),
-                          Divider(),
-                          Text('or'),
-                          SizedBox(height: 10),
-                          ElevatedButton.icon(
-                            onPressed: () async {
-                              setState(() {
-                                isLoading = true;
-                              });
-                              User? user = await _signInWithGoogle();
-                              if (user != null) {
-                                String userName =
-                                    user.displayName ?? user.email ?? "Guest";
-                                Navigator.of(context).pop(user);
-                                _onQRViewCreated(
-                                    controller!, userName, scannedTableId);
-                              } else {
-                                setState(() {
-                                  isLoading = false;
-                                });
-                              }
-                            },
-                            icon: Image.asset(
-                              'images/google_logo.png',
-                              height: 24.0,
-                              width: 24.0,
-                            ),
-                            label: Text('Sign in with Google'),
-                            style: ElevatedButton.styleFrom(
-                              foregroundColor: Colors.black,
-                              backgroundColor: Colors.white,
-                              minimumSize: Size(double.infinity, 50),
-                              side: BorderSide(color: Colors.grey),
-                            ),
-                          ),
-                        ],
-                      ],
+        return Stack(
+          children: [
+            Positioned(
+              bottom: 0, // Make sure it's at the bottom of the screen
+              left: 0,
+              right: 0,
+              child: Builder(
+                builder: (context) {
+                  double screenWidth = MediaQuery.of(context).size.width;
+                  double aspectRatio = 16 / 9;
+                  double imageHeight = screenWidth / aspectRatio;
+
+                  return Container(
+                    width: screenWidth,
+                    height: imageHeight, 
+                    child: Opacity(
+                      opacity: 0.4, // 50% opacity
+                      child: Image.asset(
+                        'images/bg.png', // Replace with your background image path
+                        fit: BoxFit.cover, // Ensure it covers the width and scales the height responsively
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
+            Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                child: StatefulBuilder(
+                  builder: (context, setState) {
+                    return Center(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Column(
+                              children: [
+                                Image.asset(
+                                  'images/logo.png',
+                                  height: 100,
+                                  width: 100,
+                                ),
+                                Text(
+                                  isSignUp ? 'Get Started' : 'Welcome Back',
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color.fromARGB(255, 50, 59, 50), // Text color to ensure visibility
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  isSignUp
+                                      ? 'Hello! Welcome to TableServe.'
+                                      : 'Hey! It\'s good to see you again.',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: const Color.fromARGB(255, 100, 100, 100), // Lighter grey for better visibility
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 50),
+                            if (isLoading)
+                              CircularProgressIndicator()
+                            else ...[
+                              TextField(
+                                controller: emailController,
+                                decoration: InputDecoration(
+                                  labelText: 'Email',
+                                  prefixIcon: Icon(Icons.email),
+                                ),
+                              ),
+                              PasswordVisibilityToggle(
+                                controller: passwordController,
+                                labelText: 'Password',
+                              ),
+                              if (isSignUp) 
+                                PasswordVisibilityToggle(
+                                  controller: confirmPasswordController,
+                                  labelText: 'Confirm Password',
+                                ),
+                               // Add the Forgot Password Button here
+                              if (!isSignUp)
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      // Logic for forgot password
+                                      // You can navigate to a forgot password page or show a dialog
+                                      print("Forgot Password button pressed");
+                                    },
+                                    child: Text(
+                                      'Forgot Password?',
+                                      style: TextStyle(color: Colors.blue),
+                                    ),
+                                  ),
+                                ),
+                              SizedBox(height: 25),
+                              ElevatedButton(
+                                onPressed: () async {
+                                  setState(() {
+                                    isLoading = true;
+                                  });
+                                  final email = emailController.text;
+                                  final password = passwordController.text;
+                                  final confirmPassword = confirmPasswordController.text.trim();
+                                  
+                                  User? user;
+                                  if (isSignUp) {
+                                    if(password != confirmPassword){
+                                      setState(() {
+                                        isLoading = false;
+                                      });
+                                      Fluttertoast.showToast(
+                                        msg: "Passwords do not match.",
+                                        toastLength: Toast.LENGTH_SHORT,
+                                        gravity: ToastGravity.BOTTOM,
+                                        timeInSecForIosWeb: 1,
+                                        backgroundColor: Colors.red,
+                                        textColor: Colors.white,
+                                        fontSize: 16.0,
+                                      );
+                                      return;
+                                    }
+                                    user = await _signUpWithEmailAndPassword(email, password);
+                                    if (user != null) {
+                                      Fluttertoast.showToast(
+                                        msg: "Sign up successful! Please sign in.",
+                                        toastLength: Toast.LENGTH_SHORT,
+                                        gravity: ToastGravity.BOTTOM,
+                                        timeInSecForIosWeb: 1,
+                                        backgroundColor: Colors.green,
+                                        textColor: Colors.white,
+                                        fontSize: 16.0,
+                                      );
+                                      setState(() {
+                                        isSignUp = false;
+                                        isLoading = false;
+                                      });
+                                    } else {
+                                      setState(() {
+                                        isLoading = false;
+                                      });
+                                    }
+                                  } else {
+                                    user = await _signInWithEmailAndPassword(email, password);
+                                    if (user != null) {
+                                      String userName = user.displayName ?? user.email ?? "Guest";
+                                      Navigator.of(context).pop(user);
+                                      _onQRViewCreated(controller!, userName, scannedTableId);
+                                    } else {
+                                      setState(() {
+                                        isLoading = false;
+                                      });
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  backgroundColor: Colors.teal, // Teal color for the button
+                                  minimumSize: Size(double.infinity, 50),
+                                ),
+                                child: Text(isSignUp ? 'Sign Up' : 'Sign In'),
+                              ),
+                              
+                              SizedBox(height: 25),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      thickness: 1,
+                                      color: const Color.fromARGB(255, 75, 75, 75), 
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                                    child: Text(
+                                      'Or',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: const Color.fromARGB(255, 75, 75, 75), 
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      thickness: 1,
+                                      color: const Color.fromARGB(255, 75, 75, 75), 
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 25),
+                              ElevatedButton.icon(
+                                onPressed: () async {
+                                  setState(() {
+                                    isLoading = true;
+                                  });
+                                  User? user = await _signInWithGoogle();
+                                  if (user != null) {
+                                    String userName =
+                                        user.displayName ?? user.email ?? "Guest";
+                                    Navigator.of(context).pop(user);
+                                    _onQRViewCreated(controller!, userName, scannedTableId);
+                                  } else {
+                                    setState(() {
+                                      isLoading = false;
+                                    });
+                                  }
+                                },
+                                icon: Image.asset(
+                                  'images/google_logo.png',
+                                  height: 24.0,
+                                  width: 24.0,
+                                ),
+                                label: Text('Sign in with Google'),
+                                style: ElevatedButton.styleFrom(
+                                  foregroundColor: Colors.black,
+                                  backgroundColor: Colors.white,
+                                  minimumSize: Size(double.infinity, 50),
+                                ),
+                              ),
+                              SizedBox(height: 50),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    isSignUp = !isSignUp;
+                                  });
+                                },
+                                child: Text(
+                                  isSignUp
+                                      ? 'Already a user? Sign in here'
+                                      : 'New user? Sign up here',
+                                  style: TextStyle(color: Colors.blue),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         );
       },
     );
   }
+
+
+  Widget _buildThemedTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+  }) {
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.white),
+        prefixIcon: Icon(icon, color: Colors.white),
+        filled: true,
+        fillColor: Colors.teal[800]!.withOpacity(0.6),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.teal[400]!),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.tealAccent),
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      style: TextStyle(color: Colors.white),
+    );
+  }
+
 }
