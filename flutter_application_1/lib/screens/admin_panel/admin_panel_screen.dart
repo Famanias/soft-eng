@@ -219,7 +219,8 @@ class AdminPanelState extends State<AdminPanel> {
                 ],
               ],
               if (isVisitorStatistics) ...[
-                pw.Text('Visitors This Month',
+                pw.Text(
+                    'Visitors for ${DateFormat('MMMM').format(selectedDate)}',
                     style: pw.TextStyle(fontSize: 24)),
                 pw.SizedBox(height: 10),
                 ...weeklyVisitors.entries.map((entry) {
@@ -339,10 +340,11 @@ class AdminPanelState extends State<AdminPanel> {
     }
 
     if (isVisitorStatistics) {
-      // Fetch visitor data for the current month
-      DateTime now = DateTime.now();
-      DateTime firstDayOfMonth = DateTime(now.year, now.month, 1);
-      DateTime lastDayOfMonth = DateTime(now.year, now.month + 1, 0);
+      // Fetch visitor data for the selected month
+      DateTime firstDayOfMonth =
+          DateTime(selectedDate.year, selectedDate.month, 1);
+      DateTime lastDayOfMonth =
+          DateTime(selectedDate.year, selectedDate.month + 1, 0);
 
       QuerySnapshot visitorsSnapshot = await FirebaseFirestore.instance
           .collection('activeTables')
@@ -352,7 +354,7 @@ class AdminPanelState extends State<AdminPanel> {
 
       for (var doc in visitorsSnapshot.docs) {
         var data = doc.data() as Map<String, dynamic>;
-        String userName = data['userName'] ?? 'Unknown';
+        var userNames = data['userNames'];
         DateTime timestamp = (data['timestamp'] as Timestamp).toDate();
         int weekOfMonth = ((timestamp.day - 1) / 7).floor() + 1;
 
@@ -360,7 +362,15 @@ class AdminPanelState extends State<AdminPanel> {
           weeklyVisitors[weekOfMonth] = [];
         }
 
-        weeklyVisitors[weekOfMonth]!.add(userName);
+        if (userNames is List) {
+          for (var name in userNames) {
+            weeklyVisitors[weekOfMonth]!.add(name);
+          }
+        } else if (userNames is Map) {
+          userNames.forEach((userName, userEmail) {
+            weeklyVisitors[weekOfMonth]!.add(userName);
+          });
+        }
       }
 
       // Ensure all weeks are represented
