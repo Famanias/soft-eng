@@ -76,6 +76,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   String tableId = "";
   String userName = "Guest";
   String userEmail = "";
+  String uniqueUserName = "";
   List<bool> selectedItems = List.generate(10, (index) => false);
   List<Map<String, dynamic>> requestHistory = [];
   List<String> requestTypes = [];
@@ -90,6 +91,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   void initState() {
     super.initState();
     fetchRequestData();
+    uniqueUserName = "$userName: $userEmail";
     _initializeLocalNotifications();
     _listenForNotifications();
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -1116,7 +1118,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                 stream: FirebaseFirestore.instance
                     .collection('notifications')
                     .where('tableId', isEqualTo: tableId)
-                    .where('userName', isEqualTo: userName)
+                    .where('userName', isEqualTo: uniqueUserName)
                     .where('viewed',
                         isEqualTo: false) // Only show unviewed notifications
                     .snapshots(),

@@ -490,10 +490,9 @@ class ScanScreenState extends State<ScanScreen> {
         print("Scanned QR code: $scannedTableId");
 
         Position userLocation = await _getCurrentLocation();
-        // 14.856759 - dave house latitude , school -  14.8322955, lynard - 14.852444
-        double targetLatitude = 14.852444; // Replace with your target
-        // 120.328327 - dave house longitude, school = 120.282504, lynard - 120.291917
-        double targetLongitude = 120.291917; // Replace with your target longitude
+        double targetLatitude = 14.856759; // Replace with your target latitude
+        double targetLongitude =
+            120.328327; // Replace with your target longitude
         double rangeInMeters = 500; // Define the acceptable range in meters
 
         if (!_isLocationWithinRange(
@@ -533,6 +532,7 @@ class ScanScreenState extends State<ScanScreen> {
           String finalUserName =
               userName ?? user.displayName ?? user.email ?? "Guest";
           String userEmail = user.email ?? "unknown";
+          String uniqueUserName = "$finalUserName: $userEmail";
 
           // Show loading dialog
           showDialog(
@@ -561,53 +561,27 @@ class ScanScreenState extends State<ScanScreen> {
               .doc(scannedTableId);
           DocumentSnapshot tableDoc = await tableRef.get();
 
+          Map<String, dynamic> userNamesMap = {};
           if (tableDoc.exists) {
             var userNames = tableDoc['userNames'];
             if (userNames is List) {
               // Convert list to map
-              Map<String, dynamic> userNamesMap = {};
               for (var name in userNames) {
                 userNamesMap[name] = '';
               }
-              userNames = userNamesMap;
+            } else if (userNames is Map) {
+              userNamesMap = Map<String, dynamic>.from(userNames);
             }
-            Map<String, dynamic> userNamesMap =
-                Map<String, dynamic>.from(userNames ?? {});
             print("Existing userNames: $userNamesMap");
-            if (userNamesMap.containsKey(finalUserName)) {
-              Fluttertoast.showToast(
-                msg: "Username $finalUserName already exists.",
-                toastLength: Toast.LENGTH_SHORT,
-                gravity: ToastGravity.BOTTOM,
-                timeInSecForIosWeb: 1,
-                backgroundColor: Colors.red,
-                textColor: Colors.white,
-                fontSize: 16.0,
-              );
-              if (mounted) {
-                setState(() {
-                  isScanning = false;
-                });
-              }
-              Navigator.of(context).pop(); // Close loading dialog
-              return _toggleCamera();
-            } else {
-              userNamesMap[finalUserName] = userEmail;
-              await tableRef.update({
-                'status': 'active',
-                'userNames': userNamesMap,
-              });
-              print("Updated userNames: $userNamesMap");
-            }
-          } else {
-            await tableRef.set({
-              'status': 'active',
-              'timestamp': Timestamp.now(),
-              'userNames': {finalUserName: userEmail},
-            });
-            print(
-                "Created new table with userNames: {$finalUserName: $userEmail}");
           }
+
+          userNamesMap[uniqueUserName] = userEmail;
+          await tableRef.set({
+            'status': 'active',
+            'timestamp': Timestamp.now(),
+            'userNames': userNamesMap,
+          }, SetOptions(merge: true));
+          print("Updated userNames: $userNamesMap");
 
           // Save tableId and userName to shared preferences
           final prefs = await SharedPreferences.getInstance();
@@ -656,7 +630,8 @@ class ScanScreenState extends State<ScanScreen> {
             '/guestRequest',
             arguments: {
               'tableId': scannedTableId,
-              'userName': finalUserName
+              'userName': finalUserName,
+              'userEmail': userEmail,
             }, // Pass the tableId and userName here
           );
         } else {

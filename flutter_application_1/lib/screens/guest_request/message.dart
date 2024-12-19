@@ -51,7 +51,7 @@ class MessagesScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("$userName's Conversation"), // Set the title to the user's name
+        title: Text("Admin"), // Set the title to the user's name
       ),
       body: Column(
         children: [
