@@ -1024,7 +1024,7 @@ class AdminPanelState extends State<AdminPanel> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Edit FAQ"),
+          title: const Text("Editing"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
