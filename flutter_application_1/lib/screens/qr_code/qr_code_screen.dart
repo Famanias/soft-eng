@@ -20,10 +20,10 @@ class PasswordVisibilityToggle extends StatefulWidget {
   final String labelText;
 
   const PasswordVisibilityToggle({
-    Key? key,
+    super.key,
     required this.controller,
     required this.labelText,
-  }) : super(key: key);
+  });
 
   @override
   _PasswordVisibilityToggleState createState() => _PasswordVisibilityToggleState();
@@ -743,7 +743,7 @@ class ScanScreenState extends State<ScanScreen> {
                   double aspectRatio = 16 / 9;
                   double imageHeight = screenWidth / aspectRatio;
 
-                  return Container(
+                  return SizedBox(
                     width: screenWidth,
                     height: imageHeight, 
                     child: Opacity(

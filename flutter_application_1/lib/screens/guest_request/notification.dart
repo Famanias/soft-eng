@@ -56,9 +56,13 @@ class NotificationScreenState extends State<NotificationScreen> {
       return;
     }
 
+    int notificationId = DateTime.now()
+        .millisecondsSinceEpoch
+        .remainder(100000); // Unique ID based on current time
+
     AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: 10,
+        id: notificationId, // Use unique ID for each notification
         channelKey: 'high_importance_channel',
         title: data['type'] == 'newMessage'
             ? 'Message from Admin'
@@ -126,7 +130,8 @@ class NotificationScreenState extends State<NotificationScreen> {
             padding: EdgeInsets.zero,
             itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              var doc = snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
+              var doc =
+                  snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
               var data = doc.data() as Map<String, dynamic>;
 
               return ListTile(
@@ -180,7 +185,8 @@ class NotificationScreenState extends State<NotificationScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text("Clear Notifications"),
-          content: const Text("Are you sure you want to clear all notifications?"),
+          content:
+              const Text("Are you sure you want to clear all notifications?"),
           actions: [
             TextButton(
               child: const Text("Cancel"),
