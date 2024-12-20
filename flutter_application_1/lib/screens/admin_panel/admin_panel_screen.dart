@@ -117,6 +117,41 @@ class AdminPanelState extends State<AdminPanel> {
     });
   }
 
+  List<pw.Widget> buildWeeklyVisitors(Map<int, List<String>> weeklyVisitors) {
+    List<pw.Widget> widgets = [];
+    var sortedEntries = weeklyVisitors.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+
+    final uniqueVisitors = <String>{};
+
+    for (var entry in sortedEntries) {
+      widgets.add(
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('Week ${entry.key}:', style: pw.TextStyle(fontSize: 18)),
+            pw.SizedBox(height: 10),
+            if (entry.value.isEmpty)
+              pw.Text('None', style: pw.TextStyle(fontSize: 16)),
+            if (entry.value.isNotEmpty)
+              ...entry.value
+                  .where((visitor) {
+                    // Check if the visitor is unique
+                    final isUnique = uniqueVisitors.add(visitor);
+                    return isUnique;
+                  })
+                  .map((visitor) =>
+                      pw.Text(visitor, style: pw.TextStyle(fontSize: 16)))
+                  .toList(),
+            pw.SizedBox(height: 20),
+          ],
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
   Future<void> _generatePdf(
       Map<String, Map<String, int>> overallData,
       Map<String, Map<String, Map<String, int>>> dateWiseData,
@@ -223,22 +258,7 @@ class AdminPanelState extends State<AdminPanel> {
                     'Visitors for ${DateFormat('MMMM').format(selectedDate)}',
                     style: pw.TextStyle(fontSize: 24)),
                 pw.SizedBox(height: 10),
-                ...weeklyVisitors.entries.map((entry) {
-                  return pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Week ${entry.key}:',
-                          style: pw.TextStyle(fontSize: 18)),
-                      pw.SizedBox(height: 10),
-                      if (entry.value.isEmpty)
-                        pw.Text('None', style: pw.TextStyle(fontSize: 16)),
-                      if (entry.value.isNotEmpty)
-                        ...entry.value.map((visitor) => pw.Text(visitor,
-                            style: pw.TextStyle(fontSize: 16))),
-                      pw.SizedBox(height: 20),
-                    ],
-                  );
-                }).toList(),
+                ...buildWeeklyVisitors(weeklyVisitors),
               ],
             ],
           );
@@ -247,10 +267,11 @@ class AdminPanelState extends State<AdminPanel> {
     );
 
     final output = await getTemporaryDirectory();
-    final file = File("${output.path}/statistics.pdf");
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final file = File("${output.path}/statistics_$timestamp.pdf");
     await file.writeAsBytes(await pdf.save());
 
-    // Provide an option to download the PDF
+// Provide an option to download the PDF
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('PDF generated successfully!'),

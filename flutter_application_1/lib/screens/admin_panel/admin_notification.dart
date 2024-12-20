@@ -38,9 +38,13 @@ class AdminNotificationScreenState extends State<AdminNotificationScreen> {
   }
 
   void _showLocalNotification(Map<String, dynamic> data) {
+    int notificationId = DateTime.now()
+        .millisecondsSinceEpoch
+        .remainder(100000); // Unique ID based on current time
+
     AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: 10,
+        id: notificationId, // Use unique ID for each notification
         channelKey: 'high_importance_channel',
         title: data['type'] == 'newMessage' ? '${data['message']}' : 'Request',
         body: data['type'] == 'newMessage'
