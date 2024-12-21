@@ -1582,18 +1582,18 @@ class AdminPanelState extends State<AdminPanel> {
                         ),
                         const SizedBox(height: 5),
                         SizedBox(
-                          height: 400,
+                          height: 500,
                           child: SfCircularChart(
                             legend: Legend(
                               isVisible: true,
-                              alignment: ChartAlignment
-                                  .center, // Aligns the legend to the center
-                              position: LegendPosition
-                                  .bottom, // Places the legend below the chart
+                              alignment: ChartAlignment.center,
+                              position: LegendPosition.bottom,
                               orientation: LegendItemOrientation.vertical,
-                              overflowMode: LegendItemOverflowMode
-                                  .wrap, // Allows wrapping for long legends
+                              overflowMode: LegendItemOverflowMode.scroll,
                               itemPadding: 10,
+                              textStyle: TextStyle(
+                                fontSize: 16, // Set your desired font size here
+                              ),
                             ),
                             series: <CircularSeries>[
                               PieSeries<_ChartData, String>(
