@@ -26,7 +26,8 @@ class PasswordVisibilityToggle extends StatefulWidget {
   });
 
   @override
-  _PasswordVisibilityToggleState createState() => _PasswordVisibilityToggleState();
+  _PasswordVisibilityToggleState createState() =>
+      _PasswordVisibilityToggleState();
 }
 
 class _PasswordVisibilityToggleState extends State<PasswordVisibilityToggle> {
@@ -52,7 +53,6 @@ class _PasswordVisibilityToggleState extends State<PasswordVisibilityToggle> {
     );
   }
 }
-
 
 class ScanScreenState extends State<ScanScreen> {
   bool isSignUp = false;
@@ -570,9 +570,9 @@ class ScanScreenState extends State<ScanScreen> {
           }
 
           String finalUserName =
-              userName ?? user.displayName ?? user.email ?? "Guest";
+              userName ?? user.displayName ?? "Guest";
           String userEmail = user.email ?? "unknown";
-          String uniqueUserName = "$finalUserName: $userEmail";
+          String uniqueUserName = finalUserName;
 
           // Show loading dialog
           showDialog(
@@ -719,8 +719,8 @@ class ScanScreenState extends State<ScanScreen> {
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController = TextEditingController();
-
+  final TextEditingController confirmPasswordController =
+      TextEditingController();
 
   _showSignInDialog(String scannedTableId) {
     _toggleCamera();
@@ -745,12 +745,13 @@ class ScanScreenState extends State<ScanScreen> {
 
                   return SizedBox(
                     width: screenWidth,
-                    height: imageHeight, 
+                    height: imageHeight,
                     child: Opacity(
                       opacity: 0.4, // 50% opacity
                       child: Image.asset(
                         'images/bg.png', // Replace with your background image path
-                        fit: BoxFit.cover, // Ensure it covers the width and scales the height responsively
+                        fit: BoxFit
+                            .cover, // Ensure it covers the width and scales the height responsively
                       ),
                     ),
                   );
@@ -782,7 +783,8 @@ class ScanScreenState extends State<ScanScreen> {
                                   style: TextStyle(
                                     fontSize: 24,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color.fromARGB(255, 50, 59, 50), // Text color to ensure visibility
+                                    color: const Color.fromARGB(255, 50, 59,
+                                        50), // Text color to ensure visibility
                                   ),
                                 ),
                                 SizedBox(height: 8),
@@ -792,7 +794,8 @@ class ScanScreenState extends State<ScanScreen> {
                                       : 'Hey! It\'s good to see you again.',
                                   style: TextStyle(
                                     fontSize: 16,
-                                    color: const Color.fromARGB(255, 100, 100, 100), // Lighter grey for better visibility
+                                    color: const Color.fromARGB(255, 100, 100,
+                                        100), // Lighter grey for better visibility
                                   ),
                                 ),
                               ],
@@ -812,12 +815,12 @@ class ScanScreenState extends State<ScanScreen> {
                                 controller: passwordController,
                                 labelText: 'Password',
                               ),
-                              if (isSignUp) 
+                              if (isSignUp)
                                 PasswordVisibilityToggle(
                                   controller: confirmPasswordController,
                                   labelText: 'Confirm Password',
                                 ),
-                               // Add the Forgot Password Button here
+                              // Add the Forgot Password Button here
                               if (!isSignUp)
                                 Align(
                                   alignment: Alignment.centerRight,
@@ -841,11 +844,12 @@ class ScanScreenState extends State<ScanScreen> {
                                   });
                                   final email = emailController.text;
                                   final password = passwordController.text;
-                                  final confirmPassword = confirmPasswordController.text.trim();
-                                  
+                                  final confirmPassword =
+                                      confirmPasswordController.text.trim();
+
                                   User? user;
                                   if (isSignUp) {
-                                    if(password != confirmPassword){
+                                    if (password != confirmPassword) {
                                       setState(() {
                                         isLoading = false;
                                       });
@@ -860,10 +864,12 @@ class ScanScreenState extends State<ScanScreen> {
                                       );
                                       return;
                                     }
-                                    user = await _signUpWithEmailAndPassword(email, password);
+                                    user = await _signUpWithEmailAndPassword(
+                                        email, password);
                                     if (user != null) {
                                       Fluttertoast.showToast(
-                                        msg: "Sign up successful! Please sign in.",
+                                        msg:
+                                            "Sign up successful! Please sign in.",
                                         toastLength: Toast.LENGTH_SHORT,
                                         gravity: ToastGravity.BOTTOM,
                                         timeInSecForIosWeb: 1,
@@ -881,11 +887,15 @@ class ScanScreenState extends State<ScanScreen> {
                                       });
                                     }
                                   } else {
-                                    user = await _signInWithEmailAndPassword(email, password);
+                                    user = await _signInWithEmailAndPassword(
+                                        email, password);
                                     if (user != null) {
-                                      String userName = user.displayName ?? user.email ?? "Guest";
+                                      String userName = user.displayName ??
+                                          user.email ??
+                                          "Guest";
                                       Navigator.of(context).pop(user);
-                                      _onQRViewCreated(controller!, userName, scannedTableId);
+                                      _onQRViewCreated(controller!, userName,
+                                          scannedTableId);
                                     } else {
                                       setState(() {
                                         isLoading = false;
@@ -895,35 +905,40 @@ class ScanScreenState extends State<ScanScreen> {
                                 },
                                 style: ElevatedButton.styleFrom(
                                   foregroundColor: Colors.white,
-                                  backgroundColor: Colors.teal, // Teal color for the button
+                                  backgroundColor:
+                                      Colors.teal, // Teal color for the button
                                   minimumSize: Size(double.infinity, 50),
                                 ),
                                 child: Text(isSignUp ? 'Sign Up' : 'Sign In'),
                               ),
-                              
+
                               SizedBox(height: 25),
                               Row(
                                 children: [
                                   Expanded(
                                     child: Divider(
                                       thickness: 1,
-                                      color: const Color.fromARGB(255, 75, 75, 75), 
+                                      color:
+                                          const Color.fromARGB(255, 75, 75, 75),
                                     ),
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10.0),
                                     child: Text(
                                       'Or',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: const Color.fromARGB(255, 75, 75, 75), 
+                                        color: const Color.fromARGB(
+                                            255, 75, 75, 75),
                                       ),
                                     ),
                                   ),
                                   Expanded(
                                     child: Divider(
                                       thickness: 1,
-                                      color: const Color.fromARGB(255, 75, 75, 75), 
+                                      color:
+                                          const Color.fromARGB(255, 75, 75, 75),
                                     ),
                                   ),
                                 ],
@@ -936,10 +951,12 @@ class ScanScreenState extends State<ScanScreen> {
                                   });
                                   User? user = await _signInWithGoogle();
                                   if (user != null) {
-                                    String userName =
-                                        user.displayName ?? user.email ?? "Guest";
+                                    String userName = user.displayName ??
+                                        user.email ??
+                                        "Guest";
                                     Navigator.of(context).pop(user);
-                                    _onQRViewCreated(controller!, userName, scannedTableId);
+                                    _onQRViewCreated(
+                                        controller!, userName, scannedTableId);
                                   } else {
                                     setState(() {
                                       isLoading = false;
@@ -987,7 +1004,6 @@ class ScanScreenState extends State<ScanScreen> {
     );
   }
 
-
   Widget _buildThemedTextField({
     required TextEditingController controller,
     required String label,
@@ -1013,5 +1029,4 @@ class ScanScreenState extends State<ScanScreen> {
       style: TextStyle(color: Colors.white),
     );
   }
-
 }

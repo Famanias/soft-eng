@@ -1132,9 +1132,6 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                     .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
                   if (snapshot.hasData) {
-                    print(
-                        "Number of documents: ${snapshot.data!.docs.length}"); // Debugging: Print number of documents
-                    print(tableId);
                     print(uniqueUserName);
                     if (snapshot.data!.docs.isNotEmpty) {
                       return IconButton(
