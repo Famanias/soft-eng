@@ -105,6 +105,8 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     Timer.periodic(Duration(seconds: 1), (timer) {
       _checkLoginExpiry();
     });
+
+    print("uniqueUserName: $uniqueUserName");
   }
 
   void _initializeLocalNotifications() {
@@ -134,7 +136,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     FirebaseFirestore.instance
         .collection('notifications')
         .where('tableId', isEqualTo: tableId)
-        .where('userName', isEqualTo: userName)
+        .where('userName', isEqualTo: uniqueUserName)
         .where('viewed', isEqualTo: false)
         .snapshots()
         .listen((QuerySnapshot snapshot) {
@@ -148,9 +150,13 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
   }
 
   void _showLocalNotification(Map<String, dynamic> data) {
+    int notificationId = DateTime.now()
+        .millisecondsSinceEpoch
+        .remainder(100000); // Unique ID based on current time
+
     AwesomeNotifications().createNotification(
       content: NotificationContent(
-        id: 10,
+        id: notificationId, // Use unique ID for each notification
         channelKey: 'high_importance_channel',
         title: data['type'] == 'newMessage'
             ? 'Message from Admin'
