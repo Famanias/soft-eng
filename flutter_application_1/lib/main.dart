@@ -1,14 +1,16 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_application_1/screens/login/login.dart';
+import 'package:flutter_application_1/screens/guest_request/faq_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'screens/admin_panel/admin_panel_screen.dart';
+import 'screens/guest_request/guest_request_screen.dart';
+import 'screens/guest_request/custom_request_screen.dart';
+import 'screens/qr_code/qr_code_screen.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
@@ -69,40 +71,12 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   AwesomeNotifications().createNotificationFromJsonData(message.data);
 }
 
-void _setupGlobalNotificationListener() {
-  FirebaseFirestore.instance
-      .collection('notifications')
-      .where('sendTo', isEqualTo: 'admin')
-      .snapshots()
-      .listen((QuerySnapshot snapshot) {
-    for (var change in snapshot.docChanges) {
-      if (change.type == DocumentChangeType.added) {
-        var data = change.doc.data() as Map<String, dynamic>;
-        _showLocalNotification(data);
-      }
-    }
-  });
-}
-
-void _showLocalNotification(Map<String, dynamic> data) {
-  AwesomeNotifications().createNotification(
-    content: NotificationContent(
-      id: 10,
-      channelKey: 'high_importance_channel',
-      title: data['type'] == 'newMessage'
-          ? 'Message from Admin'
-          : 'Request: ${data['requestType']}',
-      body: data['type'] == 'newMessage'
-          ? data['message']
-          : 'Status: ${data['status']}',
-      notificationLayout: NotificationLayout.Default,
-      icon: 'resource://drawable/ic_launcher',
-    ),
-  );
-}
-
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  final String tableId;
+  final String userName;
+  final String userEmail;
+
+  const MyApp({super.key, required this.tableId, required this.userName, required this.userEmail});
 
   @override
   MyAppState createState() => MyAppState();
@@ -141,10 +115,15 @@ class MyAppState extends State<MyApp> {
         primarySwatch: Colors.blue,
         fontFamily: 'Poppins',
       ),
-      initialRoute: '/login',
+      initialRoute: '/',
       routes: {
-        '/login': (context) => LoginScreen(),
-        '/adminPanel': (context) => AdminPanel(),
+        '/': (context) => widget.tableId.isNotEmpty
+            ? GuestRequestScreen(tableId: widget.tableId, userName: widget.userName, userEmail: widget.userEmail,)
+            : const ScanScreen(),
+        '/qrCode': (context) => const ScanScreen(),
+        '/guestRequest': (context) => GuestRequestScreen(tableId: widget.tableId, userName: widget.userName, userEmail: widget.userEmail),
+        '/customRequest': (context) => CustomRequestScreen(tableId: widget.tableId, userName: widget.userName),
+        '/faq': (context) => faqScreen(),
       },
       builder: (context, child) {
         return Stack(
