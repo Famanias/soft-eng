@@ -569,10 +569,9 @@ class ScanScreenState extends State<ScanScreen> {
             }
           }
 
-          String finalUserName =
-              userName ?? user.displayName ?? "Guest";
+          String finalUserName = userName ?? user.displayName ?? "Guest";
           String userEmail = user.email ?? "unknown";
-          String uniqueUserName = "$finalUserName: $userEmail";
+          String uniqueUserName = "$finalUserName";
 
           // Show loading dialog
           showDialog(
@@ -615,12 +614,13 @@ class ScanScreenState extends State<ScanScreen> {
             print("Existing userNames: $userNamesMap");
           }
 
+          userNamesMap[uniqueUserName] = userEmail;
           await tableRef.set({
             'status': 'active',
             'timestamp': Timestamp.now(),
-            'userNames': uniqueUserName,
+            'userNames': userNamesMap,
           }, SetOptions(merge: true));
-          print("Updated userNames: $uniqueUserName");
+          print("Updated userNames: $userNamesMap");
 
           // Save tableId and userName to shared preferences
           final prefs = await SharedPreferences.getInstance();
