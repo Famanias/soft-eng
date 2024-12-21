@@ -107,6 +107,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     });
 
     print("uniqueUserName: $uniqueUserName");
+    print("tableId: $tableId");
   }
 
   void _initializeLocalNotifications() {
@@ -214,6 +215,7 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
       tableId = prefs.getString('tableId') ?? "";
       userName = prefs.getString('userName') ?? "Guest";
       userEmail = prefs.getString('userEmail') ?? "unknown";
+      uniqueUserName = "$userName: $userEmail";
     });
     _fetchRequestHistory();
   }
@@ -1129,95 +1131,99 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                         isEqualTo: false) // Only show unviewed notifications
                     .snapshots(),
                 builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
-                  if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
-                    return IconButton(
-                      icon: Stack(
-                        children: [
-                          const Icon(Icons.notifications),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(1),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 12,
-                                minHeight: 12,
-                              ),
-                              child: const Text(
-                                '!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 8,
+                  if (snapshot.hasData) {
+                    print(
+                        "Number of documents: ${snapshot.data!.docs.length}"); // Debugging: Print number of documents
+                    print(tableId);
+                    print(uniqueUserName);
+                    if (snapshot.data!.docs.isNotEmpty) {
+                      return IconButton(
+                        icon: Stack(
+                          children: [
+                            const Icon(Icons.notifications),
+                            Positioned(
+                              right: 0,
+                              child: Container(
+                                padding: const EdgeInsets.all(1),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(6),
                                 ),
-                                textAlign: TextAlign.center,
+                                constraints: const BoxConstraints(
+                                  minWidth: 12,
+                                  minHeight: 12,
+                                ),
+                                child: const Text(
+                                  '!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
+                            ),
+                          ],
+                        ),
+                        onPressed: () async {
+                          if (tableId.isNotEmpty) {
+                            // Update the status of the notifications to 'viewed'
+                            var batch = FirebaseFirestore.instance.batch();
+                            for (var doc in snapshot.data!.docs) {
+                              batch.update(doc.reference, {'viewed': true});
+                            }
+                            await batch.commit();
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => NotificationScreen(
+                                  tableId: tableId,
+                                  userName: userName,
+                                  userEmail: userEmail,
+                                ),
+                              ),
+                            );
+                          } else {
+                            Fluttertoast.showToast(
+                                msg: "No Table ID available.",
+                                toastLength: Toast.LENGTH_SHORT,
+                                gravity: ToastGravity.BOTTOM,
+                                timeInSecForIosWeb: 1,
+                                backgroundColor: Colors.red,
+                                textColor: Colors.white,
+                                fontSize: 16.0);
+                          }
+                        },
+                      );
+                    }
+                  }
+                  return IconButton(
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () {
+                      if (tableId.isNotEmpty) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => NotificationScreen(
+                              tableId: tableId,
+                              userName: userName,
+                              userEmail: userEmail,
                             ),
                           ),
-                        ],
-                      ),
-                      onPressed: () async {
-                        if (tableId.isNotEmpty) {
-                          // Update the status of the notifications to 'viewed'
-                          var batch = FirebaseFirestore.instance.batch();
-                          for (var doc in snapshot.data!.docs) {
-                            batch.update(doc.reference, {'viewed': true});
-                          }
-                          await batch.commit();
-
-                          Navigator.push(
-                            // ignore: use_build_context_synchronously
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NotificationScreen(
-                                tableId: tableId,
-                                userName: userName,
-                                userEmail: userEmail,
-                              ),
-                            ),
-                          );
-                        } else {
-                          Fluttertoast.showToast(
-                              msg: "No Table ID available.",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                              fontSize: 16.0);
-                        }
-                      },
-                    );
-                  } else {
-                    return IconButton(
-                      icon: const Icon(Icons.notifications),
-                      onPressed: () {
-                        if (tableId.isNotEmpty) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => NotificationScreen(
-                                tableId: tableId,
-                                userName: userName,
-                                userEmail: userEmail,
-                              ),
-                            ),
-                          );
-                        } else {
-                          Fluttertoast.showToast(
-                              msg: "No Table ID available.",
-                              toastLength: Toast.LENGTH_SHORT,
-                              gravity: ToastGravity.BOTTOM,
-                              timeInSecForIosWeb: 1,
-                              backgroundColor: Colors.red,
-                              textColor: Colors.white,
-                              fontSize: 16.0);
-                        }
-                      },
-                    );
-                  }
+                        );
+                      } else {
+                        Fluttertoast.showToast(
+                            msg: "No Table ID available.",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            timeInSecForIosWeb: 1,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0);
+                      }
+                    },
+                  );
                 },
               ),
             ],

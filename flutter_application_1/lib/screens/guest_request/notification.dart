@@ -24,6 +24,7 @@ class NotificationScreen extends StatefulWidget {
 class NotificationScreenState extends State<NotificationScreen> {
   String _selectedStatus = 'all';
   late String uniqueUserName;
+  final Set<int> _displayedNotifications = {};
 
   @override
   void initState() {
@@ -56,9 +57,13 @@ class NotificationScreenState extends State<NotificationScreen> {
       return;
     }
 
-    int notificationId = DateTime.now()
-        .millisecondsSinceEpoch
-        .remainder(100000); // Unique ID based on current time
+    int notificationId = data['timestamp'].millisecondsSinceEpoch.remainder(100000); // Unique ID based on timestamp
+
+    if (_displayedNotifications.contains(notificationId)) {
+      return; // Notification already displayed
+    }
+
+    _displayedNotifications.add(notificationId);
 
     AwesomeNotifications().createNotification(
       content: NotificationContent(
@@ -133,8 +138,11 @@ class NotificationScreenState extends State<NotificationScreen> {
               var doc =
                   snapshot.data!.docs[snapshot.data!.docs.length - 1 - index];
               var data = doc.data() as Map<String, dynamic>;
+              bool isViewed = data['viewed'] ?? true;
 
               return ListTile(
+                tileColor: isViewed ? Colors.transparent : Colors.white12, // Highlight if not viewed
+                leading: isViewed ? null : Icon(Icons.new_releases, color: Colors.red), // Icon if not viewed
                 title: Text(data['type'] == 'newMessage'
                     ? "Message from Admin"
                     : "Request: ${data['requestType']}"),
@@ -151,7 +159,7 @@ class NotificationScreenState extends State<NotificationScreen> {
                   ],
                 ),
                 onTap: () async {
-                  // Mark the notification as viewed
+                  // Mark the specific notification as viewed
                   await FirebaseFirestore.instance
                       .collection('notifications')
                       .doc(doc.id)
