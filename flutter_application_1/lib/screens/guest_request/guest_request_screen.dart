@@ -456,6 +456,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                             color: Colors.grey[500],
                                           ),
                                         ),
+                                        if (request['status'] == 'rejected' &&
+                                            request.containsKey('remarks'))
+                                          const SizedBox(height: 4.0),
+                                        Text(
+                                          'Remarks: ${request['remarks']}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.red,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                     trailing: Row(
