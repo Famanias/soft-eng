@@ -35,10 +35,6 @@ dependencies:
     sdk: flutter
   firebase_core: ^3.7.0 # Replace with the latest if this changes
   cloud_firestore: ^5.4.5 # Replace with the latest if this changes
-  qr_code_scanner:
-    git:
-      url: https://github.com/juliuscanute/qr_code_scanner.git
-  http: ^1.2.2               # For making HTTP requests to your backend
   firebase_messaging: ^15.1.4 # For real-time notifications to the admin
   shared_preferences: ^2.2.0
   # google_sign_in: ^5.0.0
@@ -50,7 +46,10 @@ dependencies:
   awesome_notifications: ^0.10.0
   syncfusion_flutter_charts: ^20.2.47
   connectivity_plus: ^4.0.1
-  fluttertoast: ^8.0.8
+  fluttertoast: ^8.2.0
+  pdf: ^3.3.0
+  path_provider: ^2.0.11
+  open_file: ^3.2.1
 
 
 
