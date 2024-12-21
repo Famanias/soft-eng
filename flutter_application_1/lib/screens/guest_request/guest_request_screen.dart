@@ -458,14 +458,20 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                         ),
                                         if (request['status'] == 'rejected' &&
                                             request.containsKey('remarks'))
-                                          const SizedBox(height: 4.0),
-                                        Text(
-                                          'Remarks: ${request['remarks']}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.red,
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              const SizedBox(height: 4.0),
+                                              Text(
+                                                'Remarks: ${request['remarks']}',
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ),
                                       ],
                                     ),
                                     trailing: Row(
@@ -512,68 +518,39 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
                                               );
 
                                               if (confirmDelete == true) {
-                                                // Check if the document exists before deleting
-                                                DocumentSnapshot docSnapshot =
-                                                    await FirebaseFirestore
-                                                        .instance
-                                                        .collection(
-                                                            'guestRequests')
-                                                        .doc(request['docId'])
-                                                        .get();
+                                                // Update the status and timestamp
+                                                await _updateRequestStatus(
+                                                    request['docId'],
+                                                    'canceled');
 
-                                                if (docSnapshot.exists) {
-                                                  // Update the status to "canceled"
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection(
-                                                          'guestRequests')
-                                                      .doc(request['docId'])
-                                                      .update({
-                                                    'status': 'canceled'
-                                                  });
+                                                // Notify the admin
+                                                await FirebaseFirestore.instance
+                                                    .collection(
+                                                        'adminNotifications')
+                                                    .add({
+                                                  'type': 'requestCanceled',
+                                                  'message':
+                                                      'Request "${request['requestType']}" from user "${request['userName']}" at table "${request['tableId']}" has been canceled.',
+                                                  'timestamp': FieldValue
+                                                      .serverTimestamp(),
+                                                  'viewed': false,
+                                                });
 
-                                                  // Notify the admin
-                                                  await FirebaseFirestore
-                                                      .instance
-                                                      .collection(
-                                                          'adminNotifications')
-                                                      .add({
-                                                    'type': 'requestCanceled',
-                                                    'message':
-                                                        'Request "${request['requestType']}" from user "${request['userName']}" at table "${request['tableId']}" has been canceled.',
-                                                    'timestamp': FieldValue
-                                                        .serverTimestamp(),
-                                                    'viewed': false,
-                                                  });
-
-                                                  await _fetchRequestHistory(); // Refresh the request history
-                                                  setState(
-                                                      () {}); // Update the state to reflect the changes
-                                                  Fluttertoast.showToast(
-                                                      msg:
-                                                          "Request Cancelled successfully.",
-                                                      toastLength:
-                                                          Toast.LENGTH_SHORT,
-                                                      gravity:
-                                                          ToastGravity.BOTTOM,
-                                                      timeInSecForIosWeb: 1,
-                                                      backgroundColor:
-                                                          Colors.green,
-                                                      textColor: Colors.white,
-                                                      fontSize: 16.0);
-                                                } else {
-                                                  Fluttertoast.showToast(
-                                                      msg: "No Requests Found.",
-                                                      toastLength:
-                                                          Toast.LENGTH_SHORT,
-                                                      gravity:
-                                                          ToastGravity.BOTTOM,
-                                                      timeInSecForIosWeb: 1,
-                                                      backgroundColor:
-                                                          Colors.red,
-                                                      textColor: Colors.white,
-                                                      fontSize: 16.0);
-                                                }
+                                                await _fetchRequestHistory(); // Refresh the request history
+                                                setState(
+                                                    () {}); // Update the state to reflect the changes
+                                                Fluttertoast.showToast(
+                                                    msg:
+                                                        "Request Cancelled successfully.",
+                                                    toastLength:
+                                                        Toast.LENGTH_SHORT,
+                                                    gravity:
+                                                        ToastGravity.BOTTOM,
+                                                    timeInSecForIosWeb: 1,
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                    textColor: Colors.white,
+                                                    fontSize: 16.0);
                                               }
                                             },
                                           ),
@@ -609,139 +586,16 @@ class GuestRequestScreenState extends State<GuestRequestScreen>
     );
   }
 
-  Future<void> _updateRequest(Map<String, dynamic> request) async {
-    String selectedRequestType = request['requestType'];
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Update Request'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                value: requestTypes.contains(selectedRequestType)
-                    ? selectedRequestType
-                    : null,
-                items: requestTypes.map((String type) {
-                  return DropdownMenuItem<String>(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    selectedRequestType = newValue!;
-                  });
-                },
-                decoration: InputDecoration(labelText: 'Request'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  _showCustomRequestDialog(request);
-                },
-                child: Text('Make Custom Request'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                // Check if the document exists before updating
-                DocumentSnapshot docSnapshot = await FirebaseFirestore.instance
-                    .collection('guestRequests')
-                    .doc(request['docId'])
-                    .get();
-
-                if (docSnapshot.exists) {
-                  await FirebaseFirestore.instance
-                      .collection('guestRequests')
-                      .doc(request['docId'])
-                      .update({'requestType': selectedRequestType});
-                  Navigator.of(context).pop();
-                  _fetchRequestHistory();
-                } else {
-                  Navigator.of(context).pop();
-                  Fluttertoast.showToast(
-                      msg: "Request not found.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.green,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                }
-              },
-              child: Text('Update'),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _updateRequestStatus(String docId, String newStatus) async {
+    await FirebaseFirestore.instance
+        .collection('guestRequests')
+        .doc(docId)
+        .update({
+      'status': newStatus,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
   }
 
-  void _showCustomRequestDialog(Map<String, dynamic> request) {
-    TextEditingController customRequestController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Custom Request'),
-          content: TextField(
-            controller: customRequestController,
-            decoration: InputDecoration(labelText: 'Enter your custom request'),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                if (customRequestController.text.isNotEmpty) {
-                  await FirebaseFirestore.instance
-                      .collection('guestRequests')
-                      .doc(request['docId'])
-                      .update({'requestType': customRequestController.text});
-                  Navigator.of(context).pop();
-                  _fetchRequestHistory();
-                  Fluttertoast.showToast(
-                      msg: "Custom request updated successfully.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.green,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                } else {
-                  Fluttertoast.showToast(
-                      msg: "Custom Request cannot be empty.",
-                      toastLength: Toast.LENGTH_SHORT,
-                      gravity: ToastGravity.BOTTOM,
-                      timeInSecForIosWeb: 1,
-                      backgroundColor: Colors.red,
-                      textColor: Colors.white,
-                      fontSize: 16.0);
-                }
-              },
-              child: Text('Submit'),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   Future<void> _submitRequest() async {
     List<Map<String, dynamic>> selectedRequests = [];
