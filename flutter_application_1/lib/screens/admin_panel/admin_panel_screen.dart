@@ -2317,6 +2317,7 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
 
             String userName = data['userName'] ?? "Guest";
             String staffName = data['updatedBy'] ?? "Unassigned";
+            String remarks = data['remarks'] ?? "No Remarks";
             String itemName;
             if (data['items'] is List) {
               itemName = data['items'].join(', ');
@@ -2367,29 +2368,27 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
                           style: const TextStyle(fontSize: 14),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          "Status: ${doc['status']}",
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (doc['status'] == 'rejected')
+                  if (doc['status'] == 'rejected') ...[
                     Text(
-                      "Rejected by: $staffName",
+                      "Rejected by $staffName",
                       style: const TextStyle(fontSize: 14),
                     ),
+                    Text(
+                      "Remarks: $remarks",
+                      style: const TextStyle(fontSize: 14),
+                    ),
+                  ],
                   if (doc['status'] == 'accepted')
                     Text(
-                      "Accepted by: $staffName",
+                      "Accepted by $staffName",
                       style: const TextStyle(fontSize: 14),
                     ),
                   if (doc['status'] == 'done')
                     Text(
-                      "Done by: $staffName",
+                      "Done by $staffName",
                       style: const TextStyle(fontSize: 14),
                     ),
                   const SizedBox(height: 16),
@@ -2417,7 +2416,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
           ElevatedButton(
             onPressed: () {
               // Handle reject button
-              _updateRequestStatus(requestId, 'rejected');
+              _showRejectDialog(requestId);
+              // _updateRequestStatus(requestId, 'rejected');
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.grey[300],
@@ -2529,6 +2529,104 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     } else {
       return null;
     }
+  }
+
+  void _showRejectDialog(String requestId) {
+    final TextEditingController remarksController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("Reject Request"),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8, // Set width to 80% of screen width
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start, // Align content to the left
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, // Allow the column to take minimum height
+                    crossAxisAlignment: CrossAxisAlignment.start, // Align text to the left
+                    children: [
+                      const Text("Please provide remarks for rejection:"),
+                      const SizedBox(height: 8), // Space between text and text field
+                      TextField(
+                        controller: remarksController,
+                        decoration: const InputDecoration(
+                          hintText: "Remarks",
+                          border: OutlineInputBorder(), 
+                        ),
+                        maxLines: null, // Allow multiple lines
+                        keyboardType: TextInputType.multiline, // Enable multiline keyboard
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text("Cancel"),
+            ),
+            TextButton(
+              onPressed: () {
+                final remarks = remarksController.text;
+                if (remarks.isNotEmpty) {
+                  _updateRequestStatusWithRemarks(requestId, 'rejected', remarks);
+                  Navigator.of(context).pop(); // Close the dialog
+                } else {
+                  // Show a message if remarks are empty
+                  Fluttertoast.showToast(
+                    msg: "Remarks cannot be empty.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    timeInSecForIosWeb: 1,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                }
+              },
+              child: const Text("Reject", style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _updateRequestStatusWithRemarks(String requestId, String status, String remarks) {
+
+    FirebaseFirestore.instance.collection('guestRequests').doc(requestId).update({
+      'status': status,
+      'remarks': remarks,
+    }).then((_) {
+      Fluttertoast.showToast(
+        msg: "Request rejected successfully.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    }).catchError((error) {
+      // Handle error
+      Fluttertoast.showToast(
+        msg: "Failed to update request: $error.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        timeInSecForIosWeb: 1,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+    });
   }
 
   Future<void> _deleteRequest(String requestId) async {
