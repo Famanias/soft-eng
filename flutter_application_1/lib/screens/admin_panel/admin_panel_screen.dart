@@ -2577,7 +2577,8 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
               onPressed: () {
                 final remarks = remarksController.text;
                 if (remarks.isNotEmpty) {
-                  _updateRequestStatusWithRemarks(requestId, 'rejected', remarks);
+                  _updateRequestStatus(requestId, 'rejected');
+                  _updateRequestStatusWithRemarks(requestId, remarks);
                   Navigator.of(context).pop(); // Close the dialog
                 } else {
                   // Show a message if remarks are empty
@@ -2600,10 +2601,9 @@ class RequestDetailsScreenState extends State<RequestDetailsScreen>
     );
   }
 
-  void _updateRequestStatusWithRemarks(String requestId, String status, String remarks) {
+  void _updateRequestStatusWithRemarks(String requestId, String remarks) {
 
     FirebaseFirestore.instance.collection('guestRequests').doc(requestId).update({
-      'status': status,
       'remarks': remarks,
     }).then((_) {
       Fluttertoast.showToast(
