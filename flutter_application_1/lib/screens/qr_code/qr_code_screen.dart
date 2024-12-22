@@ -312,6 +312,77 @@ class ScanScreenState extends State<ScanScreen> {
     return distance <= rangeInMeters;
   }
 
+  Future<void> _forgotPassword() async {
+    final TextEditingController resetEmailController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Reset Password'),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8, // 80% of screen width
+            child: TextField(
+              controller: resetEmailController,
+              keyboardType: TextInputType.emailAddress,
+              decoration: InputDecoration(
+                labelText: 'Enter your email',
+                prefixIcon: Icon(Icons.email),
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final String email = resetEmailController.text.trim();
+                if (email.isEmpty) {
+                  Fluttertoast.showToast(
+                    msg: "Please enter your email address.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                  return;
+                }
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  Navigator.of(context).pop();
+                  Fluttertoast.showToast(
+                    msg: "Password reset email sent.",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.green,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                } catch (e) {
+                  Fluttertoast.showToast(
+                    msg: "Error: ${e.toString()}",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: Colors.red,
+                    textColor: Colors.white,
+                    fontSize: 16.0,
+                  );
+                }
+              },
+              child: Text('Send'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+
   Future<User?> _signInWithGoogle() async {
     try {
       final GoogleSignIn googleSignIn = GoogleSignIn();
@@ -387,6 +458,7 @@ class ScanScreenState extends State<ScanScreen> {
   }
 
   Future<User?> _signUpWithEmailAndPassword(
+    
       String email, String password) async {
     try {
       final UserCredential userCredential =
@@ -483,7 +555,8 @@ class ScanScreenState extends State<ScanScreen> {
           );
         } else {
           Fluttertoast.showToast(
-            msg: "Error: ${e.message}",
+            // msg: "Error: ${e.message}",
+            msg: "Error: Please enter correct password.",
             toastLength: Toast.LENGTH_SHORT,
             gravity: ToastGravity.BOTTOM,
             timeInSecForIosWeb: 1,
@@ -824,16 +897,9 @@ class ScanScreenState extends State<ScanScreen> {
                                 Align(
                                   alignment: Alignment.centerRight,
                                   child: TextButton(
-                                    onPressed: () {
-                                      // Logic for forgot password
-                                      // You can navigate to a forgot password page or show a dialog
-                                      print("Forgot Password button pressed");
-                                    },
-                                    child: Text(
-                                      'Forgot Password?',
-                                      style: TextStyle(color: Colors.blue),
-                                    ),
-                                  ),
+                                  onPressed: _forgotPassword,
+                                  child: Text("Forgot password?"),
+                                ),
                                 ),
                               SizedBox(height: 25),
                               ElevatedButton(
